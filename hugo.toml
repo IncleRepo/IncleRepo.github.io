@@ -3,7 +3,7 @@ locale = 'ko-KR'
 defaultContentLanguage = 'ko'
 title = 'Dev Archive'
 theme = 'PaperMod'
-copyright = '© 2026 인클'
+copyright = '© 2026 [인클](https://github.com/IncleRepo)'
 
 enableRobotsTXT = true
 
