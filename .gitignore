@@ -1,0 +1,11 @@
+# Hugo generated files
+/public/
+/resources/_gen/
+.hugo_build.lock
+hugo_stats.json
+
+# Local environment
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
