@@ -1,0 +1,38 @@
+baseURL = 'https://inclerepo.github.io/'
+locale = 'ko-KR'
+defaultContentLanguage = 'ko'
+title = 'Dev Archive'
+theme = 'PaperMod'
+
+enableRobotsTXT = true
+
+[pagination]
+  pagerSize = 10
+
+[params]
+  env = 'production'
+  description = '백엔드 개발 과정에서 공부한 내용을 기록하는 기술 블로그'
+  defaultTheme = 'auto'
+  disableThemeToggle = false
+  ShowReadingTime = true
+  ShowToc = true
+  TocOpen = false
+  ShowCodeCopyButtons = true
+  ShowPostNavLinks = true
+  ShowBreadCrumbs = true
+
+  [params.homeInfoParams]
+    Title = 'Dev Archive'
+    Content = '백엔드 개발 과정에서 공부한 내용을 기록합니다.'
+
+[[menu.main]]
+  identifier = 'categories'
+  name = '카테고리'
+  url = '/categories/'
+  weight = 10
+
+[[menu.main]]
+  identifier = 'tags'
+  name = '태그'
+  url = '/tags/'
+  weight = 20
