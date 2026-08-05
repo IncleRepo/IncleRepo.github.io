@@ -1,15 +1,3 @@
-.footer {
-  font-size: 0;
-}
-
-.footer > span:first-child {
-  font-size: 12px;
-}
-
-.footer > span:last-child {
-  display: none;
-}
-
 .post-category-link {
   position: relative;
   z-index: 2;
