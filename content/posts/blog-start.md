@@ -3,7 +3,7 @@ title = '블로그 시작'
 date = 2026-08-05T17:01:39+09:00
 lastmod = 2026-08-05T17:01:39+09:00
 draft = false
-categories = ['블로그']
+categories = ['기술 문서화와 AI']
 tags = ['Hugo', 'GitHub Pages']
 +++
 

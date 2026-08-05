@@ -23,4 +23,4 @@ Dev Archive는 백엔드 개발 과정에서 학습한 개념과 설계 판단�
 hugo new content posts/<slug>.md
 ```
 
-생성된 글은 공통 목차와 Front Matter를 포함합니다. 내용을 작성한 뒤 `draft`를 `false`로 변경하며, 기존 글을 의미 있게 수정했다면 `lastmod`도 수정한 시각으로 갱신합니다.
+생성된 글은 공통 목차와 Front Matter를 포함합니다. 글마다 가장 가까운 확정 카테고리 하나를 선택하고 세부 기술은 태그로 분류합니다. 내용을 작성한 뒤 `draft`를 `false`로 변경하며, 기존 글을 의미 있게 수정했다면 `lastmod`도 수정한 시각으로 갱신합니다.
