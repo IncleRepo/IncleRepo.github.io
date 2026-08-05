@@ -18,10 +18,10 @@
     {{- end }}
 {{- end }}
 
-{{- if and (eq .Kind "page") .Params.categories -}}
+{{- with .GetTerms "categories" -}}
     {{- $categories := slice }}
-    {{- range (.GetTerms "categories") }}
-        {{- $categories = $categories | append (printf "<a href='%s'>%s</a>" .RelPermalink (.LinkTitle | htmlEscape)) }}
+    {{- range . }}
+        {{- $categories = $categories | append (printf "<a class='post-category-link' href='%s'>%s</a>" .RelPermalink (.LinkTitle | htmlEscape)) }}
     {{- end }}
     {{- with $categories }}
         {{- $scratch.Add "meta" (slice (printf "<span>카테고리: %s</span>" (delimit . ", "))) }}

@@ -9,3 +9,13 @@
 .footer > span:last-child {
   display: none;
 }
+
+.post-meta .post-category-link {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.post-meta .post-category-link:hover {
+  color: var(--primary);
+}
