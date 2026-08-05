@@ -1,7 +1,7 @@
 +++
 title = '블로그 시작'
-date = 2026-08-05T00:00:00+09:00
-lastmod = 2026-08-05T00:00:00+09:00
+date = 2026-08-05T17:01:39+09:00
+lastmod = 2026-08-05T17:01:39+09:00
 draft = false
 categories = ['블로그']
 tags = ['Hugo', 'GitHub Pages']

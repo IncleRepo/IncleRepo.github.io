@@ -14,3 +14,12 @@
   position: relative;
   z-index: 1;
 }
+
+.post-date {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.post-meta-label {
+  font-weight: 600;
+}

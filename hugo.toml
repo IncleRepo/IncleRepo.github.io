@@ -1,5 +1,6 @@
 baseURL = 'https://inclerepo.github.io/'
 locale = 'ko-KR'
+timeZone = 'Asia/Seoul'
 defaultContentLanguage = 'ko'
 title = 'Dev Archive'
 theme = 'PaperMod'
