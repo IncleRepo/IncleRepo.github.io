@@ -21,7 +21,7 @@ enableRobotsTXT = true
   TocOpen = false
   ShowCodeCopyButtons = true
   ShowPostNavLinks = true
-  ShowBreadCrumbs = true
+  ShowBreadCrumbs = false
 
   [params.homeInfoParams]
     Title = 'Dev Archive'
