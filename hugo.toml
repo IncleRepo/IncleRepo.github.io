@@ -11,7 +11,8 @@ enableRobotsTXT = true
 
 [params]
   env = 'production'
-  description = '백엔드 개발 과정에서 공부한 내용을 기록하는 기술 블로그'
+  author = '인클'
+  description = '백엔드 개발을 공부하며 이해한 원리와 설계 판단을 기록합니다.'
   defaultTheme = 'auto'
   disableThemeToggle = false
   ShowReadingTime = true
@@ -23,7 +24,7 @@ enableRobotsTXT = true
 
   [params.homeInfoParams]
     Title = 'Dev Archive'
-    Content = '백엔드 개발 과정에서 공부한 내용을 기록합니다.'
+    Content = '백엔드 개발을 공부하며 이해한 원리와 설계 판단을 기록합니다.'
 
 [[menu.main]]
   identifier = 'categories'
