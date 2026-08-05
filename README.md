@@ -16,3 +16,11 @@ Dev Archive는 백엔드 개발 과정에서 학습한 개념과 설계 판단�
 ## 운영 방식
 
 모든 글은 Markdown으로 작성하고 Git으로 변경 이력을 관리합니다. Hugo로 정적 사이트를 생성하고 GitHub Pages를 통해 게시합니다.
+
+## 새 글 작성
+
+```shell
+hugo new content posts/<slug>.md
+```
+
+생성된 글은 공통 목차와 Front Matter를 포함합니다. 내용을 작성한 뒤 `draft`를 `false`로 변경하며, 기존 글을 의미 있게 수정했다면 `lastmod`도 수정한 날짜로 갱신합니다.
