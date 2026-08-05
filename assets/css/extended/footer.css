@@ -11,6 +11,8 @@
 }
 
 .post-meta .post-category-link {
+  position: relative;
+  z-index: 1;
   color: inherit;
   text-decoration: underline;
   text-underline-offset: 3px;
