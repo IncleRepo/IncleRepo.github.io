@@ -10,14 +10,19 @@
   display: none;
 }
 
-.post-meta .post-category-link {
+.post-category-link {
   position: relative;
-  z-index: 1;
+  z-index: 2;
   color: inherit;
   text-decoration: underline;
   text-underline-offset: 3px;
 }
 
-.post-meta .post-category-link:hover {
+.post-category-link:hover {
   color: var(--primary);
+}
+
+.post-entry .entry-footer {
+  position: relative;
+  z-index: 1;
 }
