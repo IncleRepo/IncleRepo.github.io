@@ -3,6 +3,7 @@ locale = 'ko-KR'
 defaultContentLanguage = 'ko'
 title = 'Dev Archive'
 theme = 'PaperMod'
+copyright = '© 2026 인클'
 
 enableRobotsTXT = true
 
@@ -25,6 +26,12 @@ enableRobotsTXT = true
   [params.homeInfoParams]
     Title = 'Dev Archive'
     Content = '백엔드 개발 과정에서 공부한 내용을 기록합니다.'
+
+  [params.assets]
+    favicon = '/favicon.png'
+    favicon16x16 = '/favicon.png'
+    favicon32x32 = '/favicon.png'
+    apple_touch_icon = '/favicon.png'
 
 [[menu.main]]
   identifier = 'posts'
