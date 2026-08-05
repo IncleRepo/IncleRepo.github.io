@@ -28,10 +28,10 @@ enableRobotsTXT = true
     Content = '백엔드 개발 과정에서 공부한 내용을 기록합니다.'
 
   [params.assets]
-    favicon = '/favicon.ico'
-    favicon16x16 = '/favicon-16x16.png'
-    favicon32x32 = '/favicon-32x32.png'
-    apple_touch_icon = '/apple-touch-icon.png'
+    favicon = '/favicon-v2.ico'
+    favicon16x16 = '/favicon-v2-16x16.png'
+    favicon32x32 = '/favicon-v2-32x32.png'
+    apple_touch_icon = '/apple-touch-icon-v2.png'
 
 [[menu.main]]
   identifier = 'posts'
