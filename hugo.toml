@@ -16,7 +16,6 @@ enableRobotsTXT = true
   description = '백엔드 개발 과정에서 공부한 내용을 기록합니다.'
   defaultTheme = 'auto'
   disableThemeToggle = false
-  ShowReadingTime = true
   ShowLastMod = true
   ShowToc = true
   TocOpen = false
