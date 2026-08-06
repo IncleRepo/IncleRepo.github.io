@@ -86,6 +86,10 @@ body:has(.portfolio-page) {
   text-wrap: balance;
 }
 
+.portfolio-introduction > p span {
+  display: block;
+}
+
 .portfolio-actions {
   display: flex;
   flex-wrap: wrap;

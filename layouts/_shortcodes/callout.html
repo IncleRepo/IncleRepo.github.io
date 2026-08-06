@@ -1,0 +1,6 @@
+{{- $type := .Get "type" | default "note" -}}
+{{- $title := .Get "title" -}}
+<aside class="article-callout article-callout--{{ $type }}">
+  {{- with $title }}<strong>{{ . }}</strong>{{ end -}}
+  <div>{{ .Inner | .Page.RenderString }}</div>
+</aside>

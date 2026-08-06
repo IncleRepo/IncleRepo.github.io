@@ -9,3 +9,6 @@ hugo_stats.json
 Thumbs.db
 .idea/
 .vscode/
+
+# Local working documents
+.internal/

@@ -12,7 +12,11 @@
     </div>
 
     <div class="portfolio-introduction">
-      <p>{{ .Params.hero_description }}</p>
+      <p>
+        {{- range .Params.hero_description }}
+        <span>{{ . }}</span>
+        {{- end }}
+      </p>
       <div class="portfolio-actions" aria-label="바로가기">
         {{- range .Params.links }}
         <a href="{{ .url }}"{{ if .external }} target="_blank" rel="noopener noreferrer"{{ end }}>
@@ -29,8 +33,9 @@
       <h2 id="about-heading">About</h2>
     </header>
     <div class="portfolio-prose">
-      <p>{{ .Params.about_description }}</p>
-      <p>{{ .Params.growth_description }}</p>
+      {{- range .Params.about_paragraphs }}
+      <p>{{ . }}</p>
+      {{- end }}
     </div>
   </section>
 
@@ -62,6 +67,7 @@
         <p class="portfolio-period">{{ .period }}</p>
         <div>
           <h3><a href="{{ .url }}" target="_blank" rel="noopener noreferrer">{{ .school }} <span aria-hidden="true">↗</span></a></h3>
+          <p class="portfolio-role">{{ .major }}</p>
         </div>
       </article>
       {{- end }}

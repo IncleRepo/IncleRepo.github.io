@@ -1,0 +1,13 @@
+{{- $options := dict -}}
+{{- if not (transform.CanHighlight .Type) -}}
+  {{- $options = dict "type" "text" -}}
+{{- end -}}
+{{- $result := transform.HighlightCodeBlock . $options -}}
+{{- $label := .Type | upper -}}
+{{- with .Attributes.title -}}
+  {{- $label = . -}}
+{{- end -}}
+<figure class="article-code-block">
+  {{- with $label }}<figcaption>{{ . }}</figcaption>{{ end -}}
+  {{ $result.Wrapped }}
+</figure>

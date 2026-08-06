@@ -9,10 +9,16 @@ ShowPostNavLinks = false
 
 eyebrow = 'BACKEND DEVELOPER'
 hero_title = '김학인'
-hero_description = '기술의 원리와 선택의 이유를 이해하며, 오래 유지할 수 있는 백엔드를 고민합니다.'
+hero_description = [
+  '기술의 원리를 이해하고,',
+  '근거 있는 선택을 지향합니다.'
+]
 
-about_description = '신재생에너지 서비스를 개발하고 운영하며 Java와 Spring을 중심으로 백엔드 경험을 쌓고 있습니다. AI는 생산성을 높이는 도구로 활용하되, 설계와 검증까지 맡겨 잘못된 방향으로 빨라지는 상황은 경계합니다.'
-growth_description = '앞으로는 대용량 트래픽에서도 안정적으로 동작하는 시스템을 설계하고 운영하는 개발자로 성장하고자 합니다.'
+about_paragraphs = [
+  '기술의 원리를 바탕으로 근거 있는 선택을 하기 위해 노력합니다.',
+  '이 과정에서 AI는 생산성을 높이는 도구로 적극 활용하지만, 설계와 검증은 개발자의 책임이라고 생각합니다.',
+  '이러한 기준을 바탕으로 규모 있는 서비스를 안정적으로 설계하고 운영할 수 있는 개발자로 성장하고자 합니다.'
+]
 
 [[links]]
 label = '글 둘러보기'
@@ -30,11 +36,12 @@ period = '2026.01 — 현재'
 company = 'JKCORE'
 role = 'Backend Developer'
 url = 'https://jkcore.com/'
-description = '신재생에너지 데이터 수집·분석과 모니터링을 지원하는 백엔드 서비스를 개발하고 유지보수합니다.'
+description = '신재생에너지 디지털 O&M 플랫폼 백엔드 개발'
 
 [[education]]
 period = '2020.02 — 2027.02'
 school = '한국기술교육대학교'
+major = '컴퓨터공학부'
 url = 'https://www.koreatech.ac.kr/'
 
 [[skill_groups]]

@@ -1,13 +1,23 @@
 .post-category-link {
   position: relative;
   z-index: 2;
-  color: inherit;
-  text-decoration: underline;
-  text-underline-offset: 3px;
+  display: inline-flex;
+  align-items: center;
+  margin: -2px 0;
+  padding: 2px 7px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--code-bg);
+  color: var(--secondary);
+  line-height: 1.35;
+  text-decoration: none;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
 
 .post-category-link:hover {
   color: var(--primary);
+  border-color: var(--tertiary);
+  background: var(--border);
 }
 
 .post-entry .entry-footer {

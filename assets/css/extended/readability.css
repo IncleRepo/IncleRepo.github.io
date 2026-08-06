@@ -12,3 +12,19 @@
   overflow-wrap: break-word;
   word-break: keep-all;
 }
+
+.page-header .post-description {
+  display: none;
+}
+
+.home-info {
+  min-height: 0;
+  margin-bottom: 32px;
+}
+
+@media (max-width: 768px) {
+  .home-info {
+    min-height: 0;
+    margin-bottom: 24px;
+  }
+}

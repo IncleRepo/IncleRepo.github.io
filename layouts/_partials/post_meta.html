@@ -26,7 +26,7 @@
         {{- $categories = $categories | append (printf "<a class='post-category-link' href='%s'>%s</a>" .RelPermalink (.LinkTitle | htmlEscape)) }}
     {{- end }}
     {{- with $categories }}
-        {{- $scratch.Add "meta" (slice (printf "<span>카테고리: %s</span>" (delimit . ", "))) }}
+        {{- $scratch.Add "meta" (slice (printf "<span>%s</span>" (delimit . ", "))) }}
     {{- end }}
 {{- end }}
 

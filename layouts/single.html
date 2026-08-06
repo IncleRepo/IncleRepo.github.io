@@ -1,0 +1,93 @@
+{{- define "main" }}
+
+{{- $headers := findRE "<h[2-3].*?>(.|\n])+?</h[2-3]>" .Content -}}
+{{- $showArticleToc := and (.Param "ShowToc") (ge (len $headers) 2) -}}
+
+<article class="post-single post-single--hybrid">
+  <header class="post-header article-header">
+    {{- with (first 1 (.GetTerms "categories")) }}
+    {{- range . }}
+    <a class="article-category" href="{{ .RelPermalink }}">{{ .LinkTitle }}</a>
+    {{- end }}
+    {{- end }}
+
+    <h1 class="post-title article-title entry-hint-parent">
+      {{ .Title }}
+      {{- if .Draft }}
+      <span class="entry-hint" title="Draft">
+        <svg xmlns="http://www.w3.org/2000/svg" height="35" viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true">
+          <path d="M160-410v-60h300v60H160Zm0-165v-60h470v60H160Zm0-165v-60h470v60H160Zm360 580v-123l221-220q9-9 20-13t22-4q12 0 23 4.5t20 13.5l37 37q9 9 13 20t4 22q0 11-4.5 22.5T862.09-380L643-160H520Zm60-60h38l121-122-37-37-122 121v38Z" />
+        </svg>
+      </span>
+      {{- end }}
+    </h1>
+
+    {{- if .Description }}
+    <p class="post-description article-summary">{{ .Description }}</p>
+    {{- end }}
+
+    {{- if not (.Param "hideMeta") }}
+    <div class="post-meta article-meta">
+      {{- with (partial "author.html" .) }}<span>{{ . }}</span>{{- end }}
+      {{- if not .Date.IsZero }}
+      <span><span class="post-meta-label">작성</span> <time datetime="{{ .Date.Format "2006-01-02T15:04:05Z07:00" }}">{{ .Date.Format "2006. 01. 02. 15:04" }}</time></span>
+      {{- end }}
+      {{- if and (.Param "ShowLastMod") (not .Lastmod.IsZero) (.Lastmod.After .Date) }}
+      <span><span class="post-meta-label">수정</span> <time datetime="{{ .Lastmod.Format "2006-01-02T15:04:05Z07:00" }}">{{ .Lastmod.Format "2006. 01. 02. 15:04" }}</time></span>
+      {{- end }}
+    </div>
+    {{- end }}
+  </header>
+
+  {{- $isHidden := (.Param "cover.hiddenInSingle") | default (.Param "cover.hidden") | default false }}
+  {{- partial "cover.html" (dict "cxt" . "IsSingle" true "isHidden" $isHidden) }}
+
+  {{- if $showArticleToc }}
+  <details class="article-mobile-toc" {{ if (.Param "TocOpen") }}open{{ end }}>
+    <summary>{{ i18n "toc" | default "목차" }}</summary>
+    <div class="article-toc-content">{{ .TableOfContents }}</div>
+  </details>
+  {{- end }}
+
+  <div class="article-layout{{ if not $showArticleToc }} article-layout--without-toc{{ end }}">
+    <div class="article-main-column">
+      {{- if .Content }}
+      <div class="post-content md-content article-content">
+        {{- if not (.Param "disableAnchoredHeadings") }}
+        {{- partial "anchored_headings.html" .Content -}}
+        {{- else }}{{ .Content }}{{ end }}
+      </div>
+      {{- end }}
+
+      {{- partial "extend_post_content.html" . }}
+
+      <footer class="post-footer article-footer">
+        {{- $tags := .Language.Params.Taxonomies.tag | default "tags" }}
+        <ul class="post-tags">
+          {{- range ($.GetTerms $tags) }}
+          <li><a href="{{ .Permalink }}">#{{ .LinkTitle }}</a></li>
+          {{- end }}
+        </ul>
+        {{- if (.Param "ShowPostNavLinks") }}
+        {{- partial "post_nav_links.html" . }}
+        {{- end }}
+        {{- if (and site.Params.ShowShareButtons (ne .Params.disableShare true)) }}
+        {{- partial "share_icons.html" . -}}
+        {{- end }}
+      </footer>
+    </div>
+
+    {{- if $showArticleToc }}
+    <aside class="article-desktop-toc" aria-label="{{ i18n "toc" | default "목차" }}">
+      <p>{{ i18n "toc" | default "목차" }}</p>
+      {{ .TableOfContents }}
+    </aside>
+    {{- end }}
+  </div>
+
+  {{- if (.Param "comments") }}
+  {{- partial "comments.html" . }}
+  {{- end }}
+</article>
+
+{{- end }}
