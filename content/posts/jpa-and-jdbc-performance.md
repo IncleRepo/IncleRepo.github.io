@@ -1,7 +1,7 @@
 +++
 title = 'JPA를 유지하면서 JDBC를 선택해야 하는 순간'
 date = 2026-04-27T00:59:00+09:00
-lastmod = 2026-08-06T17:40:00+09:00
+lastmod = 2026-08-06T17:54:00+09:00
 draft = false
 description = 'JPA의 영속성 컨텍스트와 Dirty Checking 비용을 이해하고 대량 변경·삽입·조회에서 JDBC를 선택하는 기준을 정리합니다.'
 categories = ['데이터 접근 설계']

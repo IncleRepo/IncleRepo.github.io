@@ -46,6 +46,27 @@ jobs:
           TZ: Asia/Seoul
         run: hugo --gc --minify --baseURL "${{ steps.pages.outputs.base_url }}/"
 
+      - name: 게시글 무결성 검사
+        run: |
+          set -euo pipefail
+
+          if grep -RIl $'\uFFFD' content/posts public/posts; then
+            echo "손상된 대체 문자(�)가 발견되었습니다."
+            exit 1
+          fi
+
+          for source in content/posts/*.md; do
+            slug="$(basename "$source" .md)"
+            if [[ "$slug" == "_index" ]]; then
+              continue
+            fi
+
+            page="public/posts/$slug/index.html"
+            test -s "$page"
+            grep -q '정리' "$page"
+            grep -q '참고 자료' "$page"
+          done
+
       - name: 빌드 결과 업로드
         uses: actions/upload-pages-artifact@v5
         with:

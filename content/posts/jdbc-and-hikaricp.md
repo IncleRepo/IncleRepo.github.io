@@ -1,7 +1,7 @@
 +++
 title = 'JDBC 커넥션은 왜 재사용하고 HikariCP는 어떻게 관리하는가'
 date = 2026-04-23T20:00:00+09:00
-lastmod = 2026-08-06T17:40:00+09:00
+lastmod = 2026-08-06T17:54:00+09:00
 draft = false
 description = 'JDBC 커넥션 생성 비용과 Connection Pool의 역할, HikariCP 설정을 처리량과 대기 시간 관점에서 설명합니다.'
 categories = ['데이터 접근 설계']

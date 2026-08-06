@@ -1,7 +1,7 @@
 +++
 title = 'Lost Update는 왜 발생하고 어떤 동시성 제어를 선택해야 하는가'
 date = 2026-03-16T19:00:00+09:00
-lastmod = 2026-08-06T17:40:00+09:00
+lastmod = 2026-08-06T17:54:00+09:00
 draft = false
 description = '동일한 데이터를 동시에 읽고 수정할 때 발생하는 Lost Update를 재현하고 원자적 SQL, 낙관적 Lock과 비관적 Lock을 비교합니다.'
 categories = ['데이터베이스']

@@ -1,7 +1,7 @@
 +++
 title = 'MySQL 인덱스와 실행 계획을 함께 읽어야 하는 이유'
 date = 2026-03-03T19:00:00+09:00
-lastmod = 2026-08-06T17:40:00+09:00
+lastmod = 2026-08-06T17:54:00+09:00
 draft = false
 description = 'InnoDB의 B+Tree, Clustered·Secondary Index와 복합 인덱스 순서를 이해하고 EXPLAIN과 EXPLAIN ANALYZE로 검증하는 방법을 정리합니다.'
 categories = ['데이터베이스']

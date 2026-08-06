@@ -1,7 +1,7 @@
 +++
 title = 'Offset과 Keyset Pagination은 언제 선택해야 하는가'
 date = 2026-03-05T19:00:00+09:00
-lastmod = 2026-08-06T17:40:00+09:00
+lastmod = 2026-08-06T17:54:00+09:00
 draft = false
 description = 'Offset Pagination이 뒤 페이지에서 느려지는 이유와 Keyset Pagination의 안정적인 Cursor 조건, Page와 Slice 선택 기준을 설명합니다.'
 categories = ['데이터 접근 설계']

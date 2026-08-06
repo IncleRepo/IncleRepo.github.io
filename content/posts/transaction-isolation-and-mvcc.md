@@ -1,7 +1,7 @@
 +++
 title = 'MVCC는 락 없이 일관된 읽기를 어떻게 제공하는가'
 date = 2026-03-24T19:00:00+09:00
-lastmod = 2026-08-06T17:40:00+09:00
+lastmod = 2026-08-06T17:54:00+09:00
 draft = false
 description = '트랜잭션 이상 현상과 격리 수준을 살펴보고 InnoDB의 Read View와 Undo Log가 일관된 읽기를 제공하는 방식을 설명합니다.'
 categories = ['데이터베이스']

@@ -1,7 +1,7 @@
 +++
 title = 'N+1 문제를 Fetch Join만으로 해결할 수 없는 이유'
 date = 2026-02-20T19:00:00+09:00
-lastmod = 2026-08-06T17:40:00+09:00
+lastmod = 2026-08-06T17:54:00+09:00
 draft = false
 description = 'JPA 연관 관계에서 N+1이 발생하는 원리를 확인하고 Fetch Join, Batch Fetching, EntityGraph와 DTO Projection의 선택 기준을 정리합니다.'
 categories = ['JPA']

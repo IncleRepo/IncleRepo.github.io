@@ -1,7 +1,7 @@
 +++
 title = '캐시는 DB 부하를 어떻게 줄이고 Redis는 무엇을 맡는가'
 date = 2026-04-03T19:10:00+09:00
-lastmod = 2026-08-06T17:40:00+09:00
+lastmod = 2026-08-06T17:54:00+09:00
 draft = false
 description = '캐시가 필요한 이유에서 출발해 Redis의 자료형, TTL, 영속성, Pipeline과 Spring Cache 연동을 정리합니다.'
 categories = ['데이터 접근 설계']

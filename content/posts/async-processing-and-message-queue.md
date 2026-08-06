@@ -1,7 +1,7 @@
 +++
 title = '@Async는 언제 충분하고 언제 메시지 큐가 필요한가'
 date = 2026-05-12T19:30:00+09:00
-lastmod = 2026-08-06T17:40:00+09:00
+lastmod = 2026-08-06T17:54:00+09:00
 draft = false
 description = 'Spring @Async와 메시지 큐가 요청과 작업을 분리하는 방식, 실행 보장과 장애 복구의 차이를 정리합니다.'
 categories = ['비동기 처리']

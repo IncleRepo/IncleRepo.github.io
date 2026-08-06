@@ -1,7 +1,7 @@
 +++
 title = '캐시 전략은 읽기 성능과 데이터 정합성을 어떻게 맞추는가'
 date = 2026-04-10T19:00:00+09:00
-lastmod = 2026-08-06T17:40:00+09:00
+lastmod = 2026-08-06T17:54:00+09:00
 draft = false
 description = 'Cache Aside, Read Through, Write Through와 Write Behind의 흐름을 비교하고 무효화와 동시 요청 문제를 정리합니다.'
 categories = ['데이터 접근 설계']
