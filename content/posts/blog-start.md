@@ -3,7 +3,8 @@ title = '블로그 시작'
 date = 2026-08-05T17:01:39+09:00
 lastmod = 2026-08-05T17:01:39+09:00
 draft = false
-categories = ['기술 문서화와 AI']
+description = 'Hugo와 GitHub Pages 기반 기술 블로그의 글 목록, 카테고리, 태그, 목차와 코드 표시를 확인합니다.'
+categories = ['개발 문서화']
 tags = ['Hugo', 'GitHub Pages']
 +++
 

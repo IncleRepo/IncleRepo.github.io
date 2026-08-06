@@ -4,7 +4,7 @@ timeZone = 'Asia/Seoul'
 defaultContentLanguage = 'ko'
 title = 'Dev Archive'
 theme = 'PaperMod'
-copyright = '© 2026 [인클](https://github.com/IncleRepo)'
+copyright = '© 2026 [김학인](https://github.com/IncleRepo)'
 
 enableRobotsTXT = true
 
@@ -13,7 +13,7 @@ enableRobotsTXT = true
 
 [params]
   env = 'production'
-  author = '인클'
+  author = '김학인'
   description = '백엔드 개발 과정에서 공부한 내용을 기록합니다.'
   defaultTheme = 'auto'
   disableThemeToggle = false
@@ -29,10 +29,14 @@ enableRobotsTXT = true
     Content = '백엔드 개발 과정에서 공부한 내용을 기록합니다.'
 
   [params.assets]
-    favicon = '/favicon-v2.ico'
-    favicon16x16 = '/favicon-v2-16x16.png'
-    favicon32x32 = '/favicon-v2-32x32.png'
-    apple_touch_icon = '/apple-touch-icon-v2.png'
+    favicon = '/favicon-moon.svg'
+    favicon16x16 = '/favicon-moon-16x16.png'
+    favicon32x32 = '/favicon-moon-32x32.png'
+    apple_touch_icon = '/apple-touch-icon-moon.png'
+
+  [params.schema]
+    publisherType = 'Person'
+    sameAs = ['https://github.com/IncleRepo']
 
 [[menu.main]]
   identifier = 'posts'
