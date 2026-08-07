@@ -191,8 +191,13 @@ body:has(.post-single--hybrid) {
 .article-desktop-toc {
   position: sticky;
   top: 28px;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  max-height: calc(100vh - 56px);
   padding: 15px 0 15px 18px;
   border-left: 1px solid var(--border);
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .article-desktop-toc > p {
@@ -202,6 +207,30 @@ body:has(.post-single--hybrid) {
   font-weight: 700;
 }
 
+.article-desktop-toc-scroll {
+  min-height: 0;
+  padding-right: 8px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scroll-behavior: smooth;
+  scrollbar-color: color-mix(in srgb, var(--primary) 24%, transparent) transparent;
+  scrollbar-width: thin;
+}
+
+.article-desktop-toc-scroll::-webkit-scrollbar {
+  width: 5px;
+}
+
+.article-desktop-toc-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.article-desktop-toc-scroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--primary) 24%, transparent);
+}
+
 .article-desktop-toc nav ul {
   margin: 0;
   padding: 0;
@@ -209,25 +238,44 @@ body:has(.post-single--hybrid) {
 }
 
 .article-desktop-toc nav ul ul {
-  margin-top: 5px;
-  padding-left: 12px;
+  margin-top: 2px;
+  padding-left: 10px;
 }
 
 .article-desktop-toc nav li {
-  margin: 7px 0;
+  margin: 3px 0;
 }
 
 .article-desktop-toc nav a {
   display: block;
+  margin-left: -8px;
+  padding: 3px 8px;
+  border-radius: 6px;
   color: var(--secondary);
   font-size: 13px;
   line-height: 1.55;
   text-decoration: none;
   word-break: keep-all;
+  overflow-wrap: anywhere;
+  transition: color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .article-desktop-toc nav a:hover {
   color: var(--primary);
+  background: var(--article-surface-subtle);
+}
+
+.article-desktop-toc nav a:focus-visible {
+  color: var(--primary);
+  outline: 2px solid var(--article-border-strong);
+  outline-offset: 1px;
+}
+
+.article-desktop-toc nav a.is-active {
+  color: var(--primary);
+  font-weight: 650;
+  background: var(--article-surface-subtle);
+  box-shadow: inset 2px 0 color-mix(in srgb, var(--primary) 55%, transparent);
 }
 
 .article-mobile-toc {
@@ -246,7 +294,7 @@ body:has(.post-single--hybrid) {
 }
 
 .article-toc-content nav ul {
-  margin: 13px 0 0;
+  margin: 0;
   padding-left: 20px;
 }
 
@@ -258,6 +306,19 @@ body:has(.post-single--hybrid) {
   color: var(--secondary);
   font-size: 14px;
   text-decoration: none;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.article-toc-content {
+  max-height: min(55vh, 420px);
+  margin-top: 13px;
+  padding-right: 8px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-color: color-mix(in srgb, var(--primary) 24%, transparent) transparent;
+  scrollbar-width: thin;
 }
 
 .article-code-block {

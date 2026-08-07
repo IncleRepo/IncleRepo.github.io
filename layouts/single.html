@@ -80,7 +80,9 @@
     {{- if $showArticleToc }}
     <aside class="article-desktop-toc" aria-label="{{ i18n "toc" | default "목차" }}">
       <p>{{ i18n "toc" | default "목차" }}</p>
-      {{ .TableOfContents }}
+      <div class="article-desktop-toc-scroll">
+        {{ .TableOfContents }}
+      </div>
     </aside>
     {{- end }}
   </div>
@@ -89,5 +91,9 @@
   {{- partial "comments.html" . }}
   {{- end }}
 </article>
+
+{{- if $showArticleToc }}
+{{- partial "article_toc_script.html" . }}
+{{- end }}
 
 {{- end }}

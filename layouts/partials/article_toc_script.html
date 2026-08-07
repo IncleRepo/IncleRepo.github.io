@@ -1,0 +1,70 @@
+<script>
+(() => {
+  const toc = document.querySelector(".article-desktop-toc-scroll");
+  if (!toc) return;
+
+  const links = Array.from(toc.querySelectorAll('a[href^="#"]'));
+  const entries = links
+    .map((link) => {
+      const id = decodeURIComponent(link.hash.slice(1));
+      return { link, heading: document.getElementById(id) };
+    })
+    .filter((entry) => entry.heading);
+
+  if (!entries.length) return;
+
+  let activeLink;
+  let ticking = false;
+
+  const setActiveLink = () => {
+    const threshold = 140;
+    let current = entries[0];
+
+    for (const entry of entries) {
+      if (entry.heading.getBoundingClientRect().top <= threshold) {
+        current = entry;
+      } else {
+        break;
+      }
+    }
+
+    if (activeLink === current.link) return;
+
+    for (const entry of entries) {
+      const isActive = entry.link === current.link;
+      entry.link.classList.toggle("is-active", isActive);
+      if (isActive) {
+        entry.link.setAttribute("aria-current", "location");
+      } else {
+        entry.link.removeAttribute("aria-current");
+      }
+    }
+
+    activeLink = current.link;
+
+    const linkTop = activeLink.offsetTop;
+    const linkBottom = linkTop + activeLink.offsetHeight;
+    const visibleTop = toc.scrollTop;
+    const visibleBottom = visibleTop + toc.clientHeight;
+
+    if (linkTop < visibleTop || linkBottom > visibleBottom) {
+      toc.scrollTo({
+        top: Math.max(0, linkTop - toc.clientHeight / 2),
+        behavior: "smooth",
+      });
+    }
+  };
+
+  const requestUpdate = () => {
+    if (ticking) return;
+    ticking = true;
+    window.requestAnimationFrame(() => {
+      setActiveLink();
+      ticking = false;
+    });
+  };
+
+  setActiveLink();
+  window.addEventListener("scroll", requestUpdate, { passive: true });
+})();
+</script>
