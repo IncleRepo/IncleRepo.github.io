@@ -1,7 +1,7 @@
 +++
 title = '@Async는 언제 충분하고 언제 메시지 큐가 필요한가'
 date = 2026-05-12T19:30:00+09:00
-lastmod = 2026-08-06T17:54:00+09:00
+lastmod = 2026-08-07T16:49:40+09:00
 draft = false
 description = 'Spring @Async와 메시지 큐가 요청과 작업을 분리하는 방식, 실행 보장과 장애 복구의 차이를 정리합니다.'
 categories = ['비동기 처리']
@@ -13,6 +13,8 @@ tags = ['Spring', 'Async', 'Kafka', '메시지 큐']
 Spring의 `@Async`와 Kafka 같은 메시지 큐는 모두 이 분리를 지원한다. 하지만 작업을 어디에 보관하고, 장애가 났을 때 어떻게 복구하는지가 다르다. 짧고 유실되어도 다시 수행할 수 있는 작업에는 `@Async`가 단순하고, 반드시 처리해야 하거나 여러 소비자가 독립적으로 받아야 하는 작업에는 메시지 큐가 더 잘 맞는다.
 
 ## 비동기 처리는 무엇을 줄이는가
+
+![동기·비동기와 Blocking·Non-Blocking의 조합](/images/posts/async-processing-and-message-queue/legacy-01.png "동기·비동기와 Blocking·Non-Blocking은 서로 다른 기준이다")
 
 비동기를 이해할 때 먼저 `동기·비동기`와 `Blocking·Non-Blocking`을 구분해야 한다. 두 쌍은 비슷하게 들리지만 바라보는 대상이 다르다.
 
@@ -112,6 +114,16 @@ corePoolSize까지 작업 스레드 사용
 
 ## 메시지 큐가 바꾸는 경계
 
+![Kafka의 Producer, Broker, Topic, Partition, Consumer 구조](/images/posts/async-processing-and-message-queue/legacy-02.png "Kafka 기본 구조")
+
+Spring에서 Kafka를 연결할 때도 구조는 같다. 의존성을 추가하고 Broker 주소를 설정한 뒤, Producer는 `KafkaTemplate`, Consumer는 `@KafkaListener`로 이 경계에 연결된다.
+
+![Spring Kafka 의존성 구성](/images/posts/async-processing-and-message-queue/legacy-03.png "Spring Kafka 의존성")
+
+![Kafka Broker 연결 설정](/images/posts/async-processing-and-message-queue/legacy-04.png "Kafka Broker 연결 설정")
+
+![KafkaTemplate을 사용한 메시지 발행 예시](/images/posts/async-processing-and-message-queue/legacy-05.png "Spring에서 Kafka 메시지 발행")
+
 메시지 큐를 사용하면 작업이 애플리케이션 프로세스 밖의 Broker에 기록된다.
 
 ```text
@@ -204,6 +216,10 @@ public void consume(OrderCompletedEvent event) {
 결국 `@Async`와 메시지 큐의 차이는 문법보다 작업을 어디에 남기고 누가 실패를 복구하느냐에 있다. 이제 앞에서 확인한 실행 위치, 유실 가능성, 중복과 복구 요구를 선택 기준으로 묶어볼 수 있다.
 
 ## 무엇을 선택할까
+
+메시지 큐를 선택했다면 전달 성공 여부만 볼 것이 아니라 Consumer Lag, 실패율과 재시도처럼 실제 처리 상태를 관찰해야 한다.
+
+![Kafka 처리 상태를 확인하는 Grafana 대시보드](/images/posts/async-processing-and-message-queue/legacy-06.png "Kafka 모니터링 예시")
 
 `@Async`가 잘 맞는 경우는 다음과 같다.
 

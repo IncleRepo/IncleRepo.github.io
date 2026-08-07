@@ -1,7 +1,7 @@
 +++
 title = 'Lost Update는 왜 발생하고 어떤 동시성 제어를 선택해야 하는가'
 date = 2026-03-16T19:00:00+09:00
-lastmod = 2026-08-06T17:54:00+09:00
+lastmod = 2026-08-07T16:49:40+09:00
 draft = false
 description = '동일한 데이터를 동시에 읽고 수정할 때 발생하는 Lost Update를 재현하고 원자적 SQL, 낙관적 Lock과 비관적 Lock을 비교합니다.'
 categories = ['데이터베이스']
@@ -86,6 +86,12 @@ if (updated == 0) {
 
 ## 낙관적 Lock은 충돌을 발견한다
 
+![Entity에 Version 필드를 선언한 낙관적 Lock 예시](/images/posts/lost-update/legacy-01.png "JPA @Version")
+
+![Version을 조건에 포함한 UPDATE SQL](/images/posts/lost-update/legacy-02.png "Version으로 충돌을 감지하는 UPDATE")
+
+![낙관적 Lock 충돌을 처리하는 Service 예시](/images/posts/lost-update/legacy-03.png "낙관적 Lock 처리 예시")
+
 낙관적 Lock은 동시에 수정하는 경우가 드물다고 가정한다. Entity에 Version을 두고 읽었던 Version이 그대로일 때만 Update한다.
 
 ```java
@@ -130,6 +136,10 @@ Transaction B: OptimisticLockException
 충돌이 예외적인 상황이라면 이 방식이 효율적이다. 반대로 같은 행을 자주 다투고, 읽은 최신 상태를 기준으로 뒤의 판단을 반드시 이어가야 한다면 실패 후 재시도보다 처음부터 변경 순서를 세우는 편이 나을 수 있다.
 
 ## 비관적 Lock은 다른 변경을 기다리게 한다
+
+![PESSIMISTIC_WRITE를 선언한 Repository 예시](/images/posts/lost-update/legacy-04.png "JPA 비관적 Lock")
+
+![FOR UPDATE가 포함된 비관적 Lock 실행 SQL](/images/posts/lost-update/legacy-05.png "비관적 Lock 실행 SQL")
 
 비관적 Lock은 조회 시점부터 다른 트랜잭션의 변경을 막는다.
 

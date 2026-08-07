@@ -1,7 +1,7 @@
 +++
 title = '캐시는 DB 부하를 어떻게 줄이고 Redis는 무엇을 맡는가'
 date = 2026-04-03T19:10:00+09:00
-lastmod = 2026-08-06T17:54:00+09:00
+lastmod = 2026-08-07T16:49:40+09:00
 draft = false
 description = '캐시가 필요한 이유에서 출발해 Redis의 자료형, TTL, 영속성, Pipeline과 Spring Cache 연동을 정리합니다.'
 categories = ['데이터 접근 설계']
@@ -33,6 +33,12 @@ Redis는 애플리케이션 안에 있는 Java `Map`이 아니라 별도 프로�
 이 비용을 줄이려면 무엇을 Key 하나에 저장할지부터 정해야 한다. Redis는 단순한 Cache Map이 아니라 필요한 연산에 맞춰 자료형을 고를 수 있는 저장소다.
 
 ## Redis의 Key와 자료형
+
+![메모리 기반 데이터 저장소 Redis](/images/posts/redis-cache-basics/legacy-01.png "Redis")
+
+![Client 요청을 처리하는 Redis Server의 구조](/images/posts/redis-cache-basics/legacy-02.png "Redis Server의 요청 처리 흐름")
+
+![Redis가 제공하는 주요 자료형](/images/posts/redis-cache-basics/legacy-03.png "Redis 자료형")
 
 Redis는 단순한 문자열 저장소가 아니라 자료구조 서버다. 자주 사용하는 자료형은 다음과 같다.
 

@@ -1,7 +1,7 @@
 +++
 title = '세션과 JWT는 어떤 문제를 다르게 해결하는가'
 date = 2026-04-29T19:40:00+09:00
-lastmod = 2026-08-06T17:54:00+09:00
+lastmod = 2026-08-07T16:49:40+09:00
 draft = false
 description = 'HTTP의 무상태성과 인증 상태 유지 문제에서 출발해 서버 세션과 JWT의 구조, 확장과 폐기 전략을 비교합니다.'
 categories = ['애플리케이션 보안']
@@ -28,6 +28,8 @@ GET /posts
 <!--more-->
 
 ## 세션은 식별자만 클라이언트에 둔다
+
+![Cookie를 이용해 Session ID를 주고받는 흐름](/images/posts/session-and-jwt/legacy-01.png "Cookie와 Session의 기본 흐름")
 
 세션 방식에서는 인증 정보를 서버에 저장하고, 클라이언트에는 그 정보를 찾을 수 있는 임의의 Session ID만 전달한다.
 
@@ -79,7 +81,15 @@ userId=15, role=MEMBER 확인
 
 세션은 클라이언트의 식별자로 서버 상태를 찾는다. 반대로 요청 자체에 인증에 필요한 Claim을 담아 각 서버가 검증하게 만들면 중앙 조회 의존성을 줄일 수 있는데, 이것이 JWT가 제공하는 기본 방향이다.
 
+서버가 여러 대라면 세션을 어느 서버에서 찾을지도 결정해야 한다. 한 사용자의 요청을 같은 서버로 보내는 Sticky Session은 단순하지만 특정 서버에 부하와 상태가 집중된다. 세션을 복제하거나 외부 저장소에서 공유하면 어느 서버에서도 조회할 수 있지만 동기화와 저장소 운영 비용이 추가된다.
+
+![한 사용자의 요청을 같은 서버로 보내는 Sticky Session](/images/posts/session-and-jwt/legacy-02.png "Sticky Session")
+
+![여러 서버가 세션을 공유하는 Session Clustering](/images/posts/session-and-jwt/legacy-03.png "Session Clustering")
+
 ## JWT는 Claim을 Token 안에 담는다
+
+![Header, Payload, Signature로 구성된 JWT](/images/posts/session-and-jwt/legacy-04.png "JWT의 세 부분")
 
 JWT는 당사자 사이에 전달할 Claim을 URL-safe한 문자열로 표현하는 표준이다. 흔히 사용하는 서명된 JWT는 Header, Payload, Signature로 구성된다.
 
@@ -132,6 +142,8 @@ Authorization Header에서 Token 추출
 이 폐기 문제는 Token의 수명과 바로 연결된다. 하나의 Token을 오래 유지하는 대신 API 호출용과 재발급용의 책임을 나누면 탈취 위험과 사용자 편의 사이를 조절할 수 있다.
 
 ## Access Token과 Refresh Token을 나누는 이유
+
+![Access Token 재발급과 Refresh Token Rotation 흐름](/images/posts/session-and-jwt/legacy-05.png "Refresh Token Rotation")
 
 Access Token의 수명을 길게 잡으면 매번 로그인할 필요는 없지만 탈취됐을 때 공격 가능한 시간도 길어진다. 반대로 수명을 지나치게 짧게 잡으면 사용자 경험이 나빠진다.
 

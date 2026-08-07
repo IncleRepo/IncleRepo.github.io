@@ -1,7 +1,7 @@
 +++
 title = 'MVCC는 락 없이 일관된 읽기를 어떻게 제공하는가'
 date = 2026-03-24T19:00:00+09:00
-lastmod = 2026-08-06T17:54:00+09:00
+lastmod = 2026-08-07T16:49:40+09:00
 draft = false
 description = '트랜잭션 이상 현상과 격리 수준을 살펴보고 InnoDB의 Read View와 Undo Log가 일관된 읽기를 제공하는 방식을 설명합니다.'
 categories = ['데이터베이스']
@@ -58,6 +58,8 @@ Transaction A: 같은 조건 조회 → 4행
 
 ## SQL 표준의 네 격리 수준
 
+![트랜잭션 격리 수준별 Dirty Read, Non-repeatable Read, Phantom Read 비교](/images/posts/transaction-isolation-and-mvcc/legacy-03.svg "격리 수준별 읽기 현상 비교")
+
 | 격리 수준 | Dirty Read | Non-repeatable Read | Phantom Read |
 | --- | --- | --- | --- |
 | Read Uncommitted | 허용 가능 | 허용 가능 | 허용 가능 |
@@ -72,6 +74,10 @@ Transaction A: 같은 조건 조회 → 4행
 표만으로는 Lock 없이 같은 값을 반복해서 읽을 수 있는 이유가 보이지 않는다. InnoDB의 Consistent Read를 이해하려면 현재 행에서 과거 Version을 복원하는 MVCC 구조를 살펴봐야 한다.
 
 ## MVCC가 이전 값을 만드는 방법
+
+![트랜잭션별 Read View가 판단하는 가시성 범위](/images/posts/transaction-isolation-and-mvcc/legacy-01.png "Read View")
+
+![Undo Log의 이전 버전이 연결되는 Record History](/images/posts/transaction-isolation-and-mvcc/legacy-02.png "InnoDB Record History")
 
 InnoDB가 행을 변경하면 이전 값을 복원할 수 있는 정보를 Undo Log에 남긴다. 트랜잭션은 Read View를 기준으로 어떤 Transaction ID의 변경을 볼 수 있는지 판단한다.
 
@@ -122,6 +128,8 @@ Repeatable Read : 트랜잭션의 첫 Consistent Read에서 만든 Read View 재
 Snapshot은 일관된 조회를 제공하지만 이후의 변경 순서를 예약하지는 않는다. 읽은 값을 기준으로 곧바로 수정해야 한다면 과거 Version을 보는 것만으로는 부족하고 현재 행에 대한 Lock이 필요할 수 있다.
 
 ## 읽기 Lock은 언제 필요한가
+
+![Record Lock, Gap Lock과 Next-Key Lock의 범위](/images/posts/transaction-isolation-and-mvcc/legacy-04.png "InnoDB의 Record·Gap·Next-Key Lock")
 
 조회한 값을 바탕으로 곧바로 변경할 때 단순 Snapshot만으로는 다른 트랜잭션의 변경을 막을 수 없다.
 

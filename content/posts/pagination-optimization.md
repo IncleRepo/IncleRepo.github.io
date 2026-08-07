@@ -1,7 +1,7 @@
 +++
 title = 'Offset과 Keyset Pagination은 언제 선택해야 하는가'
 date = 2026-03-05T19:00:00+09:00
-lastmod = 2026-08-06T17:54:00+09:00
+lastmod = 2026-08-07T16:49:40+09:00
 draft = false
 description = 'Offset Pagination이 뒤 페이지에서 느려지는 이유와 Keyset Pagination의 안정적인 Cursor 조건, Page와 Slice 선택 기준을 설명합니다.'
 categories = ['데이터 접근 설계']
@@ -15,6 +15,8 @@ Pagination이 필요한 이유부터 보면 두 방식의 차이가 분명해진
 Keyset Pagination은 마지막으로 본 정렬 값을 다음 조회 조건으로 사용한다. 깊은 페이지에서도 Index 범위 탐색을 이어갈 수 있지만 임의의 페이지 번호로 이동하기 어렵다. 두 방식은 속도만이 아니라 사용자 화면의 탐색 방식까지 함께 보고 선택해야 한다.
 
 ## Offset Pagination은 어떻게 동작하는가
+
+![Offset Pagination의 EXPLAIN 결과](/images/posts/pagination-optimization/legacy-01.png "Offset Pagination 실행계획")
 
 ```sql
 SELECT id, title, created_at
@@ -46,6 +48,10 @@ Offset 방식의 장점도 분명하다.
 문제는 같은 탐색 방식을 데이터가 계속 쌓이는 깊은 목록에도 그대로 적용할 때다. 앞선 행을 매번 건너뛰는 비용을 피하려면 페이지 번호가 아니라 마지막으로 읽은 위치에서 조회를 이어가야 한다.
 
 ## Keyset Pagination은 마지막 위치에서 이어간다
+
+![Keyset Pagination의 EXPLAIN 결과](/images/posts/pagination-optimization/legacy-02.png "Keyset Pagination 실행계획")
+
+![Offset과 Keyset Pagination의 실행 시간 비교](/images/posts/pagination-optimization/legacy-03.png "Offset과 Keyset 실행 시간 비교")
 
 첫 조회는 정렬의 처음부터 일정 개수를 가져온다.
 
@@ -130,6 +136,14 @@ pageSize = 20
 이 차이에서 별도로 확인할 비용이 Count Query다. 전체 페이지 수가 필요한 `Page`를 선택했다면 목록 조회가 빨라도 Count가 병목이 될 수 있다.
 
 ## Count Query는 언제 비싼가
+
+COUNT 비용을 판단할 때는 쿼리만 보지 않고 실행계획과 실제 데이터 규모를 함께 확인한다. 정확한 개수가 필요하지 않다면 통계 기반 근사값을 사용할 수 있고, 정확한 값을 빠르게 반복 조회해야 한다면 별도의 Counter Table도 선택지가 된다.
+
+![COUNT Query 실행계획 확인](/images/posts/pagination-optimization/legacy-04.png "COUNT Query 실행계획")
+
+![Counter Table을 갱신하는 예시](/images/posts/pagination-optimization/legacy-05.png "Counter Table 갱신")
+
+![Counter Table에서 집계 값을 조회하는 예시](/images/posts/pagination-optimization/legacy-06.png "Counter Table 조회")
 
 단순한 작은 테이블의 `COUNT(*)`는 문제가 아닐 수 있다. 하지만 복잡한 Filter와 Join이 붙고 대상 행이 매우 많으면 목록 쿼리와 별도로 큰 범위를 다시 처리해야 한다.
 

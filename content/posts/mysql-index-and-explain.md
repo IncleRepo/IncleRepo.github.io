@@ -1,7 +1,7 @@
 +++
 title = 'MySQL 인덱스와 실행 계획을 함께 읽어야 하는 이유'
 date = 2026-03-03T19:00:00+09:00
-lastmod = 2026-08-06T17:54:00+09:00
+lastmod = 2026-08-07T16:49:40+09:00
 draft = false
 description = 'InnoDB의 B+Tree, Clustered·Secondary Index와 복합 인덱스 순서를 이해하고 EXPLAIN과 EXPLAIN ANALYZE로 검증하는 방법을 정리합니다.'
 categories = ['데이터베이스']
@@ -15,6 +15,10 @@ tags = ['MySQL', '인덱스', 'EXPLAIN', 'B+Tree']
 인덱스를 만들었다는 사실만으로 Query가 빨라지지도 않는다. `WHERE`, `JOIN`, `ORDER BY`, 반환 Column과 데이터 분포에 따라 Optimizer가 다른 경로를 선택한다. 설계와 실행 계획을 함께 봐야 하는 이유다.
 
 ## InnoDB는 왜 B+Tree를 사용하는가
+
+![B-Tree와 Binary Tree의 탐색 구조 비교](/images/posts/mysql-index-and-explain/legacy-01.jpg "B-Tree와 Binary Tree")
+
+![B+Tree의 Root, Branch와 Leaf Node 구조](/images/posts/mysql-index-and-explain/legacy-03.png "B+Tree 구조")
 
 균형 잡힌 Tree는 데이터가 늘어도 탐색 깊이가 급격히 커지지 않는다. B+Tree는 한 Node에 여러 Key를 저장해 높이를 낮추고, Leaf Node를 정렬된 순서로 연결한다.
 
@@ -32,6 +36,8 @@ B+Tree에서는 실제 탐색에 필요한 Key가 내부 Node에 있고, Leaf No
 이 B+Tree가 실제 행을 어디에 저장하는지에 따라 한 번의 탐색으로 끝날지, 다른 Tree를 다시 찾아갈지가 달라진다. InnoDB의 Clustered Index와 Secondary Index를 구분해야 하는 이유다.
 
 ## Clustered Index와 Secondary Index
+
+![Clustered Index와 Secondary Index의 탐색 경로](/images/posts/mysql-index-and-explain/legacy-02.png "Clustered Index와 Secondary Index")
 
 InnoDB Table에는 행 데이터를 담는 Clustered Index가 하나 있다. 일반적으로 Primary Key가 Clustered Index가 된다.
 
@@ -71,6 +77,8 @@ email 인덱스에서 user@example.com 탐색
 Secondary Index를 설계할 때는 Column을 포함하는 것만으로 충분하지 않다. B+Tree가 앞에서부터 정렬된다는 성질 때문에 복합 인덱스의 Column 순서가 실제 탐색 범위를 결정한다.
 
 ## 복합 인덱스는 순서가 핵심이다
+
+![복합 인덱스 실습에 사용한 테이블과 인덱스 구성](/images/posts/mysql-index-and-explain/legacy-04.png "복합 인덱스 실습 구성")
 
 다음 인덱스는 `(status, created_at, id)` 순서로 정렬된다.
 
@@ -130,6 +138,18 @@ Covering Index는 별도의 인덱스 종류가 아니다. **현재 Query가 필
 여기까지는 설계 단계에서 예상한 동작이다. Optimizer가 실제로 같은 Index를 선택했고 몇 행을 읽는지는 실행 계획으로 확인해야 한다.
 
 ## EXPLAIN에서 먼저 볼 값
+
+실행계획은 한 열만 따로 읽기보다 접근 방식, 선택한 인덱스, 비교 대상과 예상 행 수를 한 흐름으로 확인하는 편이 이해하기 쉽다. 다음 화면은 각 값을 실제 `EXPLAIN` 결과에서 확인한 예시다.
+
+![EXPLAIN의 기본 실행계획](/images/posts/mysql-index-and-explain/legacy-05.png "EXPLAIN 기본 결과")
+
+![상수 조건에서 ref가 const로 표시된 실행계획](/images/posts/mysql-index-and-explain/legacy-06.png "ref가 const인 경우")
+
+![Join 조건의 컬럼이 ref에 표시된 실행계획](/images/posts/mysql-index-and-explain/legacy-07.png "Join에서 ref를 읽는 방법")
+
+![rows와 filtered를 함께 확인하는 실행계획](/images/posts/mysql-index-and-explain/legacy-08.png "rows와 filtered")
+
+![인덱스 구성 이후 달라진 실행계획](/images/posts/mysql-index-and-explain/legacy-09.png "인덱스 적용 후 실행계획")
 
 ```sql
 EXPLAIN
@@ -194,6 +214,30 @@ Index를 사용했는지 확인한 뒤에는 `Extra`에 나타나는 추가 작�
 이 신호를 줄이려면 먼저 Query와 Index가 어긋난 이유를 찾아야 한다. 단순히 새 Index를 추가하기보다 조건식이 정렬 값을 훼손하거나 복합 인덱스의 선두를 건너뛰지는 않았는지 확인한다.
 
 ## 인덱스를 타지 못하는 흔한 이유
+
+다음 예시는 쿼리 형태를 바꿨을 때 옵티마이저의 선택이 어떻게 달라지는지 보여준다. 인덱스가 있다는 사실보다 해당 조건이 B+Tree의 시작 위치와 범위를 결정할 수 있는지가 중요하다.
+
+![인덱스 컬럼에 함수를 적용한 실행계획](/images/posts/mysql-index-and-explain/legacy-10.png "인덱스 컬럼에 함수를 적용한 경우")
+
+![암묵적 형변환이 포함된 실행계획](/images/posts/mysql-index-and-explain/legacy-11.png "암묵적 형변환")
+
+![OR 조건에서 index_merge가 선택된 실행계획](/images/posts/mysql-index-and-explain/legacy-12.png "OR 조건과 index_merge")
+
+![앞쪽 와일드카드가 포함된 LIKE 검색](/images/posts/mysql-index-and-explain/legacy-13.png "앞쪽 와일드카드 LIKE")
+
+![앞쪽 와일드카드 유무에 따른 실행계획 비교](/images/posts/mysql-index-and-explain/legacy-14.png "LIKE 검색의 실행계획 비교")
+
+![SELECT *로 Covering Index가 깨진 실행계획](/images/posts/mysql-index-and-explain/legacy-15.png "SELECT *와 Covering Index")
+
+![필요한 컬럼만 조회한 실행계획](/images/posts/mysql-index-and-explain/legacy-16.png "필요한 컬럼만 조회한 경우")
+
+### OR과 UNION ALL의 실행계획 비교
+
+`OR`은 여러 인덱스 결과를 하나의 실행계획 안에서 병합할 수 있다. 같은 조건을 독립된 `SELECT`로 나누어 `UNION ALL`로 연결하면 각 쿼리가 자신에게 맞는 인덱스를 선택할 여지가 생긴다. 어느 쪽이 유리한지는 중복 가능성과 실제 실행계획을 함께 확인해야 한다.
+
+![OR 조건에서 결과를 병합하는 실행계획](/images/posts/mysql-index-and-explain/legacy-17.png "OR의 index_merge 실행계획")
+
+![UNION ALL로 나눈 쿼리의 실행계획](/images/posts/mysql-index-and-explain/legacy-18.png "UNION ALL 실행계획")
 
 - 인덱스 Column에 함수를 적용해 원래 정렬 값을 바로 비교할 수 없음
 - 문자열 Column과 숫자처럼 타입이 다른 값을 비교해 암시적 변환 발생

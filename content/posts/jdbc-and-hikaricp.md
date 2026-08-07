@@ -1,7 +1,7 @@
 +++
 title = 'JDBC 커넥션은 왜 재사용하고 HikariCP는 어떻게 관리하는가'
 date = 2026-04-23T20:00:00+09:00
-lastmod = 2026-08-06T17:54:00+09:00
+lastmod = 2026-08-07T16:49:40+09:00
 draft = false
 description = 'JDBC 커넥션 생성 비용과 Connection Pool의 역할, HikariCP 설정을 처리량과 대기 시간 관점에서 설명합니다.'
 categories = ['데이터 접근 설계']
@@ -13,6 +13,10 @@ tags = ['JDBC', 'HikariCP', 'Connection Pool', '데이터베이스']
 Connection Pool은 미리 만든 커넥션을 보관했다가 빌려주고, 사용이 끝나면 다시 회수한다. HikariCP는 Spring Boot에서 널리 사용되는 JDBC Connection Pool 구현체다.
 
 ## JDBC는 공통 인터페이스다
+
+![애플리케이션에서 JDBC Driver를 거쳐 데이터베이스로 연결되는 구조](/images/posts/jdbc-and-hikaricp/legacy-01.png "JDBC 연결 구조")
+
+![JDBC API와 Driver 구현의 관계](/images/posts/jdbc-and-hikaricp/legacy-02.png "JDBC의 인터페이스 기반 구조")
 
 Java 애플리케이션은 JDBC API를 통해 데이터베이스와 통신한다. 실제 Protocol과 Socket 통신은 MySQL Connector/J 같은 JDBC Driver가 담당한다.
 
@@ -74,6 +78,8 @@ Pool을 사용하지 않는다면 `DriverManager.getConnection()`으로 얻은 �
 
 ## Pool이 가득 차면 무슨 일이 생기는가
 
+![HikariCP가 Connection을 탐색하고 대여하는 흐름](/images/posts/jdbc-and-hikaricp/legacy-03.png "HikariCP Connection 획득 흐름")
+
 HikariCP의 `maximumPoolSize`는 유휴 커넥션과 사용 중인 커넥션을 합친 최대 크기다. 모든 커넥션이 사용 중이면 `getConnection()` 호출은 사용 가능한 커넥션이 돌아올 때까지 기다린다. `connectionTimeout`이 지나면 `SQLException`이 발생한다.
 
 여기서 유휴 커넥션은 연결이 끊긴 커넥션이 아니라, 데이터베이스와 연결된 채로 현재 빌려간 요청이 없는 커넥션이다. Active는 요청이 빌려 사용 중인 수, Idle은 바로 빌려줄 수 있는 수, Pending은 커넥션을 기다리는 요청 수라고 이해하면 된다.
@@ -108,6 +114,8 @@ spring:
 ```
 
 ### maximumPoolSize
+
+![Pool 크기에 따른 TPS와 응답 시간 실험 결과](/images/posts/jdbc-and-hikaricp/legacy-04.png "maximumPoolSize 실험 결과")
 
 데이터베이스에 동시에 열 수 있는 실제 커넥션의 상한이다. 웹 스레드 수와 같게 맞추는 값이 아니다. 한 요청이 커넥션을 점유하는 시간, 데이터베이스의 처리 능력, 같은 DB를 사용하는 다른 애플리케이션까지 함께 측정해야 한다.
 

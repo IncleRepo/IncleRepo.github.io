@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="500" viewBox="0 0 1000 500" role="img" aria-labelledby="title desc">
+  <title id="title">트랜잭션 격리 수준별 읽기 현상 비교</title>
+  <desc id="desc">Read Uncommitted부터 Serializable까지 Dirty Read, Non-repeatable Read, Phantom Read의 허용 여부를 비교한 표</desc>
+  <rect width="1000" height="500" rx="24" fill="#f8f8f7"/>
+  <rect x="32" y="32" width="936" height="78" rx="14" fill="#242424"/>
+  <g font-family="Pretendard, Noto Sans KR, sans-serif" font-size="24" font-weight="700" fill="#ffffff">
+    <text x="62" y="81">격리 수준</text>
+    <text x="390" y="81">Dirty Read</text>
+    <text x="590" y="81">Non-repeatable Read</text>
+    <text x="832" y="81">Phantom Read</text>
+  </g>
+  <g stroke="#dededb" stroke-width="2">
+    <line x1="32" y1="190" x2="968" y2="190"/>
+    <line x1="32" y1="280" x2="968" y2="280"/>
+    <line x1="32" y1="370" x2="968" y2="370"/>
+    <line x1="350" y1="110" x2="350" y2="458"/>
+    <line x1="550" y1="110" x2="550" y2="458"/>
+    <line x1="800" y1="110" x2="800" y2="458"/>
+  </g>
+  <g font-family="Pretendard, Noto Sans KR, sans-serif" font-size="23" fill="#242424">
+    <text x="62" y="157">Read Uncommitted</text>
+    <text x="62" y="247">Read Committed</text>
+    <text x="62" y="337">Repeatable Read</text>
+    <text x="62" y="427">Serializable</text>
+  </g>
+  <g font-family="Pretendard, Noto Sans KR, sans-serif" font-size="22" text-anchor="middle">
+    <g fill="#a33d3d">
+      <text x="450" y="157">허용</text><text x="675" y="157">허용</text><text x="884" y="157">허용</text>
+      <text x="675" y="247">허용</text><text x="884" y="247">허용</text>
+      <text x="884" y="337">허용*</text>
+    </g>
+    <g fill="#2f6b50">
+      <text x="450" y="247">방지</text>
+      <text x="450" y="337">방지</text><text x="675" y="337">방지</text>
+      <text x="450" y="427">방지</text><text x="675" y="427">방지</text><text x="884" y="427">방지</text>
+    </g>
+  </g>
+  <text x="50" y="480" font-family="Pretendard, Noto Sans KR, sans-serif" font-size="17" fill="#686868">* SQL 표준 기준. InnoDB의 Repeatable Read는 MVCC와 Next-Key Lock으로 동작이 달라질 수 있다.</text>
+</svg>

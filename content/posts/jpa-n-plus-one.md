@@ -1,7 +1,7 @@
 +++
 title = 'N+1 문제를 Fetch Join만으로 해결할 수 없는 이유'
 date = 2026-02-20T19:00:00+09:00
-lastmod = 2026-08-06T17:54:00+09:00
+lastmod = 2026-08-07T16:49:40+09:00
 draft = false
 description = 'JPA 연관 관계에서 N+1이 발생하는 원리를 확인하고 Fetch Join, Batch Fetching, EntityGraph와 DTO Projection의 선택 기준을 정리합니다.'
 categories = ['JPA']
@@ -112,6 +112,10 @@ Member 20명과 각 Member의 Team을 Join해도 결과는 기본적으로 Membe
 같은 Fetch Join이라도 Collection에서는 결과의 모양이 달라진다. 부모 하나가 여러 자식과 결합하면서 행 수가 늘어나기 때문에 Pagination과 함께 사용할 때 별도의 문제가 생긴다.
 
 ## Collection Fetch Join과 Pagination
+
+![Collection Fetch Join에 Pageable을 적용했을 때 발생하는 Hibernate 경고](/images/posts/jpa-n-plus-one/legacy-01.png "Collection Fetch Join과 메모리 페이징 경고")
+
+![Collection Fetch Join SQL에서 LIMIT과 OFFSET이 사라진 실행 로그](/images/posts/jpa-n-plus-one/legacy-02.png "LIMIT·OFFSET이 적용되지 않은 SQL")
 
 Team과 Member가 일대다이고 Team 목록을 조회하면서 Member Collection까지 Fetch하면 한 Team이 Member 수만큼 반복된다.
 

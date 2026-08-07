@@ -1,7 +1,7 @@
 +++
 title = '캐시 전략은 읽기 성능과 데이터 정합성을 어떻게 맞추는가'
 date = 2026-04-10T19:00:00+09:00
-lastmod = 2026-08-06T17:54:00+09:00
+lastmod = 2026-08-07T16:49:40+09:00
 draft = false
 description = 'Cache Aside, Read Through, Write Through와 Write Behind의 흐름을 비교하고 무효화와 동시 요청 문제를 정리합니다.'
 categories = ['데이터 접근 설계']
@@ -15,6 +15,8 @@ tags = ['캐시', 'Redis', 'Cache Aside', '정합성']
 먼저 두 용어를 짚고 가자. 요청한 값이 캐시에 있으면 Cache Hit, 없으면 Cache Miss다. Hit에서는 원본 저장소를 방문하지 않아 이득을 얻고, Miss에서는 캐시와 원본을 모두 조회한 뒤 다음 요청을 위해 값을 채운다. 따라서 캐시는 조회마다 항상 빠른 장치가 아니라 **반복되는 요청에서 이전 결과를 재사용하는 장치**다.
 
 ## Cache Aside는 애플리케이션이 흐름을 관리한다
+
+![Cache Miss일 때 원본 저장소를 조회하고 캐시에 적재하는 흐름](/images/posts/cache-strategy/legacy-01.png "Cache Aside")
 
 가장 흔한 읽기 패턴은 Cache Aside다.
 
@@ -112,6 +114,10 @@ Service는 캐시 계층만 호출
 
 ## Write Through와 Write Behind
 
+![캐시와 데이터베이스에 함께 기록하는 Write Through](/images/posts/cache-strategy/legacy-02.png "Write Through")
+
+![캐시에 먼저 기록하고 나중에 데이터베이스로 반영하는 Write Behind](/images/posts/cache-strategy/legacy-03.png "Write Behind")
+
 Write Through는 쓰기 요청이 캐시 계층을 통과하면서 원본 저장소까지 동기적으로 반영되는 구조다.
 
 ```text
@@ -146,6 +152,10 @@ Write Behind
 
 Write Behind에서는 사용자가 성공 응답을 받은 뒤에도 DB에는 아직 이전 값이 남아 있을 수 있다. 그사이 캐시나 전달 작업이 사라지면 성공했다고 응답한 변경을 복원할 수 없다. 따라서 단순히 “쓰기 성능이 빠르다”가 아니라 지연 반영을 보존하고 재시도할 장치가 있는지를 먼저 확인해야 한다.
 
+Write Around는 쓰기 요청을 캐시에 넣지 않고 DB에만 반영한다. 자주 읽지 않는 데이터로 캐시가 오염되는 것을 줄일 수 있지만, 변경 직후 처음 조회할 때는 Cache Miss가 발생한다.
+
+![쓰기 요청이 캐시를 우회해 데이터베이스로 향하는 Write Around](/images/posts/cache-strategy/legacy-04.png "Write Around")
+
 이름이 비슷하므로 책임을 표로 다시 묶어보자.
 
 | 전략 | Miss 또는 쓰기를 처리하는 주체 | 원본 반영 시점 | 주의할 점 |
@@ -174,6 +184,8 @@ Write Behind에서는 사용자가 성공 응답을 받은 뒤에도 DB에는 �
 여기서 그대로 복사할 것은 저장소 개수가 아니다. 원본과 Cache의 생명주기를 구분하고, 각 단계가 실패했을 때 다음 조회 경로와 복구 시점을 미리 정하는 사고방식이다.
 
 ## 동시에 Miss가 발생하면 생기는 문제
+
+![동시에 발생한 Cache Miss가 원본 저장소로 몰리는 Cache Stampede](/images/posts/cache-strategy/legacy-05.png "Cache Stampede와 Thundering Herd")
 
 인기 Key가 만료되는 순간 여러 요청이 동시에 들어오면 모두 DB를 조회할 수 있다. 이를 Cache Stampede 또는 Thundering Herd라고 부른다.
 
