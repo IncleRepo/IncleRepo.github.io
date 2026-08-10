@@ -1,7 +1,7 @@
 +++
 title = 'MySQL 인덱스와 실행 계획을 함께 읽어야 하는 이유'
 slug = '2'
-aliases = ['/posts/mysql-index-and-explain/', '/posts/002/']
+aliases = ['/posts/002/']
 date = 2026-03-03T19:00:00+09:00
 lastmod = 2026-08-07T17:29:13+09:00
 draft = false

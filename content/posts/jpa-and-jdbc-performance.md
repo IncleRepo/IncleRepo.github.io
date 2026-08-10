@@ -1,7 +1,7 @@
 +++
 title = 'JPA를 유지하면서 JDBC를 선택해야 하는 순간'
 slug = '10'
-aliases = ['/posts/jpa-and-jdbc-performance/', '/posts/010/']
+aliases = ['/posts/010/']
 date = 2026-04-27T00:59:00+09:00
 lastmod = 2026-08-06T17:54:00+09:00
 draft = false

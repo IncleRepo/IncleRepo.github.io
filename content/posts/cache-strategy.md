@@ -1,7 +1,7 @@
 +++
 title = '캐시 전략은 읽기 성능과 데이터 정합성을 어떻게 맞추는가'
 slug = '7'
-aliases = ['/posts/cache-strategy/', '/posts/007/']
+aliases = ['/posts/007/']
 date = 2026-04-10T19:00:00+09:00
 lastmod = 2026-08-07T16:49:40+09:00
 draft = false
