@@ -3,11 +3,11 @@
   <desc id="desc">Read Uncommitted부터 Serializable까지 Dirty Read, Non-repeatable Read, Phantom Read의 허용 여부를 비교한 표</desc>
   <rect width="1000" height="500" rx="24" fill="#f8f8f7"/>
   <rect x="32" y="32" width="936" height="78" rx="14" fill="#242424"/>
-  <g font-family="Pretendard, Noto Sans KR, sans-serif" font-size="24" font-weight="700" fill="#ffffff">
+  <g font-family="Pretendard, Noto Sans KR, sans-serif" font-size="22" font-weight="700" fill="#ffffff">
     <text x="62" y="81">격리 수준</text>
-    <text x="390" y="81">Dirty Read</text>
-    <text x="590" y="81">Non-repeatable Read</text>
-    <text x="832" y="81">Phantom Read</text>
+    <text x="450" y="81" text-anchor="middle">Dirty Read</text>
+    <text x="675" y="81" text-anchor="middle">Non-repeatable Read</text>
+    <text x="884" y="81" text-anchor="middle">Phantom Read</text>
   </g>
   <g stroke="#dededb" stroke-width="2">
     <line x1="32" y1="190" x2="968" y2="190"/>
