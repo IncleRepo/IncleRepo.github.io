@@ -3,7 +3,7 @@ title = 'Lost Update는 왜 발생하고 어떤 동시성 제어를 선택해야
 slug = '4'
 aliases = ['/posts/004/']
 date = 2026-03-16T19:00:00+09:00
-lastmod = 2026-08-10T10:52:28+09:00
+lastmod = 2026-08-10T17:12:37+09:00
 draft = false
 description = '동시에 같은 데이터를 수정할 때 발생하는 Lost Update부터 단일 UPDATE, 낙관적·비관적 Lock과 Unique Constraint의 선택 기준까지 차례대로 알아봅니다.'
 categories = ['데이터베이스']
@@ -107,7 +107,7 @@ A: 현재 stock 10에서 1 차감 → 9
 B: A의 변경 이후 stock 9에서 1 차감 → 8
 ```
 
-이처럼 중간에 애플리케이션의 읽기와 계산 단계를 두지 않고 데이터베이스의 한 연산으로 처리하는 방식을 원자적 UPDATE라고 볼 수 있다.
+이처럼 애플리케이션에서 값을 읽고 계산하는 단계를 거치지 않고 데이터베이스의 한 연산으로 처리하는 방식을 원자적 UPDATE라고 한다.
 
 ```java
 int updated = productRepository.decreaseStock(productId);
@@ -262,7 +262,7 @@ Optional<Product> findByIdForUpdate(long id);
 
 ![PESSIMISTIC_WRITE를 선언한 Repository 예시](/images/posts/lost-update/legacy-04.png "JPA 비관적 Lock")
 
-일반 `SELECT`는 값을 읽기만 한다. 반면 `SELECT ... FOR UPDATE`는 “이 행을 곧 변경할 것이므로 다른 Transaction이 먼저 변경하지 못하게 잠가 달라”는 의미를 가진 조회다. 이렇게 조회하면서 Lock도 함께 거는 방식을 Locking Read라고 한다.
+일반 `SELECT`는 값을 읽기만 한다. 반면 `SELECT ... FOR UPDATE`는 “이 행을 곧 변경할 것이므로 다른 Transaction이 먼저 변경하지 못하게 잠가 달라”는 뜻의 조회다. 이렇게 조회하면서 Lock도 함께 거는 방식을 Locking Read라고 한다.
 
 ![FOR UPDATE가 포함된 비관적 Lock 실행 SQL](/images/posts/lost-update/legacy-05.png "비관적 Lock 실행 SQL")
 

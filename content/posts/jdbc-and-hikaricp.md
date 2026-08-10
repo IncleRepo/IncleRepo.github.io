@@ -3,7 +3,7 @@ title = 'JDBC 커넥션은 왜 재사용하고 HikariCP는 어떻게 관리하�
 slug = '9'
 aliases = ['/posts/009/']
 date = 2026-04-23T20:00:00+09:00
-lastmod = 2026-08-10T14:28:00+09:00
+lastmod = 2026-08-10T17:12:37+09:00
 draft = false
 description = 'SQL이 JDBC를 거쳐 데이터베이스에 도달하는 과정부터 Connection Pool의 대여·반납·대기·교체와 HikariCP 병목 진단까지 설명합니다.'
 categories = ['데이터 접근 설계']
@@ -183,7 +183,7 @@ DataSource.getConnection()
 → Pool에 반납
 ```
 
-애플리케이션이 `close()`를 호출해도 실제 연결을 끊지 않고 Pool로 돌려보내려면, Pool은 원본 Connection을 감싼 객체를 제공할 수 있다. 이런 객체를 Proxy Connection이라고 볼 수 있다.
+애플리케이션이 `close()`를 호출해도 실제 연결을 끊지 않고 Pool로 돌려보내려면, Pool은 원본 Connection을 감싼 객체를 제공할 수 있다. 이런 객체를 Proxy Connection이라고 한다.
 
 호출자는 일반 Connection과 같은 API를 사용하지만 `close()`의 동작은 HikariCP가 가로챈다. 그래서 애플리케이션은 Pool의 내부 구현을 몰라도 Connection을 빌리고 반납할 수 있다.
 

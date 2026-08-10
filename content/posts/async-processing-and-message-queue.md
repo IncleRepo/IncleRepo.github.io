@@ -3,7 +3,7 @@ title = '@Async는 언제 충분하고 언제 메시지 큐가 필요한가'
 slug = '12'
 aliases = ['/posts/012/']
 date = 2026-05-12T19:30:00+09:00
-lastmod = 2026-08-10T17:01:08+09:00
+lastmod = 2026-08-10T17:12:37+09:00
 draft = false
 description = '느린 부수 작업을 분리하는 @Async부터 작업 유실, Kafka, Transactional Outbox, 순서와 중복 처리까지 단계적으로 알아봅니다.'
 categories = ['비동기 처리']
@@ -385,7 +385,7 @@ Kafka
 
 지금부터 나오는 설정은 메시지 큐를 선택하는 기준이 아니라, 앞에서 본 Producer를 Spring 애플리케이션에서 구성하는 모습을 보여 주는 보충 예시다.
 
-Spring 애플리케이션에서 Kafka에 접근하려면 먼저 Spring Kafka 의존성이 필요하다. 이 의존성은 Kafka Producer와 Consumer를 Spring 방식으로 구성할 수 있는 기능을 제공한다.
+Spring 애플리케이션에서 Kafka에 접근하려면 먼저 Spring Kafka 의존성이 필요하다. 이 의존성을 추가하면 Kafka Producer와 Consumer를 Spring 방식으로 구성할 수 있다.
 
 ![Spring Kafka 의존성 구성](/images/posts/async-processing-and-message-queue/legacy-03.png "Spring Kafka 의존성")
 
@@ -490,7 +490,7 @@ Consumer가 0번부터 4번까지 처리한 뒤 재시작하면 어디서부터 
 2. Kafka에 주문 취소 Event 발행
 ```
 
-첫 번째는 Database, 두 번째는 Kafka라는 서로 다른 시스템에서 실행된다. DB를 먼저 Commit하면 다음 문제가 생길 수 있다.
+첫 번째 작업은 Database에서, 두 번째 작업은 Kafka에서 실행된다. DB를 먼저 Commit하면 다음 문제가 생길 수 있다.
 
 DB Transaction이 보장하는 원자성은 Database 안의 변경에만 적용된다. 같은 Service 메서드 안에서 `repository.save()`와 `kafkaTemplate.send()`를 연달아 호출해도 두 시스템이 하나의 Transaction으로 합쳐지는 것은 아니다.
 
@@ -565,7 +565,7 @@ Outbox 성공 상태로 변경하기 전에 Publisher 종료
 재시작 후 같은 Outbox 다시 발행
 ```
 
-Consumer에게는 같은 Event가 두 번 전달될 수 있다. Outbox는 발행 누락을 줄이고 재시도할 근거를 남기지만, 자동으로 정확히 한 번만 전달해 주지는 않는다. 이 중복 가능성이 뒤에서 살펴볼 at-least-once와 멱등성으로 이어진다.
+Consumer는 같은 Event를 두 번 받을 수 있다. Outbox는 발행 누락을 줄이고 재시도할 근거를 남기지만, 정확히 한 번만 전달하도록 자동으로 보장하지는 않는다. 따라서 at-least-once와 멱등성도 함께 살펴봐야 한다.
 
 Outbox에 기록된 Event를 발행하는 방법은 크게 두 가지다.
 
@@ -818,7 +818,7 @@ HTTP 응답 전에 작업 결과가 꼭 필요한가?
   └─ YES 또는 가능성 존재 → Consumer 멱등성 설계
 ```
 
-이는 정답을 자동으로 정해 주는 의사결정 트리가 아니라, 비동기 구조를 선택하기 전에 빠뜨리지 말아야 할 질문의 순서다.
+이 질문들이 정답을 자동으로 정해 주지는 않는다. 비동기 구조를 선택하기 전에 빠뜨리지 말아야 할 판단 순서로 사용하면 된다.
 
 ## 정리
 

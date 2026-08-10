@@ -3,7 +3,7 @@ title = 'JPA를 유지하면서 JDBC를 선택해야 하는 순간'
 slug = '10'
 aliases = ['/posts/010/']
 date = 2026-04-27T00:59:00+09:00
-lastmod = 2026-08-10T15:22:25+09:00
+lastmod = 2026-08-10T17:12:37+09:00
 draft = false
 description = 'JPA와 JDBC의 계층 관계부터 Bulk DML과 Batch의 차이, JDBC를 직접 사용할 기준과 공정한 성능 비교 방법까지 정리합니다.'
 categories = ['데이터 접근 설계']
@@ -30,7 +30,7 @@ JPA는 Entity를 어떤 방식으로 관리할지 정의한 표준 명세다. JP
 | JDBC | SQL과 Parameter를 JDBC Driver에 전달 |
 | JDBC Driver | 데이터베이스와 실제 통신 수행 |
 
-따라서 Spring Data JPA로 `save()`를 호출해도 내부에서는 Hibernate가 SQL을 만들고 JDBC를 통해 실행한다. 반면 `JdbcTemplate`을 사용하면 Hibernate의 Entity 관리를 거치지 않고 애플리케이션 코드가 SQL을 직접 정해 JDBC로 실행한다.
+따라서 Spring Data JPA로 `save()`를 호출해도 내부에서는 Hibernate가 SQL을 만든 뒤 JDBC로 실행한다. 반면 `JdbcTemplate`을 사용하면 Hibernate의 Entity 관리를 거치지 않고 애플리케이션 코드가 SQL을 직접 정해 JDBC로 실행한다.
 
 이 글에서 **JPA 방식**은 JPA와 Hibernate의 Entity 관리를 이용하는 접근을, **JDBC 직접 사용**은 `JdbcTemplate`처럼 애플리케이션이 SQL과 결과 변환을 직접 제어하는 접근을 뜻한다. 두 방식 모두 밑에서는 JDBC Driver를 사용한다. 차이는 JDBC를 사용하는지 여부가 아니라 **JDBC 위에 Hibernate의 Entity 관리를 둘 것인지**에 있다.
 
@@ -195,7 +195,7 @@ spring:
 
 `hibernate.jdbc.batch_size`가 한 번에 모을 SQL 실행 수를 정하는 핵심 설정이다. `order_inserts`와 `order_updates`는 필수 조건은 아니지만, 같은 형태의 SQL이 연속하도록 실행 순서를 정리해 Batch가 중간에 끊기는 일을 줄일 수 있다. 정렬 자체에도 비용이 있으므로 데이터 규모를 측정해 적용한다.
 
-설정을 켠 뒤에도 다음 조건이 맞아야 실제 Batch가 만들어진다.
+설정을 켠 뒤에도 다음 조건이 맞아야 Hibernate가 SQL을 실제 Batch로 묶는다.
 
 1. **같은 트랜잭션과 Flush 구간에 여러 작업이 모여야 한다.** Commit이나 `flush()`가 실행되기 전에 여러 Insert·Update가 대기해야 한다.
 2. **SQL 형태가 서로 호환되어야 한다.** 같은 PreparedStatement로 실행할 수 있는 SQL끼리 Batch를 구성한다. 서로 다른 Entity의 Insert가 번갈아 나오거나 Update하는 Column 구성이 다르면 Batch가 나뉠 수 있다.

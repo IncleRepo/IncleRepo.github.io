@@ -3,7 +3,7 @@ title = 'MySQL 인덱스와 실행 계획을 함께 읽어야 하는 이유'
 slug = '2'
 aliases = ['/posts/002/']
 date = 2026-03-03T19:00:00+09:00
-lastmod = 2026-08-10T09:17:09+09:00
+lastmod = 2026-08-10T17:12:37+09:00
 draft = false
 description = 'MySQL 인덱스가 범위를 줄이는 원리부터 복합 인덱스 설계와 EXPLAIN, EXPLAIN ANALYZE를 이용한 검증 방법까지 차례대로 알아봅니다.'
 categories = ['데이터베이스']
@@ -396,7 +396,7 @@ SELECT *
  WHERE DATE(created_at) = '2026-08-07';
 ```
 
-인덱스에는 원래 `created_at` 값이 정렬되어 있다. 그런데 쿼리는 변환된 `DATE(created_at)` 값을 기준으로 비교한다. 기존 정렬 값을 그대로 사용해 시작 위치를 찾기 어려워질 수 있다.
+인덱스는 원래 `created_at` 값을 정렬해 둔다. 그런데 쿼리는 `DATE(created_at)`로 변환한 값을 기준으로 비교한다. 이 경우 기존 정렬을 그대로 이용해 시작 위치를 찾기 어려울 수 있다.
 
 범위로 바꾸면 원래 값을 그대로 비교할 수 있다.
 

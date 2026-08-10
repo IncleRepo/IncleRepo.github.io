@@ -3,7 +3,7 @@ title = 'N+1 문제를 Fetch Join만으로 해결할 수 없는 이유'
 slug = '1'
 aliases = ['/posts/001/']
 date = 2026-02-20T19:00:00+09:00
-lastmod = 2026-08-07T17:11:25+09:00
+lastmod = 2026-08-10T17:12:37+09:00
 draft = false
 description = 'JPA 목록 조회 뒤 Getter에서 추가 쿼리가 실행되는 이유부터 Fetch Join, Batch Fetching, EntityGraph와 DTO Projection의 선택 기준까지 차례대로 알아봅니다.'
 categories = ['JPA']
@@ -146,7 +146,7 @@ Member 3명
 
 ## 일대다 Fetch Join에서는 같은 Team이 반복된다
 
-Team 하나가 Member 세 명을 가진다고 해보자. Team 목록을 조회하면서 Members까지 Join하면 데이터베이스 결과는 다음처럼 펼쳐진다.
+Team 하나에 Member 세 명이 속한다고 해보자. Team 목록을 조회하면서 Members까지 Join하면 데이터베이스 결과는 다음처럼 펼쳐진다.
 
 ```text
 Team A - Member 1
@@ -157,7 +157,7 @@ Team 1개
 → Join 결과는 3행
 ```
 
-Java에서는 Team 하나가 여러 Member를 목록으로 가진다. 하지만 데이터베이스의 Join 결과에서는 Member마다 하나의 행이 만들어지므로 Team A의 데이터가 Member 수만큼 반복된다.
+Java에서는 Team 하나가 여러 Member를 목록으로 참조한다. 하지만 데이터베이스의 Join 결과에서는 Member마다 하나의 행이 만들어지므로 Team A의 데이터가 Member 수만큼 반복된다.
 
 앞에서 본 다대일 관계와 지금의 일대다 관계를 SQL 결과 모양으로 비교하면 다음과 같다.
 

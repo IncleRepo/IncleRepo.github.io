@@ -3,7 +3,7 @@ title = 'Offset과 Keyset Pagination은 언제 선택해야 하는가'
 slug = '3'
 aliases = ['/posts/003/']
 date = 2026-03-05T19:00:00+09:00
-lastmod = 2026-08-10T10:30:01+09:00
+lastmod = 2026-08-10T17:12:37+09:00
 draft = false
 description = 'Offset이 깊은 페이지에서 느려지는 이유부터 Keyset Cursor 설계, Page·Slice·Window와 Count 비용, 데이터 변경 중 안정성까지 차례대로 알아봅니다.'
 categories = ['데이터 접근 설계']
@@ -297,7 +297,7 @@ pageSize = 20
 
 ### Window는 조회한 묶음과 다음 위치를 함께 다룬다
 
-Spring Data는 큰 조회 결과를 일정한 묶음으로 이어 읽을 수 있는 Scroll API도 제공한다. `Window<T>`에는 이번에 조회한 데이터 묶음이 들어가고, `ScrollPosition`은 다음 묶음을 어디서부터 읽을지 나타낸다. 이 위치는 Offset 방식과 Keyset 방식으로 모두 표현할 수 있다.
+Spring Data의 Scroll API를 사용하면 큰 조회 결과를 일정한 묶음으로 이어서 읽을 수 있다. `Window<T>`는 이번에 조회한 데이터 묶음을 담고, `ScrollPosition`은 다음 묶음을 읽기 시작할 위치를 나타낸다. 이 위치는 Offset 방식과 Keyset 방식으로 모두 표현할 수 있다.
 
 다음 예제는 Keyset 방식으로 게시글 20건을 조회한 뒤, 첫 번째 Window의 마지막 위치에서 다음 조회를 이어가는 흐름이다.
 
