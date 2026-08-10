@@ -1,0 +1,23 @@
+<script>
+  (() => {
+    const currentPath = window.location.pathname.replace(/\/+$/, "/");
+    const menuLinks = [...document.querySelectorAll("#menu a")];
+
+    const activeLink = menuLinks
+      .filter((link) => {
+        const menuPath = new URL(link.href, window.location.origin).pathname.replace(/\/+$/, "/");
+        return menuPath !== "/" && (currentPath === menuPath || currentPath.startsWith(menuPath));
+      })
+      .sort((left, right) => right.pathname.length - left.pathname.length)[0];
+
+    if (!activeLink) return;
+
+    menuLinks.forEach((link) => {
+      link.querySelector("span")?.classList.remove("active");
+      link.removeAttribute("aria-current");
+    });
+
+    activeLink.querySelector("span")?.classList.add("active");
+    activeLink.setAttribute("aria-current", "page");
+  })();
+</script>
