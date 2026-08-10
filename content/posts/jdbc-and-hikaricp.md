@@ -3,7 +3,7 @@ title = 'JDBC 커넥션은 왜 재사용하고 HikariCP는 어떻게 관리하�
 slug = '9'
 aliases = ['/posts/009/']
 date = 2026-04-23T20:00:00+09:00
-lastmod = 2026-08-10T14:21:00+09:00
+lastmod = 2026-08-10T14:28:00+09:00
 draft = false
 description = 'SQL이 JDBC를 거쳐 데이터베이스에 도달하는 과정부터 Connection Pool의 대여·반납·대기·교체와 HikariCP 병목 진단까지 설명합니다.'
 categories = ['데이터 접근 설계']
@@ -354,6 +354,26 @@ Connection Pool
 ```
 
 중요한 것은 전체 Request Thread 수가 아니라 **동시에 DB Connection을 필요로 하는 요청 수와 Connection 점유 시간**이다. 같은 요청량이라도 SQL이 느리거나 Transaction이 길어지면 Connection이 늦게 돌아오므로 더 쉽게 Pool이 가득 찬다.
+
+### 초기값을 추정하는 공식
+
+HikariCP의 Pool 크기 가이드는 PostgreSQL 프로젝트에서 제시한 다음 공식을 초기 추정 방법으로 소개한다.
+
+```text
+connections = (core_count × 2) + effective_spindle_count
+```
+
+`core_count`는 Hyper-Threading으로 늘어난 논리 Thread를 제외한 DB 서버의 CPU Core 수다. `effective_spindle_count`는 I/O 대기 중 다른 작업을 처리할 여지가 얼마나 있는지를 전통적인 회전식 Disk 수로 나타낸 값이다. 활성 데이터가 메모리에 모두 올라가 있다면 0에 가까워지고, Cache Hit Ratio가 낮아질수록 실제 Disk 수에 가까워진다.
+
+예를 들어 DB 서버가 4 Core이고 유효한 Disk가 1개라면 시작점은 다음과 같다.
+
+```text
+(4 × 2) + 1 = 9
+```
+
+이 값은 그대로 복사할 정답이 아니다. HikariCP 문서도 예상 부하를 재현해 공식 주변의 여러 크기를 시험하라고 설명한다. 특히 SSD·NVMe와 Cloud Storage 환경에서는 `effective_spindle_count`를 단순히 계산하기 어렵다. 공식은 웹 Thread 수에 맞춰 Pool을 크게 잡는 대신 작은 값에서 측정을 시작하기 위한 기준에 가깝다.
+
+또한 이 공식이 추정하는 것은 DB 서버가 감당할 수 있는 전체 Active Connection의 출발점이다. 애플리케이션 인스턴스가 여러 개라면 이 숫자를 각 Pool에 그대로 적용하는 것이 아니라 전체 Connection 예산을 나누어야 한다.
 
 ### 여러 애플리케이션의 합계도 봐야 한다
 
