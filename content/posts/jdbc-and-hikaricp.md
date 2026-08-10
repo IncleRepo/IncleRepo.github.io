@@ -1,7 +1,7 @@
 +++
 title = 'JDBC 커넥션은 왜 재사용하고 HikariCP는 어떻게 관리하는가'
-slug = '009'
-aliases = ['/posts/jdbc-and-hikaricp/']
+slug = '9'
+aliases = ['/posts/jdbc-and-hikaricp/', '/posts/009/']
 date = 2026-04-23T20:00:00+09:00
 lastmod = 2026-08-07T16:49:40+09:00
 draft = false

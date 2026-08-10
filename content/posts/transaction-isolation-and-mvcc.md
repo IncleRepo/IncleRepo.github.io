@@ -1,7 +1,7 @@
 +++
 title = 'MVCC는 락 없이 일관된 읽기를 어떻게 제공하는가'
-slug = '005'
-aliases = ['/posts/transaction-isolation-and-mvcc/']
+slug = '5'
+aliases = ['/posts/transaction-isolation-and-mvcc/', '/posts/005/']
 date = 2026-03-24T19:00:00+09:00
 lastmod = 2026-08-07T16:49:40+09:00
 draft = false

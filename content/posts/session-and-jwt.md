@@ -1,7 +1,7 @@
 +++
 title = '세션과 JWT는 어떤 문제를 다르게 해결하는가'
-slug = '011'
-aliases = ['/posts/session-and-jwt/']
+slug = '11'
+aliases = ['/posts/session-and-jwt/', '/posts/011/']
 date = 2026-04-29T19:40:00+09:00
 lastmod = 2026-08-07T16:49:40+09:00
 draft = false
