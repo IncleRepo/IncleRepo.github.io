@@ -3,7 +3,7 @@ title = 'JPA를 유지하면서 JDBC를 선택해야 하는 순간'
 slug = '10'
 aliases = ['/posts/010/']
 date = 2026-04-27T00:59:00+09:00
-lastmod = 2026-08-10T14:59:12+09:00
+lastmod = 2026-08-10T15:09:56+09:00
 draft = false
 description = 'JPA와 JDBC의 계층 관계부터 Bulk DML과 Batch의 차이, JDBC를 직접 사용할 기준과 공정한 성능 비교 방법까지 정리합니다.'
 categories = ['데이터 접근 설계']
@@ -154,9 +154,61 @@ JDBC Batch는 JDBC API가 제공하는 기능이다. 다만 개발자가 `JdbcTe
 
 Entity의 생성 규칙이나 Callback처럼 JPA의 상태 관리가 필요하다면 애플리케이션 코드는 JPA를 유지하면서 Hibernate가 JDBC Batch를 사용하도록 설정할 수 있다.
 
+먼저 `saveAll()`의 역할부터 분리해서 봐야 한다. Spring Data JPA의 `saveAll()`은 전달받은 Entity마다 `save()`를 호출해 `persist()` 또는 `merge()`가 실행되도록 돕는 편의 메서드다. `saveAll()`이 JDBC Batch를 시작하거나 활성화하는 것은 아니다.
+
 ```java
 @Transactional
-public void saveAll(List<CreateMemberCommand> commands, int batchSize) {
+public void saveMembers(List<Member> members) {
+    memberRepository.saveAll(members);
+}
+```
+
+이 코드가 JDBC Batch로 실행될 수 있는 이유는 메서드 이름이 `saveAll()`이어서가 아니다. 여러 저장 작업이 같은 트랜잭션과 영속성 컨텍스트에 쌓이고, Hibernate의 Batch 설정과 나머지 조건이 맞으면 Flush할 때 Hibernate가 JDBC Batch를 사용하기 때문이다.
+
+따라서 다음 코드도 바깥의 `@Transactional`로 같은 트랜잭션에 묶여 있다면 같은 조건에서 Batch가 가능하다.
+
+```java
+@Transactional
+public void saveMembers(List<Member> members) {
+    for (Member member : members) {
+        memberRepository.save(member);
+    }
+}
+```
+
+반대로 각 `save()`가 서로 다른 트랜잭션에서 즉시 Flush된다면 SQL을 Batch로 모을 수 없다. 핵심은 `saveAll()` 사용 여부가 아니라 **여러 호환 가능한 SQL이 같은 Flush 구간에 모이는가**이다.
+
+#### Hibernate Batch를 활성화하는 설정과 조건
+
+가장 먼저 Hibernate의 JDBC Batch Size를 0보다 큰 값으로 설정해야 한다.
+
+```yaml
+spring:
+  jpa:
+    properties:
+      hibernate:
+        jdbc:
+          batch_size: 50
+        order_inserts: true
+        order_updates: true
+```
+
+`hibernate.jdbc.batch_size`가 한 번에 모을 SQL 실행 수를 정하는 핵심 설정이다. `order_inserts`와 `order_updates`는 필수 조건은 아니지만, 같은 형태의 SQL이 연속하도록 실행 순서를 정리해 Batch가 중간에 끊기는 일을 줄일 수 있다. 정렬 자체에도 비용이 있으므로 데이터 규모를 측정해 적용한다.
+
+설정을 켠 뒤에도 다음 조건이 맞아야 실제 Batch가 만들어진다.
+
+1. **같은 트랜잭션과 Flush 구간에 여러 작업이 모여야 한다.** Commit이나 `flush()`가 실행되기 전에 여러 Insert·Update가 대기해야 한다.
+2. **SQL 형태가 서로 호환되어야 한다.** 같은 PreparedStatement로 실행할 수 있는 SQL끼리 Batch를 구성한다. 서로 다른 Entity의 Insert가 번갈아 나오거나 Update하는 Column 구성이 다르면 Batch가 나뉠 수 있다.
+3. **ID 생성 전략이 Batch를 방해하지 않아야 한다.** `GenerationType.IDENTITY`는 Insert 직후 생성된 ID를 받아야 하므로 Hibernate가 Insert를 뒤로 모으기 어렵다.
+4. **JDBC Driver가 Batch를 지원해야 한다.** Driver와 설정에 따라 실제 전송이나 SQL 재작성 방식이 달라질 수 있다.
+
+즉 `saveAll()`은 여러 Entity를 한 메서드로 저장하고 같은 트랜잭션에서 처리하기 쉽게 만들어 주지만, Batch의 발생 조건 그 자체는 아니다. 실제 조건은 **Hibernate 설정, 트랜잭션과 Flush 범위, SQL 형태, ID 전략과 JDBC Driver**다.
+
+대량 작업에서는 Batch 활성화와 별개로 영속성 컨텍스트의 크기도 제어해야 한다. 다음 예제의 메서드 이름은 Spring Data의 `saveAll()`과 구분하기 위해 `saveMembersInBatches()`로 작성했다.
+
+```java
+@Transactional
+public void saveMembersInBatches(List<CreateMemberCommand> commands, int batchSize) {
     for (int index = 0; index < commands.size(); index++) {
         CreateMemberCommand command = commands.get(index);
         entityManager.persist(Member.create(command.name(), command.grade()));
@@ -172,7 +224,9 @@ public void saveAll(List<CreateMemberCommand> commands, int batchSize) {
 }
 ```
 
-위 코드는 여전히 JPA API로 Entity를 저장한다. `flush()`가 실행되면 Hibernate가 Entity 변경을 SQL로 만들고, Batch 설정이 활성화되어 있다면 그 SQL들을 JDBC Batch API에 모아 전달한다. `clear()`는 처리가 끝난 Entity를 영속성 컨텍스트에서 분리한다. 이를 반복하면 수십만 개의 Entity가 한꺼번에 메모리에 쌓이는 상황을 피할 수 있다.
+위 코드는 여전히 JPA API로 Entity를 저장한다. `flush()`가 실행되면 Hibernate가 Entity 변경을 SQL로 만들고, 앞의 조건이 맞으면 그 SQL들을 JDBC Batch API에 모아 전달한다. `clear()`는 처리가 끝난 Entity를 영속성 컨텍스트에서 분리한다. 이를 반복하면 수십만 개의 Entity가 한꺼번에 메모리에 쌓이는 상황을 피할 수 있다.
+
+여기서 `flush()`와 `clear()`는 JDBC Batch 기능을 켜는 설정이 아니다. `flush()`는 대기 중인 SQL을 실행하면서 하나의 Batch 처리 경계를 만들고, `clear()`는 이미 처리한 Entity를 메모리에서 분리한다. 수천 건 정도라면 Commit 때 한 번 Flush해도 Batch가 동작할 수 있지만, 수십만 건을 다룰 때는 영속성 컨텍스트가 너무 커지지 않도록 일정한 간격으로 두 메서드를 호출한다.
 
 ```text
 EntityManager.persist()
@@ -181,9 +235,7 @@ EntityManager.persist()
 → JDBC Driver가 데이터베이스로 전달
 ```
 
-다만 `persist()`를 반복하고 `flush()`를 호출했다는 사실만으로 JDBC Batch가 보장되지는 않는다. Hibernate의 Batch 설정, SQL의 모양과 ID 생성 전략이 함께 맞아야 한다. 특히 `GenerationType.IDENTITY`는 `INSERT` 직후 데이터베이스가 만든 ID를 받아야 하므로 Hibernate가 Insert를 뒤로 모아 두기 어렵다. 이 전략을 사용하는 Entity의 Insert Batch에는 제약이 생긴다.
-
-`repository.saveAll(members)`도 마찬가지다. 이것은 여러 Entity를 저장하는 API이지, JDBC Batch를 자동으로 보장하는 API가 아니다. 실제 Batch 여부는 설정과 실행된 SQL을 확인해야 한다.
+Batch가 동작하더라도 Hibernate는 각 Entity에 필요한 SQL을 논리적으로 하나씩 만든다. SQL 로그에 `INSERT`가 여러 번 보인다는 사실만으로 Batch가 실패했다고 단정할 수 없는 이유다. Hibernate의 Batch 로그와 데이터베이스 왕복 횟수를 함께 확인해야 한다.
 
 ### Chunk Size와 Batch Size는 목적이 다르다
 
