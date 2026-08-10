@@ -3,7 +3,7 @@ title = 'JPA를 유지하면서 JDBC를 선택해야 하는 순간'
 slug = '10'
 aliases = ['/posts/010/']
 date = 2026-04-27T00:59:00+09:00
-lastmod = 2026-08-10T15:09:56+09:00
+lastmod = 2026-08-10T15:22:25+09:00
 draft = false
 description = 'JPA와 JDBC의 계층 관계부터 Bulk DML과 Batch의 차이, JDBC를 직접 사용할 기준과 공정한 성능 비교 방법까지 정리합니다.'
 categories = ['데이터 접근 설계']
@@ -235,7 +235,7 @@ EntityManager.persist()
 → JDBC Driver가 데이터베이스로 전달
 ```
 
-Batch가 동작하더라도 Hibernate는 각 Entity에 필요한 SQL을 논리적으로 하나씩 만든다. SQL 로그에 `INSERT`가 여러 번 보인다는 사실만으로 Batch가 실패했다고 단정할 수 없는 이유다. Hibernate의 Batch 로그와 데이터베이스 왕복 횟수를 함께 확인해야 한다.
+Batch가 동작하더라도 Hibernate는 각 Entity에 필요한 SQL을 논리적으로 하나씩 만든다. 따라서 SQL 로그에 `INSERT`가 여러 번 보인다는 사실만으로 Batch가 실패했다고 단정할 수 없다. SQL 로그는 생성된 SQL을 보여줄 뿐, JDBC Driver가 이를 어떤 Batch로 전송했는지까지 충분히 보여 주지 못할 수 있다. Hibernate의 Batch 실행 정보와 JDBC Driver·데이터베이스의 관측 지표를 함께 확인해야 한다.
 
 ### Chunk Size와 Batch Size는 목적이 다르다
 
@@ -406,7 +406,11 @@ JPA와 JDBC 중 하나를 애플리케이션 전체의 정답으로 고를 필�
 ### 공식 자료
 
 - [Jakarta Persistence 3.2 Specification](https://jakarta.ee/specifications/persistence/3.2/jakarta-persistence-spec-3.2.pdf)
-- [Hibernate ORM User Guide - Batch Processing](https://docs.hibernate.org/orm/6.1/userguide/html_single/#batch)
+- [Hibernate ORM User Guide - Batch Processing](https://docs.hibernate.org/orm/7.1/userguide/html_single/#batch)
+- [Spring Data JPA - SimpleJpaRepository](https://github.com/spring-projects/spring-data-jpa/blob/main/spring-data-jpa/src/main/java/org/springframework/data/jpa/repository/support/SimpleJpaRepository.java)
+- [Spring Data JPA - Transactionality](https://docs.spring.io/spring-data/jpa/reference/jpa/transactions.html)
+- [Spring Framework - Transaction Propagation](https://docs.spring.io/spring-framework/reference/data-access/transaction/declarative/tx-propagation.html)
+- [Spring Boot - SQL Databases](https://docs.spring.io/spring-boot/reference/data/sql.html)
 - [Spring Data JPA - Modifying Queries](https://docs.spring.io/spring-data/jpa/reference/jpa/query-methods.html)
 - [Spring Framework - JDBC Batch Operations](https://docs.spring.io/spring-framework/reference/data-access/jdbc/advanced.html)
 - [Java SE - PreparedStatement](https://docs.oracle.com/en/java/javase/26/docs/api/java.sql/java/sql/PreparedStatement.html)
