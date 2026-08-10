@@ -3,7 +3,7 @@ title = 'Offset과 Keyset Pagination은 언제 선택해야 하는가'
 slug = '3'
 aliases = ['/posts/003/']
 date = 2026-03-05T19:00:00+09:00
-lastmod = 2026-08-10T10:24:47+09:00
+lastmod = 2026-08-10T10:30:01+09:00
 draft = false
 description = 'Offset이 깊은 페이지에서 느려지는 이유부터 Keyset Cursor 설계, Page·Slice·Window와 Count 비용, 데이터 변경 중 안정성까지 차례대로 알아봅니다.'
 categories = ['데이터 접근 설계']
@@ -298,6 +298,29 @@ pageSize = 20
 ### Window는 조회한 묶음과 다음 위치를 함께 다룬다
 
 Spring Data는 큰 조회 결과를 일정한 묶음으로 이어 읽을 수 있는 Scroll API도 제공한다. `Window<T>`에는 이번에 조회한 데이터 묶음이 들어가고, `ScrollPosition`은 다음 묶음을 어디서부터 읽을지 나타낸다. 이 위치는 Offset 방식과 Keyset 방식으로 모두 표현할 수 있다.
+
+다음 예제는 Keyset 방식으로 게시글 20건을 조회한 뒤, 첫 번째 Window의 마지막 위치에서 다음 조회를 이어가는 흐름이다.
+
+```java
+Window<Post> posts = postRepository
+    .findFirst20ByStatusOrderByCreatedAtDescIdDesc(
+        PostStatus.PUBLISHED,
+        ScrollPosition.keyset()
+    );
+
+if (!posts.isEmpty() && !posts.isLast()) {
+    ScrollPosition nextPosition = posts.positionAt(posts.size() - 1);
+
+    posts = postRepository.findFirst20ByStatusOrderByCreatedAtDescIdDesc(
+        PostStatus.PUBLISHED,
+        nextPosition
+    );
+}
+```
+
+첫 조회의 `ScrollPosition.keyset()`은 아직 마지막 위치가 없으므로 정렬 결과의 처음부터 시작하라는 뜻이다. `positionAt(posts.size() - 1)`은 이번 Window의 마지막 게시글에서 다음 조회에 필요한 정렬 값을 꺼낸다. 두 번째 조회는 그 위치를 제외하고 바로 다음 게시글부터 시작한다.
+
+즉 `Window`가 다음 데이터를 자동으로 조회하는 것은 아니다. 이번에 조회한 데이터와 각 데이터의 위치를 함께 제공하고, 애플리케이션은 마지막 위치를 다음 요청에 전달해 조회를 이어간다.
 
 세부 지원 범위와 쿼리 작성 방식은 사용하는 Spring Data 모듈과 버전에 따라 다르다. 여기서 기억할 점은 Window가 전체 페이지 수를 보여주는 화면보다 현재 위치에서 다음 데이터를 계속 읽는 흐름에 어울린다는 것이다.
 
