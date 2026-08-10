@@ -3,7 +3,7 @@ title = '@Async는 언제 충분하고 언제 메시지 큐가 필요한가'
 slug = '12'
 aliases = ['/posts/012/']
 date = 2026-05-12T19:30:00+09:00
-lastmod = 2026-08-10T17:12:37+09:00
+lastmod = 2026-08-10T17:30:58+09:00
 draft = false
 description = '느린 부수 작업을 분리하는 @Async부터 작업 유실, Kafka, Transactional Outbox, 순서와 중복 처리까지 단계적으로 알아봅니다.'
 categories = ['비동기 처리']
@@ -377,31 +377,66 @@ Kafka
 - **Topic**은 같은 목적의 메시지를 모아두는 논리적인 이름이다.
 - **Consumer**는 메시지를 읽어 실제 업무를 수행하는 쪽이다.
 
-아래 그림에서는 메시지가 Producer에서 Broker의 Topic으로 들어가고 Consumer가 읽어 가는 큰 흐름을 먼저 보면 된다. 이 단계에서는 Kafka 내부 구조를 모두 외울 필요가 없다. Partition과 Consumer Group은 실제로 병렬 처리가 필요해질 때 뒤에서 하나씩 살펴본다.
+이제 네 가지 용어를 앞의 주문 완료 흐름에 하나씩 대입해 보자.
+
+```text
+주문 서비스             → Producer
+Kafka                   → Broker
+order-completed         → Topic
+이메일 처리 애플리케이션 → Consumer
+```
+
+주문 서비스는 Producer의 역할을 맡아 `order-completed` Topic으로 Event를 보낸다. Kafka Broker는 이 Event를 보관한다. 이메일 처리 애플리케이션은 Consumer가 되어 해당 Topic의 Event를 읽고 이메일을 발송한다.
+
+여기서 Broker와 Topic을 같은 대상으로 생각하기 쉽다. Broker는 메시지를 실제로 보관하는 서버이고, Topic은 Broker 안에서 메시지를 목적별로 구분하는 논리적인 이름이다. 하나의 Kafka에는 `order-completed`, `payment-completed`, `delivery-started`처럼 여러 Topic이 있을 수 있다.
+
+Producer가 보내는 것은 Java 메서드가 아니라 Consumer와 약속한 형식의 데이터다. 주문 완료 Event라면 다음처럼 주문 식별자와 발생 시각 등이 들어갈 수 있다.
+
+```json
+{
+  "eventId": "event-123",
+  "orderId": "order-100",
+  "occurredAt": "2026-08-10T16:00:00+09:00"
+}
+```
+
+Consumer는 이 데이터를 읽어 `orderId`에 해당하는 수신자를 찾고 이메일을 발송한다. Producer는 Consumer의 이메일 메서드를 직접 호출하지 않으며, Consumer가 어느 서버에서 실행되는지도 알 필요가 없다. 두 애플리케이션은 Topic에 기록되는 Event 형식만 약속한다.
+
+### 메시지 한 건은 다음 순서로 이동한다
+
+주문 완료 Event 한 건이 처리되는 흐름을 순서대로 풀면 다음과 같다.
+
+```text
+1. 주문 서비스가 주문 완료 Event를 만든다.
+2. Producer가 Event를 order-completed Topic으로 보낸다.
+3. Broker가 Event를 Topic에 기록한다.
+4. Consumer가 Broker에서 Event를 읽는다.
+5. Consumer가 주문 완료 이메일을 발송한다.
+```
+
+아래 그림도 같은 흐름을 더 자세히 나타낸다. 지금은 메시지가 Producer에서 Broker의 Topic으로 들어간 뒤 Consumer에게 이어진다는 큰 방향만 보면 된다. Partition과 Consumer Group은 여러 Consumer가 일을 나누는 과정을 설명할 때 뒤에서 하나씩 살펴본다.
 
 ![Kafka의 Producer, Broker, Topic, Partition, Consumer 구조](/images/posts/async-processing-and-message-queue/legacy-02.png "Kafka 기본 구조")
 
-### Spring에서는 이렇게 Kafka에 연결할 수 있다
+### Consumer가 멈춰도 메시지는 바로 사라지지 않는다
 
-지금부터 나오는 설정은 메시지 큐를 선택하는 기준이 아니라, 앞에서 본 Producer를 Spring 애플리케이션에서 구성하는 모습을 보여 주는 보충 예시다.
+직접 HTTP로 이메일 서비스를 호출하면 이메일 서비스가 중단된 동안 요청이 실패한다. Kafka를 사이에 두면 Producer는 Consumer가 현재 실행 중인지와 관계없이 Broker에 Event를 기록할 수 있다.
 
-Spring 애플리케이션에서 Kafka에 접근하려면 먼저 Spring Kafka 의존성이 필요하다. 이 의존성을 추가하면 Kafka Producer와 Consumer를 Spring 방식으로 구성할 수 있다.
+```text
+주문 서비스 → 주문 완료 Event 발행 → Kafka에 보관
+                                      ↓
+                         이메일 Consumer 일시 중단
+                                      ↓
+                         재시작 후 보관된 Event 처리
+```
 
-![Spring Kafka 의존성 구성](/images/posts/async-processing-and-message-queue/legacy-03.png "Spring Kafka 의존성")
+Kafka는 Topic에 들어온 메시지를 순서대로 이어서 저장한다. 이런 저장 구조를 **Log**라고 부른다. Consumer가 메시지를 읽어도 Log에서 바로 삭제하지 않고, 설정된 보존 기간이나 용량 정책에 따라 유지한다. 따라서 Consumer가 잠시 중단돼도 보존 기간 안의 메시지를 다시 읽으며 처리를 이어갈 수 있다.
 
-다음으로 애플리케이션이 접속할 Broker 주소와 메시지 직렬화 방식을 설정한다. 이 정보가 있어야 Producer가 Event를 어느 Kafka Cluster에 어떤 형태로 보낼지 알 수 있다.
+다만 Broker가 메시지를 보관한다는 사실만으로 Consumer가 어디까지 처리했는지는 알 수 없다. Kafka는 Consumer가 읽은 위치를 **Offset**으로 관리한다. 이 개념은 Consumer Group과 Partition을 먼저 살펴본 뒤 다시 확인한다.
 
-![Kafka Broker 연결 설정](/images/posts/async-processing-and-message-queue/legacy-04.png "Kafka Broker 연결 설정")
+### Producer와 Consumer의 속도가 다르면 메시지가 쌓인다
 
-설정이 끝나면 `KafkaTemplate`을 사용해 Topic과 Key, Event를 전달할 수 있다. 메서드 호출은 발행을 요청하는 코드이고, 실제 전송 성공 여부는 Producer의 비동기 결과와 확인 설정을 함께 살펴봐야 한다.
-
-![KafkaTemplate을 사용한 메시지 발행 예시](/images/posts/async-processing-and-message-queue/legacy-05.png "Spring에서 Kafka 메시지 발행")
-
-Kafka는 Consumer가 메시지를 읽었다고 바로 삭제하지 않는다. 설정된 보존 기간이나 용량 정책에 따라 메시지를 Log에 유지한다. 따라서 Consumer가 잠시 중단되어도 보존 기간 안의 메시지를 다시 읽어 처리를 이어갈 수 있다. 어디서부터 다시 읽을지는 뒤에서 살펴볼 Offset으로 관리한다.
-
-다만 Producer가 `send()`를 호출했다는 사실만으로 Message가 안전하게 보관됐다고 단정할 수는 없다. Broker가 기록을 확인했는지 나타내는 `acks`, 복제 수, 보존 정책이 요구 수준에 맞아야 한다. 메시지 큐를 사용하면 복구 수단을 설계할 수 있지만, 아무 설정 없이 자동으로 모든 Message가 보장되는 것은 아니다.
-
-메시지 큐는 순간적인 속도 차이도 흡수할 수 있다.
+메시지 큐는 순간적인 속도 차이를 흡수할 수도 있다. Producer가 잠시 빠르게 메시지를 만들더라도 Consumer는 Broker에 쌓인 메시지를 자신의 처리 속도에 맞춰 읽을 수 있기 때문이다.
 
 ```text
 Producer: 초당 1,000건
@@ -410,13 +445,13 @@ Consumer: 초당   500건
 차이: 초당 500건이 Broker에 쌓임
 ```
 
-갑작스러운 요청 증가가 짧게 끝나고 Consumer가 나중에 따라잡는다면 Broker가 완충 역할을 한다. 그러나 이 차이가 계속되면 밀린 메시지가 초당 500건씩 늘어난다. 메시지 큐는 처리량을 없애는 기술이 아니며, 장기적으로는 소비 처리량을 생산 처리량 이상으로 확보해야 한다.
+위 상황에서는 Producer가 1초마다 1,000건을 만들지만 Consumer는 500건만 처리한다. 처리하지 못한 나머지 500건은 Broker에 남는다. 요청 증가가 짧게 끝나고 Consumer가 나중에 따라잡는다면 Broker가 완충 역할을 한다.
+
+그러나 속도 차이가 계속되면 밀린 메시지가 초당 500건씩 늘어난다. 메시지 큐가 작업 자체를 대신 처리하거나 Consumer의 처리 속도를 높여 주는 것은 아니다. 장기적으로는 Consumer의 처리량을 Producer의 생산량 이상으로 확보해야 한다.
 
 예를 들어 10초 동안 초당 500건씩 밀리면 Broker에는 5,000건이 쌓인다. 이후 Producer가 초당 300건으로 줄고 Consumer가 계속 500건을 처리한다면, 초당 200건씩 밀린 작업을 해소할 수 있다. 반대로 생산 속도가 계속 1,000건이라면 Consumer를 늘리거나 처리 시간을 줄이지 않는 한 적체는 끝나지 않는다.
 
-여기서 Kafka의 내부 개념을 살펴보는 이유는 Kafka 사용법 자체를 모두 배우기 위해서가 아니다. 외부 Broker에 Message를 남기기로 선택했을 때, 여러 Consumer가 어떻게 일을 나누고 장애 뒤 어디서부터 다시 처리하는지 이해하기 위해서다.
-
-그렇다면 같은 주문 완료 Event를 이메일과 통계가 모두 처리하려면 어떻게 해야 할까?
+여기까지는 Consumer가 하나인 단순한 흐름을 살펴봤다. 실제 서비스에서는 이메일과 통계처럼 서로 다른 업무가 같은 Event를 각각 처리할 수도 있고, 이메일 Consumer를 여러 대 실행해 밀린 메시지를 나눠 처리할 수도 있다. 이 차이를 이해하려면 Consumer Group이 필요하다.
 
 ## Consumer Group에 따라 메시지 처리 방식이 달라진다
 
@@ -479,7 +514,31 @@ Consumer가 0번부터 4번까지 처리한 뒤 재시작하면 어디서부터 
 
 예를 들어 Offset 5를 Commit했다면 재시작 후 5번부터 다시 읽는다. 이메일 Group과 통계 Group은 같은 Partition을 읽더라도 서로 다른 Offset을 저장한다. 그래서 한 Group이 느리거나 잠시 중단돼도 다른 Group은 자신의 속도로 계속 처리할 수 있다.
 
-이처럼 Broker에 메시지가 남아 있고 Offset으로 읽은 위치를 관리하면 Consumer가 재시작한 뒤 처리를 이어갈 수 있다. 하지만 Producer가 업무 DB를 바꾼 뒤 Broker에 Event를 남기기 전에 종료되면 어떻게 될까?
+이처럼 Broker에 메시지가 남아 있고 Offset으로 읽은 위치를 관리하면 Consumer가 재시작한 뒤 처리를 이어갈 수 있다. 이제 이 흐름을 Spring 애플리케이션에서 어떻게 연결하는지 간단히 확인해 보자.
+
+## Spring에서는 이렇게 Kafka에 연결할 수 있다
+
+지금부터 나오는 설정은 메시지 큐를 선택하는 기준이 아니다. 앞에서 살펴본 Producer를 Spring 애플리케이션에서 구성하는 모습을 보여 주는 보충 예시다.
+
+Spring 애플리케이션에서 Kafka에 접근하려면 먼저 Spring Kafka 의존성이 필요하다. 이 의존성을 추가하면 Kafka Producer와 Consumer를 Spring 방식으로 구성할 수 있다.
+
+![Spring Kafka 의존성 구성](/images/posts/async-processing-and-message-queue/legacy-03.png "Spring Kafka 의존성")
+
+다음으로 애플리케이션이 접속할 Broker 주소와 메시지 직렬화 방식을 설정한다. Broker 주소는 Event를 보낼 Kafka의 위치를 알려 주고, 직렬화 방식은 Java 객체를 Broker가 보관할 수 있는 데이터로 바꾸는 방법을 정한다.
+
+![Kafka Broker 연결 설정](/images/posts/async-processing-and-message-queue/legacy-04.png "Kafka Broker 연결 설정")
+
+설정이 끝나면 `KafkaTemplate`을 사용해 Topic과 Key, Event를 전달할 수 있다. 다음 예시는 주문 완료 Event를 지정한 Topic으로 보내 달라고 Producer에게 요청하는 코드다.
+
+![KafkaTemplate을 사용한 메시지 발행 예시](/images/posts/async-processing-and-message-queue/legacy-05.png "Spring에서 Kafka 메시지 발행")
+
+여기서 `send()`를 호출했다고 메시지가 곧바로 안전하게 보관됐다고 단정해서는 안 된다. `send()`는 전송을 시작하는 메서드이며, Broker가 메시지를 기록했는지는 비동기 결과를 통해 별도로 확인해야 한다.
+
+`acks`는 Producer가 몇 단계의 Broker 확인을 받은 뒤 전송 성공으로 판단할지를 정하는 설정이다. 복제는 같은 메시지를 여러 Broker에 나누어 보관해 일부 Broker에 장애가 생겨도 복구할 수 있게 하는 방식이다. 이 글에서 각 설정값까지 외울 필요는 없다. `send()` 호출과 Broker의 안전한 저장 완료가 같은 순간은 아니라는 점이 핵심이다.
+
+보존 기간도 지나치게 짧으면 Consumer가 복구하기 전에 메시지가 사라질 수 있다. 메시지 큐는 복구할 수 있는 기반을 제공하지만, 의존성만 추가한다고 모든 메시지가 자동으로 보장되는 것은 아니다.
+
+이제 Producer가 Event를 보내고 Consumer가 다시 읽는 흐름까지 연결됐다. 하지만 Producer가 업무 DB를 바꾼 뒤 Broker에 Event를 남기기 전에 종료되면 어떻게 될까?
 
 ## DB 변경과 Event 발행은 한 번에 확정되지 않는다
 
