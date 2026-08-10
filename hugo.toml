@@ -8,6 +8,9 @@ copyright = '© 2026 [김학인](https://github.com/IncleRepo)'
 
 enableRobotsTXT = true
 
+[outputs]
+  home = ['HTML', 'RSS', 'JSON']
+
 [pagination]
   pagerSize = 10
 
@@ -67,3 +70,10 @@ enableRobotsTXT = true
   name = '소개'
   url = '/about/'
   weight = 40
+
+[[menu.main]]
+  identifier = 'search'
+  name = '검색'
+  url = '/search/'
+  weight = 50
+  pre = '<svg class="menu-search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg>'
