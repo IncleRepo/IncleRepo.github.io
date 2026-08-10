@@ -11,6 +11,12 @@ enableRobotsTXT = true
 [pagination]
   pagerSize = 10
 
+[markup]
+  [markup.tableOfContents]
+    startLevel = 2
+    endLevel = 2
+    ordered = false
+
 [params]
   env = 'production'
   author = '김학인'
