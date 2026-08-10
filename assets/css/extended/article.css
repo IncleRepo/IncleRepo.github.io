@@ -38,6 +38,39 @@ body:has(.post-single--hybrid) {
   border-bottom: 1px solid var(--border);
 }
 
+.article-back-link {
+  display: flex;
+  align-items: center;
+  width: fit-content;
+  gap: 7px;
+  margin-bottom: 26px;
+  color: var(--secondary);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+  text-decoration: none;
+}
+
+.article-back-link::before {
+  content: "←";
+  font-size: 16px;
+  transition: transform 140ms ease;
+}
+
+.article-back-link:hover {
+  color: var(--primary);
+}
+
+.article-back-link:hover::before {
+  transform: translateX(-3px);
+}
+
+.article-back-link:focus-visible {
+  border-radius: 3px;
+  outline: 2px solid var(--primary);
+  outline-offset: 4px;
+}
+
 .article-category {
   display: inline-block;
   margin-bottom: 13px;
@@ -521,6 +554,10 @@ body:has(.post-single--hybrid) {
   .article-header {
     margin: 32px 0 32px;
     padding-bottom: 30px;
+  }
+
+  .article-back-link {
+    margin-bottom: 22px;
   }
 
   .post-title.article-title {
