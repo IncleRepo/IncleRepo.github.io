@@ -3,7 +3,7 @@ title = '@Async는 언제 충분하고 언제 메시지 큐가 필요한가'
 slug = '12'
 aliases = ['/posts/012/']
 date = 2026-05-12T19:30:00+09:00
-lastmod = 2026-08-10T17:30:58+09:00
+lastmod = 2026-08-10T17:43:18+09:00
 draft = false
 description = '느린 부수 작업을 분리하는 @Async부터 작업 유실, Kafka, Transactional Outbox, 순서와 중복 처리까지 단계적으로 알아봅니다.'
 categories = ['비동기 처리']
@@ -358,17 +358,23 @@ Message Queue
 
 둘 다 Queue라는 이름을 사용하지만 같은 저장소가 아니다. `@Async`의 Queue에는 같은 JVM에서 실행할 `Runnable` 같은 작업이 들어간다. Broker에는 Java 메서드 자체가 아니라 여러 프로세스가 약속된 형식으로 읽을 수 있는 데이터가 기록된다.
 
-가장 단순한 주문 완료 흐름부터 보자.
+메시지 큐는 이러한 구조를 가리키는 개념이고, 실제로 메시지를 받아 보관하고 전달하는 역할은 Kafka·RabbitMQ 같은 제품이나 Amazon SQS 같은 Cloud Service가 맡을 수 있다. 제품마다 메시지를 저장하고 전달하는 방식은 다르다. 이 글에서는 이후에 살펴볼 Partition, Consumer Group, Offset을 구체적으로 설명하기 위해 **Kafka**를 예로 사용한다.
+
+Kafka는 메시지를 받아 보관하고 필요한 Consumer가 읽을 수 있게 제공하는 분산 Event Streaming Platform이다. 기능은 훨씬 많지만, 지금은 애플리케이션 외부에서 메시지를 보관하는 **Broker** 역할에 집중하면 된다.
+
+주문 완료 이메일을 보낸다고 해서 주문 서비스가 이메일 메서드 자체를 Kafka에 넘기는 것은 아니다. 주문 서비스는 “주문이 완료됐다”는 이미 발생한 사실을 약속된 데이터 형식으로 기록한다. 이처럼 업무에서 발생한 사실을 나타내는 메시지를 이 글에서는 **Event**라고 부른다.
+
+가장 단순한 주문 완료 흐름은 다음과 같다.
 
 ```text
 주문 서비스
   ↓ "주문 완료" Event 발행
-Kafka
+Kafka Broker
   ↓ Event 전달
 이메일 Consumer
 ```
 
-주문 서비스는 이메일 메서드를 직접 실행해 달라고 요청하지 않는다. 대신 “주문이 완료됐다”는 이미 발생한 업무 사실을 Message로 기록한다. 이런 업무 사실을 나타내는 Message를 이 글에서는 편의상 **Event**라고 부른다. 이메일 Consumer는 Event를 읽은 뒤 자신의 실행 환경에서 이메일을 보낸다.
+이메일 Consumer는 Kafka에 기록된 Event를 읽은 뒤 자신의 실행 환경에서 이메일을 보낸다. 주문 서비스와 이메일 Consumer는 같은 Java 메서드를 공유하는 것이 아니라, 서로 이해할 수 있는 Event 형식을 약속한다.
 
 먼저 흐름을 기준으로 각 구성 요소에 이름을 붙여 보자.
 
