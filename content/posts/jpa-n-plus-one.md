@@ -138,9 +138,9 @@ Member 3명
 → Join 결과도 3행
 ```
 
-각 Member 행 옆에 Team Column이 붙을 뿐, Team 때문에 같은 Member가 여러 행으로 늘어나지는 않는다. 일대일 관계도 같은 성격을 가진다. 다대일과 일대일처럼 한 Entity가 하나의 연관 Entity를 참조하는 관계를 편의상 **To-one 관계**라고 부른다.
+각 Member 행 옆에 Team Column이 붙을 뿐, Team 때문에 같은 Member가 여러 행으로 늘어나지는 않는다. Member가 Team 하나를 참조하는 다대일 관계나 한 객체가 다른 객체 하나를 참조하는 일대일 관계는 이런 방식으로 조회해도 기준 Entity의 행 수가 그대로 유지된다.
 
-To-one Fetch Join은 조회 결과의 Member 수를 바꾸지 않으므로 목록 페이징과 비교적 잘 어울린다. 여러 To-one 관계를 함께 가져오는 것도 일반적으로 가능하다. 다만 Join 대상이 많으면 조회하는 Column 수와 전송하는 데이터 양이 커질 수 있으므로 실제 실행 계획은 확인해야 한다.
+따라서 다대일·일대일 관계의 Fetch Join은 목록 페이징과 비교적 잘 어울린다. 필요한 관계가 여러 개라면 함께 가져오는 것도 일반적으로 가능하다. 다만 Join 대상이 많으면 조회하는 Column 수와 전송하는 데이터 양이 커질 수 있으므로 실제 실행 계획은 확인해야 한다.
 
 그렇다면 필요한 연관 관계를 모두 Fetch Join하면 N+1을 해결할 수 있을까? Team이 여러 Member를 가지는 일대다 관계에서는 SQL 결과의 모양부터 달라진다.
 
@@ -157,9 +157,9 @@ Team 1개
 → Join 결과는 3행
 ```
 
-Java에서 Team은 하나지만 SQL 결과에서는 Member 수만큼 Team A가 반복된다. Team이 가진 `List<Member>`나 `Set<Member>`처럼 여러 연관 객체를 담는 관계를 **Collection 관계**라고 부른다.
+Java에서는 Team 하나가 여러 Member를 목록으로 가진다. 하지만 데이터베이스의 Join 결과에서는 Member마다 하나의 행이 만들어지므로 Team A의 데이터가 Member 수만큼 반복된다.
 
-To-one 관계와 Collection 관계의 차이는 다음과 같다.
+앞에서 본 다대일 관계와 지금의 일대다 관계를 SQL 결과 모양으로 비교하면 다음과 같다.
 
 ```text
 Member → Team과 같은 다대일·일대일
@@ -169,7 +169,7 @@ Team → Members와 같은 일대다
 → Member 수만큼 같은 Team 데이터가 반복될 수 있음
 ```
 
-Collection Fetch Join이 무조건 나쁜 것은 아니다. 결과 규모가 작고 Collection 전체가 꼭 필요하다면 유용하다. 하지만 같은 Team 데이터가 반복되므로 Member가 많을수록 데이터베이스가 읽고 애플리케이션으로 전송하는 행 수도 크게 증가한다.
+일대다 관계를 Fetch Join하는 것이 무조건 나쁜 것은 아니다. 결과 규모가 작고 Member 목록 전체가 꼭 필요하다면 유용하다. 하지만 같은 Team 데이터가 반복되므로 Member가 많을수록 데이터베이스가 읽고 애플리케이션으로 전송하는 행 수도 크게 증가한다.
 
 여기서 페이징까지 필요하면 더 어려운 문제가 생긴다. `LIMIT 20`을 적용했을 때 Team 20개를 잘라야 할까, 아니면 Join 결과 20행을 잘라야 할까?
 
@@ -184,13 +184,13 @@ Team A - Member 2
 Team A - Member 20
 ```
 
-데이터베이스에서 이 결과에 `LIMIT 20`을 적용하면 Team 20개를 가져온 것이 아니다. Team A 하나의 Members 중 20명만 잘라온 것이다. 그러면 Team A의 Collection은 실제로 30명인데 20명만 들어 있는 불완전한 상태가 된다.
+데이터베이스에서 이 결과에 `LIMIT 20`을 적용하면 Team 20개를 가져온 것이 아니다. Team A에 속한 Member 30명 중 20명만 잘라온 것이다. 그러면 실제로는 Member가 30명인 Team A에 20명만 들어 있는 불완전한 목록이 만들어진다.
 
-Hibernate는 불완전한 Collection을 만들지 않기 위해 Collection Fetch Join과 페이징을 함께 사용했을 때 데이터베이스의 `LIMIT`과 `OFFSET`을 적용하지 않을 수 있다. 전체 Join 결과를 가져온 뒤 애플리케이션 메모리에서 필요한 Team만 자르는 방식이다.
+Hibernate는 이런 불완전한 목록을 만들지 않기 위해 일대다 Fetch Join과 페이징을 함께 사용했을 때 데이터베이스의 `LIMIT`과 `OFFSET`을 적용하지 않을 수 있다. 전체 Join 결과를 가져온 뒤 애플리케이션 메모리에서 필요한 Team만 자르는 방식이다.
 
-![Collection Fetch Join에 Pageable을 적용했을 때 발생하는 Hibernate 경고](/images/posts/jpa-n-plus-one/legacy-01.png "Collection Fetch Join과 메모리 페이징 경고")
+![일대다 Fetch Join에 Pageable을 적용했을 때 발생하는 Hibernate 경고](/images/posts/jpa-n-plus-one/legacy-01.png "일대다 Fetch Join과 메모리 페이징 경고")
 
-![Collection Fetch Join SQL에서 LIMIT과 OFFSET이 사라진 실행 로그](/images/posts/jpa-n-plus-one/legacy-02.png "LIMIT·OFFSET이 적용되지 않은 SQL")
+![일대다 Fetch Join SQL에서 LIMIT과 OFFSET이 사라진 실행 로그](/images/posts/jpa-n-plus-one/legacy-02.png "LIMIT·OFFSET이 적용되지 않은 SQL")
 
 개발 데이터가 작을 때는 정상처럼 보일 수 있다. 하지만 운영 데이터가 커지면 필요하지 않은 행까지 모두 데이터베이스에서 읽고 애플리케이션 메모리에 올리므로 응답 지연과 메모리 사용량 증가로 이어질 수 있다.
 
@@ -213,7 +213,7 @@ spring:
 
 데이터베이스를 두 번 호출하지만 Team 20개의 범위를 먼저 확정할 수 있다. 전체 Join 결과를 메모리에 올리는 것보다 훨씬 안전할 수 있다.
 
-Fetch Join은 쿼리를 한 번으로 줄일 수 있는 강력한 방법이다. 그러나 일대다 관계와 페이징, 여러 Collection을 동시에 Join하는 경우, 너무 많은 Column과 행을 한꺼번에 읽는 경우에는 다른 선택지가 필요하다.
+Fetch Join은 쿼리를 한 번으로 줄일 수 있는 강력한 방법이다. 그러나 일대다 관계와 페이징을 함께 사용하거나 여러 일대다 관계를 동시에 Join하는 경우, 너무 많은 Column과 행을 한꺼번에 읽는 경우에는 다른 선택지가 필요하다.
 
 ## Fetch Join이 맞지 않을 때 선택할 수 있는 방법
 
@@ -272,7 +272,7 @@ List<Member> findTop20ByOrderByIdAsc();
 
 이처럼 Repository Method가 가져올 연관 범위를 선언하는 기능이 **EntityGraph**다. JPQL 문자열을 직접 작성하지 않고도 “이 메서드에서는 Team까지 필요하다”는 의도를 표현할 수 있다.
 
-EntityGraph도 마법처럼 SQL 결과의 구조를 바꾸는 별개의 해결책은 아니다. To-one 관계를 포함하면 비교적 단순하지만 Collection을 포함하면 Fetch Join과 마찬가지로 같은 Team 데이터가 반복될 수 있다. 따라서 일대다 관계와 페이징을 함께 사용할 때는 결과 행 증가를 똑같이 확인해야 한다.
+EntityGraph도 마법처럼 SQL 결과의 구조를 바꾸는 별개의 해결책은 아니다. 다대일·일대일 관계를 포함하면 비교적 단순하지만 일대다 관계를 포함하면 Fetch Join과 마찬가지로 같은 Team 데이터가 반복될 수 있다. 따라서 일대다 관계와 페이징을 함께 사용할 때는 결과 행 증가를 똑같이 확인해야 한다.
 
 ### DTO Projection: 필요한 Column만 바로 조회하기
 
@@ -312,7 +312,7 @@ List<MemberSummary> findSummaries(Pageable pageable);
 
 ### Spring Batch의 PagingItemReader도 페이징한다
 
-Collection Fetch Join과 페이징 문제는 Controller가 `Pageable`을 받을 때만 발생하지 않는다. Repository Method에 `Pageable`이 보이지 않아도 Spring Batch의 PagingItemReader가 일정 크기로 결과를 나누어 읽으면 페이징 쿼리가 된다.
+일대다 Fetch Join과 페이징 문제는 Controller가 `Pageable`을 받을 때만 발생하지 않는다. Repository Method에 `Pageable`이 보이지 않아도 Spring Batch의 PagingItemReader가 일정 크기로 결과를 나누어 읽으면 페이징 쿼리가 된다.
 
 ```text
 Batch가 Team 100개를 읽으려고 함
@@ -326,7 +326,7 @@ Batch라고 해서 조회 원리가 달라지는 것은 아니다. 페이징이 
 
 ### distinct가 Join 결과 행 자체를 없애는 것은 아니다
 
-Collection Fetch Join에 `distinct`를 붙이면 Hibernate가 같은 Team Entity를 하나로 합치는 데 도움을 줄 수 있다. 하지만 데이터베이스의 Join 단계에서 Member 수만큼 만들어진 행 자체가 처음부터 사라지는 것은 아니다.
+일대다 Fetch Join에 `distinct`를 붙이면 Hibernate가 같은 Team Entity를 하나로 합치는 데 도움을 줄 수 있다. 하지만 데이터베이스의 Join 단계에서 Member 수만큼 만들어진 행 자체가 처음부터 사라지는 것은 아니다.
 
 ```text
 데이터베이스 Join 결과
@@ -342,7 +342,7 @@ Team A 한 개
 
 ## 테스트에서는 왜 N+1이 잘 안 보일까
 
-N+1과 Collection Fetch Join 문제는 테스트 데이터의 개수뿐 아니라 관계가 어떻게 분포했는지에 따라 가려질 수 있다.
+N+1과 일대다 Fetch Join 문제는 테스트 데이터의 개수뿐 아니라 관계가 어떻게 분포했는지에 따라 가려질 수 있다.
 
 ### 여러 Member가 같은 Team만 참조하는 경우
 
@@ -372,7 +372,7 @@ Team B → Member 2
 Team C → Member 3
 ```
 
-일대다 관계여도 각 Team에 Member가 한 명뿐이라면 Join 결과에서 Team이 반복되지 않는다. Collection Fetch Join과 페이징을 함께 사용해도 개발 데이터에서는 결과 행 증가가 잘 드러나지 않을 수 있다.
+일대다 관계여도 각 Team에 Member가 한 명뿐이라면 Join 결과에서 Team이 반복되지 않는다. 일대다 Fetch Join과 페이징을 함께 사용해도 개발 데이터에서는 결과 행 증가가 잘 드러나지 않을 수 있다.
 
 실제 운영에서는 Team 하나에 Member가 여러 명일 수 있다.
 
@@ -389,7 +389,7 @@ Team B → Member 4, Member 5
 | --- | --- |
 | 이번 쿼리에서 필요한 다대일·일대일 관계 | Fetch Join 또는 EntityGraph |
 | 일대다 관계와 페이징을 함께 사용 | ID 선조회 후 Fetch 또는 Batch Fetching |
-| 여러 Collection을 동시에 조회 | 분리 조회 또는 Batch Fetching |
+| 여러 일대다 관계를 동시에 조회 | 분리 조회 또는 Batch Fetching |
 | 읽기 전용 API에서 일부 Column만 필요 | DTO Projection |
 | 연관 데이터가 필요한 시점이 다양함 | Batch Fetching |
 
