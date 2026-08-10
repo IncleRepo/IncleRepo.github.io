@@ -127,6 +127,10 @@
 }
 
 @media (max-width: 600px) {
+  .menu {
+    overflow: visible;
+  }
+
   .search-page {
     margin-top: 42px;
   }
