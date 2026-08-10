@@ -3,7 +3,7 @@ title = 'MySQL 인덱스와 실행 계획을 함께 읽어야 하는 이유'
 slug = '2'
 aliases = ['/posts/002/']
 date = 2026-03-03T19:00:00+09:00
-lastmod = 2026-08-07T17:29:13+09:00
+lastmod = 2026-08-10T09:17:09+09:00
 draft = false
 description = 'MySQL 인덱스가 범위를 줄이는 원리부터 복합 인덱스 설계와 EXPLAIN, EXPLAIN ANALYZE를 이용한 검증 방법까지 차례대로 알아봅니다.'
 categories = ['데이터베이스']
@@ -34,11 +34,11 @@ SELECT *
 
 인덱스는 `email` 값을 정렬된 형태로 따로 보관한다. `user@example.com`이 있을 만한 위치로 바로 이동할 수 있으므로, 관계없는 이메일을 전부 비교하지 않고 탐색 범위를 줄일 수 있다.
 
-국내 개발 현장에서는 흔히 “이 쿼리 인덱스 타나요?”라고 묻는다. 이는 MySQL이 해당 인덱스를 실제 조회 경로로 선택했는지를 묻는 표현이다. 더 중요한 것은 인덱스를 사용했는지 여부만이 아니라, 그 인덱스로 읽을 범위를 얼마나 줄였는지다.
+실무에서는 흔히 “이 쿼리 인덱스 타나요?”라고 묻는다. MySQL이 해당 인덱스를 실제 조회 경로로 선택했는지 묻는 말이다. 하지만 인덱스를 사용했는지만 확인해서는 부족하다. 그 인덱스로 읽을 범위를 얼마나 줄였는지까지 봐야 한다.
 
 그렇다면 인덱스는 어떤 구조이길래 정렬된 값에서 원하는 위치를 빠르게 찾을 수 있을까?
 
-## B+Tree는 적은 Page를 읽으며 범위를 줄인다
+## B+Tree는 읽어야 할 Page를 줄인다
 
 데이터베이스는 저장 장치에서 필요한 값 하나만 딱 떼어 읽지 않는다. 일정 크기로 묶인 **Page** 단위로 데이터를 읽는다. 이렇게 Page를 읽고 쓰는 작업을 Page I/O라고 한다. 따라서 비교 연산 몇 번을 줄였는가보다 원하는 값을 찾기 위해 몇 개의 Page를 읽었는지가 성능에 큰 영향을 준다.
 
@@ -54,13 +54,13 @@ SELECT *
 → Tree 높이와 Page 접근 횟수를 줄일 수 있음
 ```
 
-다음 그림에서는 두 Tree가 같은 수의 값을 어떤 높이와 분기 수로 나누는지 보면 된다.
+다음 그림은 같은 수의 값을 저장해도 한 Node에서 여러 갈래로 나뉘는 Tree가 더 낮은 높이를 유지할 수 있음을 보여준다.
 
 ![B-Tree와 Binary Tree의 탐색 구조 비교](/images/posts/mysql-index-and-explain/legacy-01.jpg "B-Tree와 Binary Tree")
 
 InnoDB의 인덱스는 B-Tree 계열 구조를 사용한다. 실제 구현은 Leaf Page에 정렬된 Key를 모으고, Leaf끼리 다음 범위를 이어서 읽을 수 있는 B+Tree 형태로 이해하면 쉽다.
 
-다음 그림에서는 Root에서 Branch를 거쳐 Leaf로 내려가는 과정과, Leaf Page가 정렬된 순서로 연결된 모습을 확인하면 된다.
+다음 그림처럼 탐색할 때는 Root에서 Branch를 거쳐 원하는 Leaf로 내려가고, 범위를 읽을 때는 서로 연결된 Leaf Page를 순서대로 따라간다.
 
 ![B+Tree의 Root, Branch와 Leaf Node 구조](/images/posts/mysql-index-and-explain/legacy-03.png "B+Tree 구조")
 
@@ -94,7 +94,7 @@ id = 100이 있는 Leaf Page 탐색
 
 B+Tree가 단건 조회뿐 아니라 범위 조회와 정렬에도 유리한 이유다. 단순히 `O(log N)`이라는 시간 복잡도만 외우기보다, 정렬된 Key로 시작 위치를 찾고 필요한 Page만 읽는 구조라고 이해하는 편이 실용적이다.
 
-여기까지는 인덱스 안에서 원하는 Key를 찾는 과정이다. 하지만 우리가 원하는 것은 결국 `member`의 실제 행이다. 인덱스에서 Key를 찾은 뒤 실제 데이터까지는 어떻게 찾아갈까?
+여기까지는 인덱스 안에서 원하는 Key를 찾는 과정이었다. 하지만 쿼리가 최종적으로 필요한 것은 `member`의 실제 행이다. 이제 인덱스에서 찾은 Key가 실제 데이터로 어떻게 이어지는지 살펴보자.
 
 ## 인덱스에서 실제 회원 행까지 찾아가는 방법
 
@@ -113,7 +113,7 @@ Primary Key 인덱스에서 id = 42 탐색
 → Leaf Page에서 실제 member 행 확인
 ```
 
-이처럼 실제 행 데이터를 담고 있는 인덱스를 **Clustered Index**라고 한다. InnoDB 테이블에는 Clustered Index가 하나 있으며 일반적으로 Primary Key가 그 역할을 한다.
+Primary Key가 있는 InnoDB 테이블은 실제 행 데이터를 Primary Key 순서로 저장한다. 이처럼 Leaf Page에 실제 행을 담는 인덱스가 **Clustered Index**다. 테이블마다 하나만 존재하며 일반적으로 Primary Key가 이 역할을 맡는다.
 
 이번에는 이메일에 별도 인덱스가 있고 다음 쿼리를 실행한다고 해보자.
 
@@ -123,7 +123,7 @@ SELECT name
  WHERE email = 'user@example.com';
 ```
 
-Primary Key가 아닌 일반 인덱스를 **Secondary Index**라고 한다. Secondary Index의 Leaf에는 원본 행 전체 대신 Secondary Key와 해당 행의 Primary Key가 들어 있다.
+이메일처럼 Primary Key가 아닌 컬럼에 만든 인덱스는 **Secondary Index**다. Leaf Page에는 원본 행 전체가 아니라 인덱스 컬럼 값과 해당 행의 Primary Key가 저장된다.
 
 ```text
 email 인덱스에서 user@example.com 탐색
@@ -132,7 +132,7 @@ email 인덱스에서 user@example.com 탐색
 → 실제 member 행의 name 반환
 ```
 
-다음 그림에서는 Secondary Index의 Leaf가 Primary Key를 가리키고, 그 값으로 Clustered Index를 다시 탐색하는 경로를 보면 된다.
+다음 그림은 Secondary Index에서 Primary Key를 찾은 뒤 Clustered Index를 다시 탐색해 실제 행에 도달하는 과정을 보여준다.
 
 ![Clustered Index와 Secondary Index의 탐색 경로](/images/posts/mysql-index-and-explain/legacy-02.png "Clustered Index와 Secondary Index")
 
@@ -173,9 +173,9 @@ SELECT id, title, created_at
  LIMIT 20;
 ```
 
-`status = 'PUBLISHED'`처럼 하나의 값으로 범위를 확실하게 좁히는 조건을 **Equality 조건**이라고 한다. 먼저 PUBLISHED 영역으로 바로 좁힌 뒤, 그 안에서 `created_at`의 정렬 순서를 활용할 수 있다.
+`status = 'PUBLISHED'`는 status를 하나의 값으로 고정한다. 인덱스에서 PUBLISHED 영역으로 바로 좁힌 뒤, 그 안에 정렬된 `created_at`을 이어서 활용할 수 있다.
 
-`created_at < ?`처럼 일정 구간을 읽는 조건은 **Range 조건**이다. 복합 인덱스에서 Range 조건이 시작되면 뒤의 `id`를 탐색 범위를 더 줄이는 데 사용하는 방식에는 제약이 생길 수 있다. `id`가 정렬이나 추가 조건 판단에 도움을 줄 수는 있어도 앞의 Equality 조건과 같은 방식으로 항상 범위를 좁힌다고 볼 수는 없다.
+반면 `created_at < ?`는 특정 값 하나가 아니라 일정 구간을 읽는 범위 조건이다. 복합 인덱스에서 범위 조건이 시작되면 뒤의 `id`까지 탐색 범위를 줄이는 데 사용하는 방식에는 제약이 생길 수 있다. `id`가 정렬이나 추가 조건 판단에 도움을 줄 수는 있어도, 앞의 `status`처럼 하나의 연속된 구간을 항상 더 좁혀 주는 것은 아니다.
 
 반대로 다음처럼 선두 컬럼인 `status`를 사용하지 않으면 `created_at`만으로 시작 위치를 결정하기 어렵다.
 
@@ -189,15 +189,15 @@ SELECT id, title, created_at
 
 앞에서 본 사전식 정렬을 다시 생각해보면 DRAFT 영역과 PUBLISHED 영역마다 `created_at` 순서가 따로 존재한다. status를 모르면 날짜 하나만 보고 인덱스의 연속된 한 구간으로 바로 이동하기 어렵다. 이것이 복합 인덱스의 선두 컬럼이 중요한 이유다.
 
-다음 실습 화면에서는 테이블의 컬럼과 실제로 생성한 복합 인덱스의 순서를 함께 확인하면 된다.
+다음 실습 화면에는 테이블 컬럼과 실제로 생성한 복합 인덱스의 순서가 함께 표시되어 있다.
 
 ![복합 인덱스 실습에 사용한 테이블과 인덱스 구성](/images/posts/mysql-index-and-explain/legacy-04.png "복합 인덱스 실습 구성")
 
-“선택도가 높은 컬럼을 무조건 앞에 둔다”는 규칙만으로는 충분하지 않다. PUBLISHED 값이 많아 선택도가 낮더라도 `status = 'PUBLISHED'`로 먼저 영역을 고정해야 뒤의 날짜 정렬을 효율적으로 사용할 수 있다. Equality 조건이 어디까지 이어지는지, Range 조건이 어디서 시작되는지, `ORDER BY`와 `GROUP BY`가 어떤 순서인지, 실제 쿼리가 얼마나 자주 실행되는지를 함께 봐야 한다.
+“선택도가 높은 컬럼을 무조건 앞에 둔다”는 규칙만으로는 충분하지 않다. PUBLISHED 값이 많아 선택도가 낮더라도 `status = 'PUBLISHED'`로 먼저 영역을 고정해야 뒤의 날짜 정렬을 효율적으로 사용할 수 있다. `=` 조건으로 어느 컬럼까지 값을 고정하는지, 범위 조건이 어디서 시작되는지, `ORDER BY`와 `GROUP BY`가 어떤 순서인지, 실제 쿼리가 얼마나 자주 실행되는지를 함께 봐야 한다.
 
 복합 인덱스의 순서가 쿼리와 맞으면 탐색 범위를 줄일 수 있다. 여기에 반환할 값까지 인덱스 안에 들어 있다면 실제 행을 다시 찾는 두 번째 Tree 탐색도 생략할 수 있다.
 
-## Covering Index는 실제 행을 다시 찾지 않는 상태다
+## Covering Index는 인덱스만으로 조회를 끝낸다
 
 이메일 인덱스로 회원을 찾았지만 반환할 `name`이 인덱스에 없다면 Primary Key 42로 Clustered Index를 다시 찾아가야 했다.
 
@@ -226,27 +226,27 @@ Secondary Index에서 PUBLISHED 영역 탐색
 → Clustered Index를 다시 찾지 않고 결과 반환
 ```
 
-이처럼 한 인덱스 안에서 쿼리에 필요한 값을 모두 해결할 수 있는 상태를 **Covering Index**라고 한다. Covering Index는 Clustered Index나 Secondary Index와 나란히 놓이는 별도의 인덱스 종류가 아니다. **현재 쿼리가 필요로 하는 값이 한 인덱스 안에 모두 들어 있는 상태**다.
+이 경우 MySQL은 인덱스만 읽고 결과를 반환한다. 쿼리에 필요한 컬럼을 모두 담아 실제 행 조회를 생략하게 해 주는 인덱스를 **Covering Index**라고 한다. 고정된 인덱스 종류를 가리키는 말은 아니다. 같은 인덱스라도 쿼리가 어떤 컬럼을 요구하느냐에 따라 Covering Index가 될 수도 있고 아닐 수도 있다.
 
-같은 인덱스라도 `SELECT id, created_at`에는 Covering이 될 수 있고, 인덱스에 없는 `content`까지 조회하면 Covering이 깨진다. 다음 두 화면에서는 `SELECT *`일 때와 필요한 컬럼만 조회했을 때 `Extra`의 `Using index` 표시가 어떻게 달라지는지 보면 된다.
+앞의 인덱스는 `SELECT id, created_at`에 필요한 값을 모두 가지고 있다. 반면 인덱스에 없는 `content`까지 조회하면 실제 행을 다시 찾아야 한다. 다음 두 화면을 비교하면 `SELECT *`일 때는 보이지 않던 `Using index`가 필요한 컬럼만 조회했을 때 `Extra`에 표시되는 것을 확인할 수 있다.
 
 ![SELECT *로 Covering Index가 깨진 실행계획](/images/posts/mysql-index-and-explain/legacy-15.png "SELECT *와 Covering Index")
 
 ![필요한 컬럼만 조회한 실행계획](/images/posts/mysql-index-and-explain/legacy-16.png "필요한 컬럼만 조회한 경우")
 
-Covering을 만들겠다고 모든 응답 컬럼을 인덱스에 넣는 것도 좋은 방법은 아니다. 인덱스가 넓어질수록 저장 공간과 쓰기 비용이 커지고 Page 하나에 담을 수 있는 Key도 줄어든다. 빈도가 높고 성능상 중요한 쿼리에 제한해서 적용해야 한다.
+인덱스만으로 조회를 끝내기 위해 모든 응답 컬럼을 인덱스에 넣는 것도 좋은 방법은 아니다. 인덱스가 넓어질수록 저장 공간과 쓰기 비용이 커지고 Page 하나에 담을 수 있는 Key도 줄어든다. 자주 실행되고 성능이 중요한 쿼리에 한해 적용해야 한다.
 
 여기까지는 인덱스 구조를 보고 “이렇게 동작할 것이다”라고 예상한 내용이다. 하지만 실제 쿼리에서 어떤 인덱스를 사용할지는 MySQL이 결정한다. 이제 설계한 경로가 실제로 선택됐는지 검증해야 한다.
 
-## MySQL이 실제 실행 경로를 선택한다
+## 어떤 인덱스를 사용할지는 MySQL이 결정한다
 
-MySQL은 하나의 쿼리를 실행할 수 있는 여러 방법 중 비용이 낮다고 예상되는 경로를 선택한다. 이 역할을 **Optimizer**라고 한다.
+MySQL은 하나의 쿼리를 실행할 수 있는 여러 방법을 비교하고, 비용이 가장 낮을 것으로 예상되는 경로를 선택한다. 이 판단을 담당하는 구성 요소가 **Optimizer**다.
 
 Optimizer는 사용 가능한 인덱스, 테이블 통계와 데이터 분포, 조건으로 예상되는 결과 건수, 정렬과 Join 비용 등을 비교한다. 인덱스가 존재해도 많은 행을 반환해야 한다면 Full Scan을 선택할 수 있고, 후보가 여러 개라면 개발자가 예상한 것과 다른 인덱스를 고를 수도 있다.
 
 따라서 “인덱스를 만들었다”와 “그 인덱스를 효율적으로 사용했다”는 같은 말이 아니다. MySQL이 예상한 실행 경로를 확인하는 기본 도구가 `EXPLAIN`이다.
 
-## EXPLAIN은 질문을 순서대로 확인한다
+## EXPLAIN은 여섯 가지 질문으로 읽는다
 
 다음처럼 조회 쿼리 앞에 `EXPLAIN`을 붙이면 예상 실행 계획을 확인할 수 있다.
 
@@ -270,13 +270,13 @@ SELECT id, title
 6. 별도 정렬이나 임시 결과 같은 추가 작업이 있는가? → Extra
 ```
 
-먼저 기본 실행 계획 화면에서 후보 인덱스와 실제 선택된 `key`, 접근 방식인 `type`이 어디에 표시되는지 확인해보자.
+먼저 기본 실행 계획에서 후보 인덱스와 실제 선택된 `key`, 접근 방식인 `type`을 찾아보자.
 
 ![EXPLAIN의 기본 실행계획](/images/posts/mysql-index-and-explain/legacy-05.png "EXPLAIN 기본 결과")
 
 `type`은 테이블에 접근하는 방식을 나타낸다. `ALL`은 테이블 전체를 읽는 Full Scan이고, `range`는 인덱스의 일정 범위를 읽는다. `ref`는 인덱스 앞부분을 특정 값과 비교해 범위를 좁히며, `const`는 Primary Key나 Unique Index의 상수 조건처럼 한 행 수준으로 매우 강하게 제한되는 접근이다.
 
-다음 화면에서는 상수 조건이 `ref`에 `const`로 표시되는 위치를 보면 된다.
+다음 화면에서 `ref` 컬럼의 `const`는 인덱스 값을 컬럼이 아닌 상수와 비교했다는 뜻이다. 앞에서 접근 방식으로 살펴본 `type = const`와는 다른 정보이므로 구분해서 읽어야 한다.
 
 ![상수 조건에서 ref가 const로 표시된 실행계획](/images/posts/mysql-index-and-explain/legacy-06.png "ref가 const인 경우")
 
@@ -288,11 +288,11 @@ Join에서는 앞 테이블에서 읽은 컬럼을 다음 테이블의 인덱스
 
 예를 들어 `rows = 100000`이고 `filtered = 10`이라면 약 10만 행을 읽은 뒤 그중 10% 정도가 다음 단계로 넘어갈 것으로 예상한다. 정확한 계산값이라기보다 어디에서 많은 행을 읽고 버리는지 찾는 단서다.
 
-다음 화면에서는 `rows`와 `filtered`를 따로 보지 말고 “몇 행을 읽어서 그중 얼마나 남기는가”로 함께 읽어보자.
+다음 화면처럼 `rows`와 `filtered`는 따로 보지 않고 “몇 행을 읽어서 그중 얼마나 남기는가”로 묶어서 읽는다.
 
 ![rows와 filtered를 함께 확인하는 실행계획](/images/posts/mysql-index-and-explain/legacy-08.png "rows와 filtered")
 
-인덱스를 추가하거나 순서를 바꾼 뒤에는 이전 실행 계획과 나란히 비교해야 한다. 다음 화면에서는 실제 `key`와 `type`, 예상 `rows`가 어떻게 달라졌는지 보면 된다.
+인덱스를 추가하거나 순서를 바꾼 뒤에는 이전 실행 계획과 나란히 비교해야 한다. 다음 화면에서는 변경 후 실제 `key`와 `type`, 예상 `rows`가 어떻게 달라졌는지 확인할 수 있다.
 
 ![인덱스 구성 이후 달라진 실행계획](/images/posts/mysql-index-and-explain/legacy-09.png "인덱스 적용 후 실행계획")
 
@@ -359,7 +359,7 @@ SELECT id, title
 
 인덱스로 읽은 범위를 확인한 뒤에는 `Extra`에 표시되는 추가 작업도 해석해야 한다. `Using filesort`와 `Using temporary`는 이름만 보면 오류처럼 느껴지지만, 쿼리가 실패했다는 뜻은 아니다.
 
-## Using filesort와 Using temporary는 확인할 신호다
+## Using filesort와 Using temporary가 보이면 실제 비용을 확인한다
 
 EXPLAIN의 `Extra`에 이런 문구가 나타났다고 쿼리가 잘못된 것은 아니다. 추가 작업이 생겼다는 신호이므로 처리하는 행 수와 실행 빈도, 실제 시간을 함께 확인해야 한다.
 
@@ -371,7 +371,7 @@ EXPLAIN의 `Extra`에 이런 문구가 나타났다고 쿼리가 잘못된 것�
 
 ### Using temporary
 
-`Using temporary`는 `GROUP BY`, `DISTINCT`나 복잡한 정렬을 처리하는 과정에서 중간 결과를 별도로 만들었다는 신호다. 상태가 세 종류뿐인 작은 테이블을 그룹화한 결과라면 비용이 작을 수 있다. 반대로 수백만 행을 Join한 뒤 큰 중간 결과를 만들고 다시 정렬한다면 비용이 커진다.
+`Using temporary`는 `GROUP BY`, `DISTINCT`나 복잡한 정렬을 처리하기 위해 중간 결과를 별도로 만들었다는 뜻이다. `status` 값이 세 종류뿐인 작은 테이블을 그룹화한다면 비용이 작을 수 있다. 반대로 수백만 행을 Join한 뒤 큰 중간 결과를 만들고 다시 정렬한다면 비용이 커진다.
 
 두 표시 모두 같은 질문으로 판단할 수 있다.
 
@@ -407,7 +407,7 @@ SELECT *
    AND created_at <  '2026-08-08 00:00:00';
 ```
 
-다음 실행 계획에서는 함수 적용 전후에 `type`, `key`와 `rows`가 어떻게 달라지는지 확인하면 된다.
+다음 실행 계획을 통해 함수를 적용하기 전과 후의 `type`, `key`, `rows`를 비교할 수 있다.
 
 ![인덱스 컬럼에 함수를 적용한 실행계획](/images/posts/mysql-index-and-explain/legacy-10.png "인덱스 컬럼에 함수를 적용한 경우")
 
@@ -429,7 +429,7 @@ SELECT *
  WHERE phone_number = '1012345678';
 ```
 
-형변환 방향과 데이터 타입에 따라 정렬된 인덱스 값을 그대로 탐색하기 어려워질 수 있다. 다음 화면에서는 같은 값처럼 보여도 비교 타입에 따라 선택한 접근 경로가 달라지는지 보면 된다.
+형변환 방향과 데이터 타입에 따라 정렬된 인덱스 값을 그대로 탐색하기 어려워질 수 있다. 다음 화면은 같은 값처럼 보여도 비교 타입에 따라 접근 경로가 달라질 수 있음을 보여준다.
 
 ![암묵적 형변환이 포함된 실행계획](/images/posts/mysql-index-and-explain/legacy-11.png "암묵적 형변환")
 
@@ -475,11 +475,11 @@ SELECT *
 
 정렬을 위해 새 인덱스를 추가하기 전에 조건으로 얼마나 범위를 좁히는지, 정렬할 행이 실제로 얼마나 많은지부터 확인한다.
 
-### OR 조건에서 여러 인덱스를 함께 검토하는 경우
+### OR 조건에서는 여러 인덱스를 합쳐 사용할 수 있다
 
 `OR`은 하나의 실행 계획에서 여러 조건을 처리한다. 각 조건이 서로 다른 인덱스와 잘 맞으면 MySQL이 여러 인덱스 결과를 합치는 `index_merge`를 선택할 수 있다.
 
-다음 화면에서는 `key`에 여러 인덱스가 표시되는지와 각 결과를 어떤 방식으로 합치는지 확인하면 된다.
+다음 화면에서 `key`에 여러 인덱스가 표시되는지, 각 결과를 어떤 방식으로 합치는지 확인할 수 있다.
 
 ![OR 조건에서 index_merge가 선택된 실행계획](/images/posts/mysql-index-and-explain/legacy-12.png "OR 조건과 index_merge")
 
@@ -500,7 +500,7 @@ UNION ALL
 → 마지막에 결과를 합침
 ```
 
-먼저 OR 실행 계획에서 각 조건의 결과를 병합하는 방식과 예상 행 수를 확인해보자.
+먼저 OR 실행 계획에서 각 조건의 결과를 병합하는 방식과 예상 행 수를 확인한다.
 
 ![OR 조건에서 결과를 병합하는 실행계획](/images/posts/mysql-index-and-explain/legacy-17.png "OR의 index_merge 실행계획")
 
@@ -512,7 +512,7 @@ UNION ALL
 
 ## 느린 쿼리를 확인하는 순서
 
-인덱스 튜닝은 규칙 하나를 적용하는 작업이 아니라 가설을 세우고 검증하는 과정이다.
+인덱스 튜닝은 정해진 규칙 하나를 적용하고 끝내는 작업이 아니다. 쿼리가 느린 이유를 예상하고 실행 계획과 측정 결과로 검증해야 한다.
 
 ```text
 쿼리가 느리다
@@ -543,10 +543,10 @@ possible_keys / key / type / rows / filtered / Extra 확인
 - InnoDB의 Clustered Index Leaf에는 실제 행이 있고 Secondary Index Leaf에는 Secondary Key와 Primary Key가 있다.
 - Secondary Index에 필요한 값이 없으면 Primary Key로 Clustered Index를 다시 탐색할 수 있다.
 - 복합 인덱스는 여러 컬럼이 각각 정렬된 것이 아니라 왼쪽부터 사전식으로 정렬된 하나의 인덱스다.
-- 컬럼 순서는 선택도만으로 정하지 않고 Equality, Range, 정렬과 실제 조회 패턴을 함께 봐야 한다.
-- Covering Index는 별도 종류가 아니라 현재 쿼리에 필요한 값이 한 인덱스 안에 모두 있는 상태다.
+- 컬럼 순서는 선택도만으로 정하지 않고 `=` 조건, 범위 조건, 정렬과 실제 조회 패턴을 함께 봐야 한다.
+- 쿼리에 필요한 값이 한 인덱스에 모두 있으면 실제 행을 다시 조회하지 않고 결과를 만들 수 있다.
 - `key`에 인덱스 이름이 보여도 `type`, `rows`, `filtered`, `used_key_parts`와 `Extra`를 함께 확인해야 한다.
-- `Using filesort`와 `Using temporary`, Full Scan과 `index_merge`는 실패 판정이 아니라 실제 비용을 확인할 신호다.
+- `Using filesort`, `Using temporary`, Full Scan과 `index_merge`가 보이면 처리한 행 수와 실제 실행 시간을 확인한다.
 - `EXPLAIN`은 예상 실행 계획이고 `EXPLAIN ANALYZE`는 실제 실행 결과를 보여준다.
 
 **좋은 인덱스 설계는 인덱스를 많이 만드는 것이 아니다. 쿼리가 어떤 범위를 어떻게 탐색할지 이해하고, 실행 계획과 실제 수행 시간으로 동작을 검증하는 것이다.**
