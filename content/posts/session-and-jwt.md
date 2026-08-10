@@ -3,216 +3,533 @@ title = '세션과 JWT는 어떤 문제를 다르게 해결하는가'
 slug = '11'
 aliases = ['/posts/011/']
 date = 2026-04-29T19:40:00+09:00
-lastmod = 2026-08-07T16:49:40+09:00
+lastmod = 2026-08-10T15:32:45+09:00
 draft = false
-description = 'HTTP의 무상태성과 인증 상태 유지 문제에서 출발해 서버 세션과 JWT의 구조, 확장과 폐기 전략을 비교합니다.'
+description = '로그인 이후의 요청을 사용자와 연결하는 문제에서 출발해 세션과 JWT의 구조, 확장, 폐기와 브라우저 보안을 비교합니다.'
 categories = ['애플리케이션 보안']
 tags = ['인증', '세션', 'JWT', 'HTTP']
 +++
 
-HTTP 요청은 서로 독립적이다. 로그인 요청이 성공했더라도 다음 요청만 보고는 같은 사용자인지 알 수 없다. 결국 인증 이후에는 여러 요청을 하나의 사용자 상태와 연결하는 장치가 필요하다.
-
-예를 들어 브라우저가 로그인한 뒤 게시글 목록을 조회한다고 해보자.
+로그인 API가 성공했다고 가정해 보자. 브라우저는 이어서 게시글 목록을 요청한다.
 
 ```text
-POST /login
-loginId=kim, password=...
+1. POST /login
+   ID와 Password 전달
+   → 로그인 성공
 
-GET /posts
+2. GET /posts
 ```
 
-두 번째 요청에는 첫 번째 요청이 성공했다는 사실이 저절로 따라오지 않는다. HTTP 서버는 `GET /posts`만 보고 이 요청이 김학인의 요청인지 다른 사람의 요청인지 알 수 없다. 그래서 클라이언트는 매 요청에 자신을 식별할 정보를 함께 보내고, 서버는 그 정보가 유효한지 확인해야 한다. 세션과 JWT는 바로 이 식별 정보를 구성하고 검증하는 대표적인 방법이다.
+두 번째 `GET /posts` 요청만 받은 서버는 어떻게 이 요청이 방금 로그인한 김학인의 요청이라는 사실을 알 수 있을까?
 
-여기서 인증과 인가도 구분할 필요가 있다. 인증은 “누구인가”를 확인하는 과정이고, 인가는 인증된 사용자가 “이 기능을 사용할 수 있는가”를 판단하는 과정이다. 세션과 JWT는 주로 인증 상태를 다음 요청까지 이어주는 수단이며, 실제 권한 판단은 그 안에서 얻은 사용자와 역할 정보를 바탕으로 별도로 수행한다.
+HTTP에서는 이전 요청의 결과가 다음 요청에 자동으로 따라오지 않는다. 각각의 요청은 독립적으로 해석된다. 이런 성질을 HTTP의 Stateless, 즉 무상태성이라고 한다.
 
-세션과 JWT는 이 문제를 서로 다른 위치에 상태를 두어 해결한다. 어느 한쪽이 항상 더 현대적이거나 확장성이 좋은 것은 아니다. 로그아웃과 강제 폐기, 서버 구성, 보안 요구를 함께 봐야 한다.
+따라서 로그인 요청 자체를 기억하는 것이 아니라, 이후 요청을 특정 사용자와 연결할 방법이 필요하다. 클라이언트는 매 요청에 자신을 식별할 Credential을 보내고, 서버는 다음 정보를 확인해야 한다.
+
+- 이 요청을 보낸 사용자가 누구인지
+- 현재 로그인된 상태인지
+- 어떤 권한을 가진 사용자인지
+
+여기서 인증과 인가도 나뉜다.
+
+```text
+인증(Authentication)
+→ “당신이 김학인인가?”
+
+인가(Authorization)
+→ “인증된 김학인이 관리자 페이지를 볼 수 있는가?”
+```
+
+세션과 JWT는 주로 누구인지 확인된 상태를 다음 요청까지 이어주는 방법이다. 그 사용자가 특정 기능을 사용할 수 있는지는 이후 별도의 인가 판단으로 결정한다.
+
+두 방식의 차이는 옛날 방식과 최신 방식의 차이가 아니다. 핵심은 인증 상태를 어디에 두고, 요청마다 어떻게 검증하며, 갱신하고 폐기할 것인가에 있다.
 
 <!--more-->
 
-## 세션은 식별자만 클라이언트에 둔다
+## 세션은 서버의 로그인 상태를 식별자로 찾는다
 
-![Cookie를 이용해 Session ID를 주고받는 흐름](/images/posts/session-and-jwt/legacy-01.png "Cookie와 Session의 기본 흐름")
-
-세션 방식에서는 인증 정보를 서버에 저장하고, 클라이언트에는 그 정보를 찾을 수 있는 임의의 Session ID만 전달한다.
-
-여기서 세션과 Cookie를 같은 개념으로 보면 헷갈리기 쉽다. 세션은 서버가 관리하는 인증 상태이고, Cookie는 브라우저가 값을 보관했다가 요청에 실어 보내는 수단이다. 세션 방식에서는 Cookie 안에 사용자 정보 전체를 넣는 것이 아니라, 서버의 세션을 찾기 위한 식별자만 넣는 경우가 일반적이다.
+먼저 실제 로그인 흐름을 따라가 보자.
 
 ```text
 로그인 성공
-→ 서버가 세션 생성
-→ 브라우저에 Session ID 쿠키 전달
-→ 이후 요청마다 Session ID 전송
-→ 서버가 세션 저장소에서 사용자 상태 조회
+↓
+서버가 임의의 Session ID 생성
+
+서버
+SESSION=7f3a...
+→ userId=15
+→ role=MEMBER
+
+브라우저
+SESSION=7f3a...
 ```
 
-Session ID 자체에는 사용자 이름이나 권한 같은 의미를 넣지 않는 편이 안전하다. 식별자가 유출되면 공격자는 해당 사용자를 가장할 수 있으므로 `Secure`, `HttpOnly`, `SameSite` 같은 Cookie 속성과 만료·재발급 정책이 중요하다.
+다음 요청에서 브라우저는 전달받은 Session ID를 다시 보낸다.
 
-- `Secure`: HTTPS 요청에서만 Cookie를 전송
-- `HttpOnly`: JavaScript에서 Cookie를 직접 읽지 못하게 제한
-- `SameSite`: 다른 Site에서 시작된 요청에 Cookie를 보낼 범위를 제한
-
-이 속성들이 Session ID 탈취를 완전히 막는 것은 아니지만, 브라우저에서 자격 증명이 노출되거나 원치 않는 요청에 자동으로 실리는 범위를 줄인다.
-
-로그인 이후 요청을 예로 들면 다음과 같다.
+```http
+GET /posts HTTP/1.1
+Cookie: SESSION=7f3a...
+```
 
 ```text
-Cookie: SESSION=7f3a...
-        ↓
 서버가 7f3a... 세션 조회
-        ↓
+↓
 userId=15, role=MEMBER 확인
-        ↓
-현재 요청을 15번 사용자로 처리
+↓
+현재 요청을 15번 사용자 요청으로 처리
 ```
 
-브라우저가 보내는 것은 어디까지나 식별자다. 실제 사용자 ID와 권한은 서버 저장소에서 찾는다. 그래서 서버는 로그아웃할 때 해당 세션을 삭제하거나 권한이 바뀌었을 때 세션 내용을 갱신할 수 있다.
+이처럼 실제 인증 상태는 서버에 저장하고, 클라이언트에는 그 상태를 찾기 위한 식별자만 두는 방법을 서버 세션 방식이라고 한다.
 
-서버가 여러 대가 되면 한 서버의 메모리에만 둔 세션이 문제가 된다. 로그인 요청과 다음 요청이 서로 다른 서버에 도착할 수 있기 때문이다. 해결 방법은 여러 가지다.
+아래 그림에서는 브라우저가 사용자 정보 전체를 들고 다니는 것이 아니라 Session ID만 반복해서 보낸다는 점을 보면 된다.
 
-- 같은 사용자의 요청을 같은 서버로 보내는 Sticky Session
-- 서버 사이에 세션을 복제하는 방식
-- Redis 같은 공용 세션 저장소를 사용하는 방식
+![Cookie를 이용해 Session ID를 주고받는 흐름](/images/posts/session-and-jwt/legacy-01.png "Cookie와 Session의 기본 흐름")
 
-세 방법은 해결하는 지점과 비용이 다르다.
+Session ID는 `userId=15`처럼 의미를 해석할 수 있는 사용자 정보가 아니다. 서버에 저장된 상태를 찾기 위한 임의의 열쇠에 가깝다.
 
-- Sticky Session은 구성이 단순하지만 특정 서버가 내려가면 그 서버의 메모리 세션을 잃을 수 있고 부하가 고르게 분산되지 않을 수 있다.
-- 세션 복제는 어느 서버에서도 상태를 읽을 수 있지만 서버 수와 세션 변경량이 늘수록 복제 비용이 커진다.
-- 공용 저장소는 서버를 비교적 자유롭게 늘릴 수 있지만 인증 경로에 네트워크 조회와 저장소 장애 가능성이 추가된다.
+```text
+Session ID
+≠ 사용자 정보
 
-공용 저장소를 사용하면 어느 서버도 같은 세션을 확인할 수 있고 로그아웃이나 권한 변경 때 서버 측에서 즉시 폐기하기 쉽다. 대신 모든 인증 요청이 세션 저장소에 의존하며 저장소의 가용성과 지연을 관리해야 한다.
+Session ID
+= 서버의 Session을 찾기 위한 임의 식별자
+```
 
-세션은 클라이언트의 식별자로 서버 상태를 찾는다. 반대로 요청 자체에 인증에 필요한 Claim을 담아 각 서버가 검증하게 만들면 중앙 조회 의존성을 줄일 수 있는데, 이것이 JWT가 제공하는 기본 방향이다.
+공격자가 Session ID를 알아내면 해당 사용자인 것처럼 요청할 수 있다. 따라서 충분히 예측하기 어려운 값을 사용하고, 로그인 성공처럼 권한 수준이 달라지는 시점에는 기존 Session ID를 새 값으로 바꾸는 것이 중요하다. 이는 공격자가 미리 알고 있던 식별자를 사용자의 로그인 이후에도 쓰는 Session Fixation 공격을 줄이는 방법이다.
 
-서버가 여러 대라면 세션을 어느 서버에서 찾을지도 결정해야 한다. 한 사용자의 요청을 같은 서버로 보내는 Sticky Session은 단순하지만 특정 서버에 부하와 상태가 집중된다. 세션을 복제하거나 외부 저장소에서 공유하면 어느 서버에서도 조회할 수 있지만 동기화와 저장소 운영 비용이 추가된다.
+### Session과 Cookie는 서로 경쟁하는 기술이 아니다
+
+세션 방식에서 Session ID를 반복해서 보내기 위해 Cookie를 자주 사용한다. 그렇다고 Session과 Cookie가 같은 개념은 아니다.
+
+```text
+Session
+→ 서버가 관리하는 로그인 상태
+
+Cookie
+→ 브라우저가 값을 저장하고
+   조건에 맞는 요청에 자동으로 실어 보내는 기능
+```
+
+Cookie 안에 Session 자체를 넣는다고 이해하면 안 된다. 일반적인 서버 세션 방식에서 Cookie에는 `SESSION=7f3a...` 같은 식별자가 들어가고, 실제 `userId`와 권한은 서버가 이 식별자로 찾아온다.
+
+Session ID를 Cookie로 전달한다면 대표적으로 다음 속성을 확인한다.
+
+- `Secure`: HTTPS 요청에서만 Cookie 전송
+- `HttpOnly`: JavaScript가 `document.cookie`로 값을 직접 읽지 못하게 제한
+- `SameSite`: 다른 Site에서 시작된 요청에 Cookie를 자동 전송할 범위 제한
+
+이 속성들은 모든 공격을 없애는 기능이 아니다. Credential이 노출되거나 원치 않는 요청에 자동으로 포함되는 공격 경로를 줄이는 장치다.
+
+{{< callout type="warning" title="HttpOnly가 XSS 자체를 막는 것은 아니다" >}}
+`HttpOnly`는 JavaScript가 Cookie 값을 직접 읽어 탈취하는 경로를 줄인다. 그러나 사이트에서 공격자의 Script가 실행되는 XSS 취약점 자체를 제거하지는 않는다. 공격자는 사용자의 브라우저에서 인증된 요청을 보내는 등 다른 행동을 시도할 수 있다.
+{{< /callout >}}
+
+이제 한 서버의 메모리에서 세션을 관리하는 흐름은 이해했다. 그런데 서버가 여러 대라면 다음 요청은 로그인한 서버와 다른 곳으로 갈 수 있다.
+
+## 서버가 여러 대라면 세션을 어디에서 찾을까
+
+```text
+로그인 요청
+→ Server A
+→ SESSION=123 생성
+
+다음 요청
+→ Load Balancer
+→ Server B
+```
+
+Server B의 메모리에는 `SESSION=123`이 없을 수 있다. 서버가 여러 대가 되면 세션을 어느 서버에서 찾을지가 새로운 문제가 된다.
+
+### 같은 사용자를 항상 같은 서버로 보낸다
+
+Load Balancer가 같은 사용자의 요청을 항상 같은 서버로 보내면 각 서버가 자신의 메모리 세션을 계속 사용할 수 있다. 이 방식을 Sticky Session이라고 한다.
+
+아래 그림에서는 요청이 여러 서버로 무작위 분산되는 대신, 한 사용자의 요청이 계속 같은 서버로 향한다는 점을 보면 된다.
 
 ![한 사용자의 요청을 같은 서버로 보내는 Sticky Session](/images/posts/session-and-jwt/legacy-02.png "Sticky Session")
 
-![여러 서버가 세션을 공유하는 Session Clustering](/images/posts/session-and-jwt/legacy-03.png "Session Clustering")
+구성이 비교적 단순하지만 특정 서버에 사용자와 부하가 몰릴 수 있다. 해당 서버가 내려가면 그 서버의 메모리에만 있던 세션을 잃을 수도 있다.
 
-## JWT는 Claim을 Token 안에 담는다
+### 여러 서버가 세션을 복제한다
+
+Server A의 세션을 Server B와 Server C에도 복제하면 어느 서버로 요청이 가도 같은 상태를 찾을 수 있다. 이를 Session Replication이라고 한다.
+
+하지만 서버 수와 세션 변경량이 늘어날수록 복제해야 할 데이터와 통신량도 증가한다. 모든 서버가 모든 세션을 가지는지, 일부 서버끼리 복제하는지에 따라서도 장애 대응과 운영 방식이 달라진다.
+
+### 모든 서버가 공용 저장소를 조회한다
+
+세션을 애플리케이션 서버 밖의 Redis나 데이터베이스에 저장할 수도 있다.
+
+```text
+Server A ─┐
+Server B ─┼→ Redis와 같은 공용 Session Store
+Server C ─┘
+```
+
+모든 서버가 같은 저장소에서 Session ID를 조회하므로 애플리케이션 서버를 비교적 자유롭게 늘릴 수 있다. Spring 애플리케이션에서는 Spring Session으로 기존 `HttpSession`의 저장소를 Redis나 JDBC 기반 저장소로 교체할 수 있다.
+
+대신 인증 경로에 네트워크 조회가 추가되고, 공용 저장소의 지연과 장애도 관리해야 한다. 세션이 사라진 것이 아니라 애플리케이션 서버의 메모리 밖으로 이동한 것이다.
+
+아래 그림에서는 세 가지 방식이 모두 여러 서버에서 세션을 사용하기 위한 선택지이며, 각각 메모리·네트워크·운영 비용이 다르다는 점을 보면 된다.
+
+![세션 복제와 공용 저장소를 이용한 Session Clustering](/images/posts/session-and-jwt/legacy-03.png "Session Clustering")
+
+| 방식 | 해결 방법 | 함께 생기는 비용 |
+|---|---|---|
+| Sticky Session | 같은 사용자를 같은 서버로 전달 | 부하 편중, 서버 장애 시 메모리 세션 유실 가능성 |
+| Session Replication | 서버끼리 세션 상태 복제 | 복제 통신과 메모리 사용량 증가 |
+| Shared Session Store | 모든 서버가 공용 저장소 조회 | 네트워크 조회와 저장소 가용성 관리 |
+
+따라서 “세션은 서버가 여러 대면 사용할 수 없다”는 설명은 맞지 않는다. 세션도 충분히 확장할 수 있으며, 실제 질문은 상태를 어디에 두고 요청마다 어떤 비용을 지불할 것인가다.
+
+세션 방식에서는 매 요청마다 Session ID로 서버의 인증 상태를 찾아왔다. 그렇다면 사용자 ID와 권한, 만료 시각 같은 정보를 요청이 직접 들고 오고, 각 서버가 그 정보가 위조되지 않았는지만 확인할 수는 없을까?
+
+## JWT는 Claim을 요청과 함께 전달한다
+
+흔히 사용하는 서명된 JWT는 점으로 구분된 세 부분으로 보인다.
+
+```text
+xxxxx.yyyyy.zzzzz
+```
+
+각 부분의 역할은 다음과 같다.
+
+```text
+Header
+→ Token과 서명 방식에 대한 정보
+
+Payload
+→ 전달할 사용자 관련 정보
+
+Signature
+→ 보호된 Header와 Payload가 발급 뒤 바뀌지 않았는지 검증할 서명
+```
+
+아래 그림에서는 Payload와 Signature가 서로 다른 역할을 한다는 점을 먼저 보면 된다. Payload는 정보를 담고, Signature는 그 내용의 무결성을 검증하는 데 사용한다.
 
 ![Header, Payload, Signature로 구성된 JWT](/images/posts/session-and-jwt/legacy-04.png "JWT의 세 부분")
 
-JWT는 당사자 사이에 전달할 Claim을 URL-safe한 문자열로 표현하는 표준이다. 흔히 사용하는 서명된 JWT는 Header, Payload, Signature로 구성된다.
+이런 구조로 당사자 사이에 JSON Claim을 전달할 수 있는 표준이 JWT다. 일반적인 인증용 JWT는 JWS 형식으로 서명되며 Compact Serialization을 사용하면 `Header.Payload.Signature` 형태가 된다.
 
-```text
-base64url(header).base64url(payload).signature
-```
+### Payload에는 Claim이 들어간다
 
-Payload에는 사용자 식별자, 권한, 만료 시각 같은 Claim을 담을 수 있다. 서버는 서명을 검증해 Token이 발급 뒤 변조되지 않았는지 확인한다. 이때 중요한 구분이 있다.
-
-각 부분의 역할을 간단히 펼치면 다음과 같다.
+Payload를 JSON으로 펼치면 다음과 같은 값을 볼 수 있다.
 
 ```json
-// Header
-{
-  "alg": "HS256",
-  "typ": "JWT"
-}
-
-// Payload
 {
   "sub": "15",
   "role": "MEMBER",
   "iat": 1785931200,
-  "exp": 1785932100
+  "exp": 1785932100,
+  "iss": "https://auth.example.com",
+  "aud": "https://api.example.com"
 }
 ```
 
-Header는 서명에 사용할 알고리즘 같은 메타데이터를 담고, Payload는 전달할 Claim을 담는다. Signature는 인코딩한 Header와 Payload를 발급자의 Key로 서명한 값이다. 공격자가 Payload의 `role`을 `ADMIN`으로 바꾸더라도 올바른 Key로 Signature를 다시 만들 수 없다면 검증에 실패한다.
+- `sub`: 이 Token이 누구를 나타내는지
+- `role`: 애플리케이션이 추가한 권한 정보
+- `iat`: 언제 발급했는지
+- `exp`: 언제 만료되는지
+- `nbf`: 언제부터 사용할 수 있는지
+- `iss`: 누가 발급했는지
+- `aud`: 어느 수신자를 대상으로 발급했는지
 
-Claim은 Token에 담은 하나의 정보 항목이다. `sub`는 주체 식별자, `iat`는 발급 시각, `exp`는 만료 시각을 나타내는 표준 Claim이다. 애플리케이션은 역할과 같은 자체 Claim도 추가할 수 있지만 Token이 커지고 정보가 오래 남는다는 점을 고려해야 한다.
+이처럼 Token 안에 담는 각각의 정보 항목을 Claim이라고 한다. 모든 Claim이 필수인 것은 아니며, 애플리케이션은 실제 검증 요구에 필요한 값을 선택한다.
 
-서명 검증은 Payload의 내용이 사실이라고 보증하는 과정과도 조금 다르다. “발급 뒤 내용이 바뀌지 않았고 신뢰한 발급자가 만들었다”는 사실을 확인한다. 예를 들어 Token에 오래된 권한이 들어 있다면 서명이 올바르더라도 현재 권한과 다를 수 있다. 발급 시점의 정보를 얼마나 오래 신뢰할 것인지가 Token 수명과 폐기 정책으로 이어진다.
+### Base64URL 인코딩은 암호화가 아니다
 
-요청을 받을 때 Resource Server는 단순히 문자열 모양만 확인하지 않는다.
+Payload는 전송하기 쉬운 문자열 형태로 바뀌지만 내용이 숨겨지는 것은 아니다.
 
 ```text
-Authorization Header에서 Token 추출
-→ Signature 검증
-→ exp, nbf, iss, aud 같은 Claim 조건 확인
-→ 사용자 식별자와 권한을 현재 요청의 인증 정보로 구성
-→ API 인가 판단
+Payload JSON
+↓
+Base64URL Encoding
+↓
+문자열 형태 변경
 ```
 
-{{< callout type="warning" title="서명은 암호화가 아니다" >}}
-일반적인 JWS 형태의 JWT Payload는 Base64URL로 인코딩될 뿐이다. Token을 가진 사람은 내용을 읽을 수 있으므로 비밀번호나 민감 정보를 넣으면 안 된다. 내용을 숨겨야 한다면 별도의 암호화 구조인 JWE를 검토해야 한다.
+Token을 가진 사람은 Payload를 다시 디코딩해 읽을 수 있다. 따라서 비밀번호나 외부에 노출되면 안 되는 민감한 정보를 일반적인 서명 JWT에 넣으면 안 된다. 내용의 기밀성까지 필요하다면 별도의 암호화 표준인 JWE를 검토해야 한다.
+
+### Signature는 Payload를 숨기지 않는다
+
+정상적으로 발급된 Token에 다음 Claim이 들어 있다고 해보자.
+
+```text
+role = MEMBER
+```
+
+공격자는 Payload 문자열을 고쳐 `role = ADMIN`으로 만들 수 있다. 하지만 신뢰하는 Key를 모르면 변경된 Header와 Payload에 맞는 Signature를 새로 만들 수 없다. 서버가 알고리즘과 Key를 올바르게 제한하고 검증하면 이 Token은 거부된다.
+
+Signature의 목적은 Payload를 암호화하는 것이 아니다. 보호된 Header와 Payload가 발급 이후 변조되지 않았는지, 신뢰한 발급자가 만든 값인지 확인하는 데 있다.
+
+{{< callout type="warning" title="서명 검증 성공은 Claim이 최신이라는 뜻이 아니다" >}}
+Signature는 발급 이후 내용이 변조되지 않았음을 확인한다. Token에 들어 있는 권한이 현재 데이터베이스의 권한과 같다는 사실까지 보장하지는 않는다.
 {{< /callout >}}
 
-서버가 매 요청마다 중앙 세션을 조회하지 않아도 검증할 수 있다는 점은 JWT의 장점이다. 하지만 이것만으로 운영이 단순해지는 것은 아니다. 이미 발급한 Token을 만료 전에 강제로 폐기해야 한다면 Blocklist나 Token Version, 짧은 Access Token과 Refresh Token 같은 추가 상태가 필요할 수 있다.
+예를 들어 15시에 다음 Token을 발급했다고 해보자.
 
-이 폐기 문제는 Token의 수명과 바로 연결된다. 하나의 Token을 오래 유지하는 대신 API 호출용과 재발급용의 책임을 나누면 탈취 위험과 사용자 편의 사이를 조절할 수 있다.
+```text
+JWT 발급 시점
+role = MEMBER
+```
 
-## Access Token과 Refresh Token을 나누는 이유
+10분 뒤 데이터베이스에서 사용자의 권한을 `ADMIN`으로 바꿔도 기존 Token의 `role=MEMBER`와 Signature는 그대로 정상이다. 별도의 재발급이나 현재 권한 조회가 없다면 만료 전까지 이전 Claim을 사용할 수 있다.
+
+세션도 권한을 Session에 복사해 두고 갱신하지 않으면 오래된 값을 사용할 수 있다. 다만 서버가 관리하는 상태이므로 Session을 수정하거나 폐기하는 제어 지점을 두기 쉽다. 어떤 방식을 사용하든 권한 변경을 얼마나 빨리 반영해야 하는지 먼저 정해야 한다.
+
+### 서버는 JWT의 모양만 확인하지 않는다
+
+API 요청은 보통 다음 흐름으로 처리한다.
+
+```text
+Authorization: Bearer eyJ...
+↓
+Token 추출
+↓
+허용한 알고리즘과 Key로 Signature 검증
+↓
+exp와 nbf 확인
+↓
+iss와 aud 등 서비스가 요구하는 Claim 확인
+↓
+사용자 ID와 권한 추출
+↓
+현재 요청의 인증 정보 구성
+↓
+인가 판단
+```
+
+OAuth2 문맥에서는 Access Token을 받아 보호된 API를 제공하는 서버를 Resource Server라고 부른다. Spring Security의 Resource Server도 JWT Signature와 `exp`, `nbf`, `iss` 등을 검증한 뒤 Claim을 현재 요청의 `Authentication`으로 변환한다.
+
+JWT는 Token의 Claim과 Signature만으로 기본 인증 정보를 확인할 수 있으므로 매 요청마다 중앙 Session Store에서 로그인 상태를 찾는 의존성을 줄일 수 있다. 그러나 “JWT를 쓰면 데이터베이스 조회가 0번”이라는 뜻은 아니다. 현재 권한, Blocklist, Token Version이나 기기 상태를 확인하는 설계라면 외부 저장소를 다시 조회할 수 있다.
+
+이제 새로운 문제가 생긴다. 이미 정상적으로 발급한 JWT를 사용자가 로그아웃하면 그 Token은 즉시 무효가 될까?
+
+## 정상적으로 발급한 Token은 만료 전까지 살아 있을 수 있다
+
+서명과 `exp`만 확인하는 구조라면 로그아웃했다고 Token 자체가 자동으로 바뀌지는 않는다.
+
+```text
+14:00 Token 발급
+exp = 17:00
+
+15:00 사용자가 로그아웃
+
+기존 Token
+→ Signature 정상
+→ exp도 지나지 않음
+→ 별도 폐기 확인이 없다면 검증 통과 가능
+```
+
+이 문제를 다루는 방법에는 각각 Trade-off가 있다.
+
+| 방법 | 얻는 것 | 함께 생기는 비용 |
+|---|---|---|
+| Access Token 수명을 짧게 설정 | 탈취된 Token이 사용될 수 있는 시간 축소 | 재발급 횟수 증가 |
+| Blocklist에 폐기한 Token 기록 | 만료 전에도 특정 Token 거부 가능 | 매 요청 조회와 목록 관리 필요 |
+| 사용자별 Token Version 관리 | 이전 Version의 Token을 한꺼번에 무효화 | 현재 Version을 확인할 서버 상태 필요 |
+
+Token을 짧게 만들면 유출 피해 시간은 줄어든다. 하지만 사용자가 몇 분마다 다시 로그인하게 만들 수는 없다. 이 지점에서 Access Token과 Refresh Token을 나누는 설계가 등장한다.
+
+## Access Token과 Refresh Token은 수명과 역할을 나눈다
+
+Access Token과 Refresh Token은 JWT가 반드시 요구하는 두 구성 요소가 아니다. Token 수명과 재인증 문제를 해결하기 위한 인증 설계다.
+
+- Access Token: 보호된 API 요청에 사용하는 비교적 짧은 수명의 Credential
+- Refresh Token: 새 Access Token을 발급받기 위한 더 긴 수명의 Credential
+
+Access Token은 JWT일 수도 있고 서버 조회가 필요한 Opaque Token일 수도 있다. Refresh Token 역시 JWT일 필요가 없으며, 서버가 저장소에서 찾아 검증하는 의미 없는 임의 문자열로 만들 수 있다.
+
+기본 흐름은 다음과 같다.
+
+```text
+1. 로그인 성공
+   → Access Token과 Refresh Token 발급
+
+2. API 요청
+   → Access Token 사용
+
+3. Access Token 만료
+   → Refresh Token으로 재발급 요청
+
+4. 서버가 Refresh Token 검증
+   → 새 Access Token 발급
+```
+
+Access Token을 짧게 유지하면서도 사용자가 매번 ID와 Password를 입력하지 않게 할 수 있다. 대신 Refresh Token은 더 오래 살아 있고 새 Access Token을 만들 수 있으므로 탈취되었을 때 더 큰 피해로 이어질 수 있다. 보관, 만료, 폐기와 기기별 관리가 더 엄격해야 하는 이유다.
+
+### Refresh Token을 사용할 때마다 교체한다
+
+재발급에 사용한 Refresh Token을 폐기하고 새 Refresh Token을 발급하는 방식을 Rotation이라고 한다.
+
+아래 그림에서는 Access Token뿐 아니라 Refresh Token도 `RT1 → RT2 → RT3`로 교체되고, 이미 폐기한 `RT1`을 다시 사용하면 거부된다는 점을 보면 된다.
 
 ![Access Token 재발급과 Refresh Token Rotation 흐름](/images/posts/session-and-jwt/legacy-05.png "Refresh Token Rotation")
 
-Access Token의 수명을 길게 잡으면 매번 로그인할 필요는 없지만 탈취됐을 때 공격 가능한 시간도 길어진다. 반대로 수명을 지나치게 짧게 잡으면 사용자 경험이 나빠진다.
-
-그래서 보통 두 Token의 책임을 나눈다.
-
-- Access Token: API 호출에 사용하며 비교적 짧게 유지
-- Refresh Token: 새 Access Token을 발급하는 데 사용하며 더 엄격하게 저장·검증
-
-Refresh Token을 서버 저장소에 보관하면 로그아웃, 기기별 세션 관리, 재사용 탐지와 회전 정책을 적용할 수 있다. 결국 JWT를 사용해도 보안 요구가 높아질수록 일정한 서버 상태가 다시 생긴다.
-
-재발급 흐름은 다음처럼 이해할 수 있다.
-
 ```text
-1. 로그인 성공 뒤 Access Token과 Refresh Token 발급
-2. API 요청에는 Access Token 사용
-3. Access Token 만료
-4. Refresh Token을 재발급 Endpoint에 전달
-5. 서버가 Refresh Token의 서명·만료·저장 상태 확인
-6. 새 Access Token 발급
+정상 사용자와 공격자가 RT1을 함께 보유
+↓
+정상 사용자가 RT1으로 재발급
+↓
+서버가 RT1 폐기 후 RT2 발급
+↓
+공격자가 RT1 재사용
+↓
+이미 사용된 Token임을 탐지
 ```
 
-Refresh Token은 오래 살아 있으므로 Access Token보다 탈취 피해가 크다. 재발급할 때 Refresh Token도 새 값으로 교체하는 Rotation과, 이미 사용한 Token이 다시 들어오면 같은 Token 계열을 폐기하는 재사용 탐지를 검토하는 이유다.
+서버가 이전 Token과 새 Token의 관계를 보관하면 재사용이 발견된 Token 계열 전체를 폐기하는 정책도 만들 수 있다. 이 기능을 운영하려면 Refresh Token 상태가 서버에 남는다.
 
-Token의 종류를 정해도 브라우저에서 어디에 보관하고 어떻게 전송할지는 아직 남아 있다. JWT라는 형식이 저장 위치를 자동으로 결정하지는 않는다.
+즉 JWT를 사용해도 강제 폐기, 기기별 로그인, Refresh Token Rotation과 재사용 탐지가 필요하면 서버 상태가 다시 생길 수 있다. “JWT를 사용하면 서버가 완전히 Stateless해진다”는 설명이 지나치게 단순한 이유다.
 
-## 저장 위치는 Token 형식과 별개의 문제다
+지금까지는 Token 안에 무엇을 담고 얼마나 오래 사용할지를 정했다. 그런데 브라우저는 그 Credential을 어디에 보관하고 어떻게 전송해야 할까?
 
-JWT를 쓴다고 반드시 `localStorage`에 넣어야 하는 것은 아니다. 세션을 쓴다고 반드시 Cookie만 쓸 수 있는 것도 아니다. Token의 표현 형식과 브라우저가 Credential을 보관·전송하는 방식은 분리해서 판단해야 한다.
+## Token의 형식과 브라우저 저장 위치는 별개의 선택이다
 
-브라우저에서는 JavaScript가 읽을 수 있는 저장소가 XSS에 노출될 수 있다. 반면 Cookie는 자동 전송되므로 CSRF 방어를 함께 고려해야 한다. 중요한 것은 “JWT냐 세션이냐”만 고르는 것이 아니라 전송 경로, 저장 위치, 만료, 재발급과 폐기까지 하나의 인증 수명 주기로 설계하는 것이다.
+다음과 같은 공식은 존재하지 않는다.
 
-두 위험을 단순화하면 다음과 같다.
+```text
+Session → Cookie
+JWT → localStorage
+```
 
-| 저장·전송 방식 | 주로 확인할 위험 | 함께 검토할 장치 |
+JWT 자체를 `HttpOnly` Cookie에 담을 수도 있다.
+
+```http
+Set-Cookie: access_token=eyJ...; Secure; HttpOnly; SameSite=Lax
+```
+
+반대로 Session ID도 Cookie가 아닌 Header로 전달하도록 설계할 수 있다. JWT와 Session ID는 Credential의 형태와 검증 방식에 관한 문제이고, Cookie와 JavaScript Storage는 브라우저에서 이를 저장하고 전송하는 방법에 관한 문제다.
+
+### JavaScript가 읽을 수 있는 저장소
+
+`localStorage`와 같은 저장소의 값은 같은 Origin에서 실행되는 JavaScript가 읽을 수 있다.
+
+```text
+공격자의 Script가 사이트에서 실행됨
+↓
+저장된 Token을 읽음
+↓
+외부로 전송해 다른 환경에서 재사용
+```
+
+따라서 XSS가 발생하면 Token 자체가 탈취될 가능성을 고려해야 한다. XSS는 공격자의 Script가 신뢰받는 사이트 안에서 실행되는 공격이다.
+
+### HttpOnly Cookie
+
+`HttpOnly` Cookie는 JavaScript가 값을 직접 읽는 것을 제한한다. 그러나 브라우저는 조건에 맞는 요청에 Cookie를 자동으로 첨부한다.
+
+```text
+공격 Site에서 사용자의 브라우저를 통해 요청 유도
+↓
+브라우저가 대상 Site의 Cookie를 자동 첨부할 수 있음
+↓
+사용자가 원하지 않은 작업 실행 가능
+```
+
+이런 특성을 악용해 인증된 사용자가 원하지 않은 요청을 보내게 만드는 공격이 CSRF다. Cookie 기반 인증에서는 다음 방어 수단을 서비스 구조에 맞게 함께 검토한다.
+
+- `SameSite`: Cross-site 요청에서 Cookie를 자동 전송할 범위 제어
+- CSRF Token: 공격 Site가 알기 어려운 별도 값을 요청과 함께 검증
+- Origin 검증: 요청이 허용한 Origin에서 시작됐는지 확인
+
+이 중 하나만 적용했다고 모든 CSRF가 자동으로 해결되는 것은 아니다. 프론트엔드와 API의 Origin 구성, 요청 방식과 브라우저 정책을 함께 확인해야 한다.
+
+| 저장·전송 방식 | 주로 확인할 위험 | 함께 검토할 내용 |
 |---|---|---|
-| JavaScript가 읽을 수 있는 저장소 | XSS로 Token 탈취 | 스크립트 삽입 방지, 짧은 수명, 노출 범위 축소 |
-| `HttpOnly` Cookie | 브라우저의 자동 전송을 이용한 CSRF | `SameSite`, CSRF Token, Origin 검증 |
+| JavaScript가 읽을 수 있는 저장소 | XSS로 Credential 자체가 노출될 가능성 | XSS 예방, 짧은 수명, 노출 범위 축소 |
+| `HttpOnly` Cookie | Cookie 자동 전송을 이용한 CSRF | `SameSite`, CSRF Token, Origin 검증 |
 
-어느 한쪽이 모든 공격을 자동으로 막아주는 것은 아니다. 애플리케이션의 Origin 구성과 클라이언트 종류까지 보고 선택해야 한다.
+따라서 “localStorage와 Cookie 중 무엇이 더 안전한가”를 한 문장으로 결정하기 어렵다. 두 방식은 주로 노출되는 공격 경로가 다르며, 어느 쪽도 애플리케이션의 XSS와 CSRF 대응을 대신하지 않는다.
 
-결국 세션과 JWT의 선택은 유행이나 서버 대수로 결정되지 않는다. 지금까지 살펴본 상태 위치, 즉시 폐기, 저장과 전송 방식이 서비스 요구와 어떻게 맞는지 비교해야 한다.
+## 선택하기 전에 필요한 보장을 먼저 정한다
 
-## 무엇을 선택할까
+지금까지 살펴보면 세션과 JWT 모두 장점과 운영 비용이 있었다. 따라서 서버가 한 대인지 여러 대인지, 어느 기술이 더 최신인지부터 물으면 선택 기준이 흐려진다.
 
-서버 세션은 다음 요구에 잘 맞는다.
+먼저 다음 질문에 답해야 한다.
 
-- 로그인 상태를 서버에서 즉시 폐기해야 하는 경우
-- 권한 변경을 다음 요청부터 바로 반영해야 하는 경우
-- 브라우저 중심의 단일 서비스이며 중앙 세션 저장소를 안정적으로 운영할 수 있는 경우
+- 인증 상태는 어디에 둘 것인가?
+- 매 요청에서 무엇을 조회하고 검증할 것인가?
+- 로그아웃이나 관리자의 강제 폐기를 얼마나 빨리 반영해야 하는가?
+- 권한 변경을 얼마나 빨리 반영해야 하는가?
+- 여러 API 서버가 중앙 인증 저장소 없이 Credential을 직접 검증해야 하는가?
+- Credential의 수명과 재발급을 어떻게 운영할 것인가?
+- 브라우저, 모바일 앱과 서버 간 통신 중 어떤 Client를 지원하는가?
+- Credential을 어디에 저장하고 어떤 방식으로 전송할 것인가?
 
-JWT는 다음 요구에 잘 맞을 수 있다.
+권한 변경 사례로 차이를 확인해 보자.
 
-- 여러 Resource Server가 발급자와 분리되어 Token을 독립적으로 검증해야 하는 경우
-- 서비스 사이에 표준화된 Claim을 전달해야 하는 경우
-- 짧은 수명의 Token과 명확한 재발급·폐기 정책을 운영할 수 있는 경우
+```text
+15:00
+userId=15, role=MEMBER
 
-규모가 커졌다는 이유만으로 세션을 버릴 필요는 없다. 중앙 세션 저장소도 수평 확장이 가능하고, JWT도 폐기와 재발급을 위해 상태를 가질 수 있다. 선택 기준은 상태의 존재 여부보다 **그 상태를 어디에서 어떤 수명으로 관리할지**다.
+15:05
+데이터베이스의 role을 ADMIN으로 변경
+```
+
+서버 세션에서는 Session 내용을 갱신하거나 다음 요청에서 권한을 다시 조회하도록 설계할 수 있다. JWT에 `role=MEMBER`, `exp=15:20`이 들어 있다면 별도의 폐기나 재발급 전략이 없는 동안 기존 Claim이 유지될 수 있다.
+
+이 차이도 절대적이지는 않다. 세션에 권한을 복사하고 갱신하지 않으면 오래된 값을 사용할 수 있고, JWT를 받더라도 매번 현재 권한을 조회하도록 만들 수 있다. 중요한 것은 기술 이름이 아니라 서비스가 요구하는 반영 시점을 어떤 구조로 보장할 것인가다.
+
+### 서버 세션이 잘 맞을 수 있는 경우
+
+- 로그인 상태를 서버에서 직접 관리하고 즉시 폐기해야 하는 경우
+- 권한 변경을 다음 요청부터 빠르게 반영해야 하는 경우
+- 브라우저 중심 서비스이며 공용 Session Store를 안정적으로 운영할 수 있는 경우
+
+### 서명된 Token이 잘 맞을 수 있는 경우
+
+- 여러 Resource Server가 발급자와 분리되어 Token을 직접 검증해야 하는 경우
+- 서비스 사이에 제한된 수명의 표준 Claim을 전달해야 하는 경우
+- Token의 만료, 재발급과 폐기 정책을 운영할 수 있는 경우
+
+규모가 커졌다는 이유만으로 세션을 버릴 필요는 없다. 세션도 공용 저장소로 여러 서버에서 사용할 수 있고, JWT도 폐기와 Refresh Token 관리 때문에 서버 상태를 가질 수 있다. 보안 역시 형식 하나를 선택했다고 자동으로 좋아지지 않는다.
+
+결국 인증 기능은 다음 순서로 설계할 수 있다.
+
+```text
+로그인 상태를 다음 요청에서 어떻게 확인할까?
+↓
+인증 상태를 서버가 직접 제어할 필요가 큰가?
+↓
+즉시 로그아웃과 강제 폐기가 중요한가?
+↓
+여러 API 서버가 중앙 조회 없이 Credential을 검증해야 하는가?
+↓
+Token을 사용한다면 수명·폐기·권한 반영·재발급은 어떻게 처리할까?
+↓
+브라우저 Client라면 어디에 저장하고 어떻게 전송할까?
+↓
+XSS와 CSRF를 어떻게 방어할까?
+```
+
+이 흐름은 정답을 자동으로 골라 주는 의사결정 트리가 아니다. 인증을 설계할 때 빠뜨리지 말아야 할 질문의 순서다.
 
 ## 정리
 
-- 세션은 서버에 인증 상태를 저장하고 클라이언트에는 식별자를 둔다.
-- JWT는 Claim을 Token 안에 담고 서명으로 무결성을 검증할 수 있다.
-- 서명된 JWT의 Payload는 암호화된 정보가 아니다.
-- JWT도 강제 폐기와 Refresh Token 관리를 위해 서버 상태가 필요할 수 있다.
-- Token 형식, 브라우저 저장 위치와 전송 방식은 각각 따로 검토해야 한다.
+- HTTP는 로그인 성공 사실을 다음 요청에 자동으로 연결하지 않으므로 이후 요청마다 사용자를 식별할 Credential이 필요하다.
+- 세션은 클라이언트가 전달한 Session ID로 서버가 관리하는 로그인 상태를 찾는 방식이다.
+- 서버가 여러 대여도 Sticky Session, Session Replication이나 공용 Session Store를 이용해 세션을 운영할 수 있다.
+- JWT는 Claim을 Token에 담고, 서명으로 보호된 내용이 발급 뒤 변조되지 않았는지 검증할 수 있다.
+- 일반적인 서명 JWT의 Payload는 암호화된 정보가 아니며, Signature가 정상이어도 Claim이 현재 데이터와 같다는 보장은 없다.
+- Access Token과 Refresh Token의 분리는 JWT의 필수 구조가 아니라 수명과 재인증을 다루는 설계다.
+- JWT도 강제 폐기, 기기 관리, Rotation과 재사용 탐지가 필요하면 서버 상태를 가질 수 있다.
+- Credential 형식과 브라우저 저장 위치는 별개의 문제이며, XSS와 CSRF를 서비스 구조에 맞게 함께 방어해야 한다.
+
+세션과 JWT의 핵심 차이는 “서버에 상태가 있느냐 없느냐” 한 문장으로 끝나지 않는다. 세션은 클라이언트의 식별자로 서버가 관리하는 인증 상태를 찾는 방식이고, JWT는 인증에 필요한 Claim 일부를 Token에 담아 각 서버가 검증할 수 있게 하는 방식이다. 실제 선택에서는 상태 위치뿐 아니라 수명, 강제 폐기, 권한 변경, 재발급, 브라우저 저장 방식과 보안 요구까지 함께 설계해야 한다.
 
 ## 참고 자료
 
+### 공식 자료
+
+- [IETF RFC 9110 - HTTP Semantics](https://www.rfc-editor.org/rfc/rfc9110.html)
+- [IETF RFC 7519 - JSON Web Token](https://www.rfc-editor.org/rfc/rfc7519.html)
+- [IETF RFC 7515 - JSON Web Signature](https://www.rfc-editor.org/rfc/rfc7515.html)
+- [IETF RFC 7516 - JSON Web Encryption](https://www.rfc-editor.org/rfc/rfc7516.html)
+- [IETF RFC 6749 - OAuth 2.0 Authorization Framework](https://www.rfc-editor.org/rfc/rfc6749.html)
+- [IETF RFC 9700 - Best Current Practice for OAuth 2.0 Security](https://www.rfc-editor.org/rfc/rfc9700.html)
 - [OWASP - Session Management Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html)
-- [IETF RFC 7519 - JSON Web Token](https://www.rfc-editor.org/rfc/rfc7519)
+- [OWASP - HTML5 Security Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/HTML5_Security_Cheat_Sheet.html)
+- [OWASP - Cross-Site Request Forgery Prevention Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html)
+- [Spring Session Reference](https://docs.spring.io/spring-session/reference/index.html)
+- [Spring Security - OAuth 2.0 Resource Server JWT](https://docs.spring.io/spring-security/reference/servlet/oauth2/resource-server/jwt.html)
