@@ -1,5 +1,7 @@
 +++
 title = 'N+1 문제를 Fetch Join만으로 해결할 수 없는 이유'
+slug = '001'
+aliases = ['/posts/jpa-n-plus-one/']
 date = 2026-02-20T19:00:00+09:00
 lastmod = 2026-08-07T17:11:25+09:00
 draft = false

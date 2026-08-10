@@ -1,5 +1,7 @@
 +++
 title = '@Async는 언제 충분하고 언제 메시지 큐가 필요한가'
+slug = '012'
+aliases = ['/posts/async-processing-and-message-queue/']
 date = 2026-05-12T19:30:00+09:00
 lastmod = 2026-08-07T16:49:40+09:00
 draft = false

@@ -1,5 +1,7 @@
 +++
 title = 'Offset과 Keyset Pagination은 언제 선택해야 하는가'
+slug = '003'
+aliases = ['/posts/pagination-optimization/']
 date = 2026-03-05T19:00:00+09:00
 lastmod = 2026-08-07T17:35:28+09:00
 draft = false

@@ -1,5 +1,7 @@
 +++
 title = '캐시는 DB 부하를 어떻게 줄이고 Redis는 무엇을 맡는가'
+slug = '006'
+aliases = ['/posts/redis-cache-basics/']
 date = 2026-04-03T19:10:00+09:00
 lastmod = 2026-08-07T16:49:40+09:00
 draft = false

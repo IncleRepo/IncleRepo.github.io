@@ -50,18 +50,31 @@ jobs:
         run: |
           set -euo pipefail
 
+          declare -A used_post_ids
+
           if grep -RIl $'\uFFFD' content/posts public/posts; then
             echo "손상된 대체 문자(�)가 발견되었습니다."
             exit 1
           fi
 
           for source in content/posts/*.md; do
-            slug="$(basename "$source" .md)"
-            if [[ "$slug" == "_index" ]]; then
+            if [[ "$(basename "$source")" == "_index.md" ]] || grep -q '^draft = true$' "$source"; then
               continue
             fi
 
-            page="public/posts/$slug/index.html"
+            post_id="$(sed -n "s/^slug = '\([0-9]\{3\}\)'$/\1/p" "$source")"
+            if [[ -z "$post_id" ]]; then
+              echo "$source: 공개 게시글에는 사용하지 않은 3자리 slug가 필요합니다."
+              exit 1
+            fi
+
+            if [[ -n "${used_post_ids[$post_id]:-}" ]]; then
+              echo "$source: 게시글 ID $post_id가 중복되었습니다."
+              exit 1
+            fi
+            used_post_ids[$post_id]="$source"
+
+            page="public/posts/$post_id/index.html"
             test -s "$page"
             grep -q '정리' "$page"
             grep -q '참고 자료' "$page"

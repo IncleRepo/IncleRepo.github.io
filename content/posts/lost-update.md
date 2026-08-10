@@ -1,5 +1,7 @@
 +++
 title = 'Lost Update는 왜 발생하고 어떤 동시성 제어를 선택해야 하는가'
+slug = '004'
+aliases = ['/posts/lost-update/']
 date = 2026-03-16T19:00:00+09:00
 lastmod = 2026-08-07T16:49:40+09:00
 draft = false

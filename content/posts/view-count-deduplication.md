@@ -1,5 +1,7 @@
 +++
 title = '조회수 중복 방지와 동시성 문제는 왜 따로 설계해야 하는가'
+slug = '008'
+aliases = ['/posts/view-count-deduplication/']
 date = 2026-04-20T19:00:00+09:00
 lastmod = 2026-08-06T17:54:00+09:00
 draft = false
