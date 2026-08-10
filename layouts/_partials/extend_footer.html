@@ -21,3 +21,17 @@
     activeLink.setAttribute("aria-current", "page");
   })();
 </script>
+<script>
+  (() => {
+    const backLink = document.querySelector(".article-back-link");
+    if (!backLink || !document.referrer) return;
+
+    const previousPage = new URL(document.referrer);
+    if (previousPage.origin !== window.location.origin) return;
+
+    backLink.addEventListener("click", (event) => {
+      event.preventDefault();
+      window.history.back();
+    });
+  })();
+</script>
