@@ -3,62 +3,84 @@ title = 'MVCC는 락 없이 일관된 읽기를 어떻게 제공하는가'
 slug = '5'
 aliases = ['/posts/005/']
 date = 2026-03-24T19:00:00+09:00
-lastmod = 2026-08-07T16:49:40+09:00
+lastmod = 2026-08-10T11:26:30+09:00
 draft = false
-description = '트랜잭션 이상 현상과 격리 수준을 살펴보고 InnoDB의 Read View와 Undo Log가 일관된 읽기를 제공하는 방식을 설명합니다.'
+description = '트랜잭션 격리 수준에서 출발해 InnoDB의 MVCC, Undo Log, Read View와 일반 조회·잠금 조회의 차이를 차례로 살펴봅니다.'
 categories = ['데이터베이스']
 tags = ['트랜잭션', 'MVCC', 'MySQL', 'InnoDB']
 +++
 
-여러 트랜잭션이 동시에 같은 데이터를 읽고 쓰면 처리량은 높아지지만 서로의 중간 상태가 보일 수 있다. 모든 트랜잭션을 완전히 직렬로 실행하면 문제는 줄어들지만 동시성도 잃는다.
+사용자 A가 계좌 잔액을 읽는 동안 사용자 B가 같은 계좌의 잔액을 바꾼다고 생각해 보자. B가 수정 중인 값을 A에게 바로 보여줘야 할까, Commit한 뒤에 보여줘야 할까? A가 한 번 읽은 뒤라면 같은 트랜잭션이 끝날 때까지 처음 값을 유지해야 할까?
 
-트랜잭션은 여러 데이터베이스 작업을 하나의 논리적인 작업으로 묶는 경계다. 계좌 이체라면 출금과 입금이 모두 성공하거나 모두 취소돼야 한다. 그런데 서로 다른 사용자의 트랜잭션을 항상 한 줄로 세워 실행하면 안전한 대신 기다리는 요청이 많아진다. 데이터베이스는 가능한 한 동시에 실행하면서도 각 트랜잭션이 이해할 수 있는 읽기 결과를 제공해야 한다.
+모든 트랜잭션을 한 번에 하나씩만 실행하면 이런 고민은 줄어든다. 하지만 요청이 100개 들어오면 99개는 앞의 요청이 끝나기를 기다려야 한다. 실제 데이터베이스는 가능한 한 여러 트랜잭션을 동시에 처리하면서도, 각 트랜잭션이 이해할 수 있는 기준에 맞춰 데이터를 보여줘야 한다.
 
-트랜잭션 격리 수준은 이 사이에서 어떤 현상을 허용할지 정한다. InnoDB의 MVCC는 읽기마다 공유 Lock을 잡는 대신 행의 여러 Version 중 현재 트랜잭션이 볼 수 있는 Version을 선택해 일관된 읽기를 제공한다.
+따라서 다른 트랜잭션의 변경을 내 트랜잭션에서 어느 정도까지 보이게 할지 정하는 기준이 필요하다. 이를 트랜잭션 격리 수준(Isolation Level)이라고 한다. 먼저 격리 수준이 막으려는 문제가 무엇인지 살펴본 뒤, InnoDB가 Lock만으로 모든 읽기를 막지 않고도 일관된 결과를 만드는 방법까지 이어서 알아보자.
 
-## 격리 수준을 이해하기 위한 세 가지 현상
+## 읽기 결과가 달라지는 세 가지 경우
 
-### Dirty Read
+격리 수준 표부터 외우기보다 동시에 실행된 트랜잭션 사이에서 무엇이 달라지는지 먼저 보는 편이 이해하기 쉽다.
 
-다른 트랜잭션이 아직 Commit하지 않은 값을 읽는 현상이다. 값을 쓴 트랜잭션이 Rollback하면 읽은 데이터는 실제로 존재하지 않았던 상태가 된다.
-
-```text
-Transaction A: balance 100 → 0으로 변경, 아직 Commit하지 않음
-Transaction B: balance 조회 → 0
-Transaction A: Rollback → balance는 다시 100
-```
-
-B는 최종적으로 존재하지 않게 된 0을 읽었다.
-
-### Non-repeatable Read
-
-한 트랜잭션 안에서 같은 행을 두 번 읽었는데 다른 트랜잭션의 Commit 때문에 값이 달라지는 현상이다.
+### Commit되지 않은 값을 읽는 경우
 
 ```text
-Transaction A: balance 조회 → 100
-Transaction B: balance 120으로 변경 후 Commit
-Transaction A: 같은 행 조회 → 120
+Transaction A: balance를 100에서 0으로 변경
+               아직 Commit하지 않음
+
+Transaction B: balance 조회
+               → 0
+
+Transaction A: Rollback
+               → balance는 다시 100
 ```
 
-A의 첫 번째 읽기와 두 번째 읽기가 반복되지 않는다는 의미다.
+B가 읽은 0은 A의 Rollback으로 사라졌다. 결과적으로 B는 데이터베이스에 확정된 적 없는 중간 값을 사용한 셈이다. 이렇게 다른 트랜잭션이 아직 Commit하지 않은 값을 읽는 현상을 Dirty Read라고 한다.
 
-### Phantom Read
-
-같은 조건으로 범위를 두 번 조회했는데 다른 트랜잭션이 행을 추가하거나 삭제해 결과 집합이 달라지는 현상이다.
+### 같은 행의 값이 달라지는 경우
 
 ```text
-Transaction A: WHERE status = 'READY' 조회 → 3행
-Transaction B: READY 상태의 행 1개 INSERT 후 Commit
-Transaction A: 같은 조건 조회 → 4행
+Transaction A: balance 조회
+               → 100
+
+Transaction B: balance를 120으로 변경한 뒤 Commit
+
+Transaction A: 같은 행을 다시 조회
+               → 120
 ```
 
-기존 행의 값이 바뀐 것이 아니라 조건에 맞는 행이 유령처럼 새로 나타난 것처럼 보여 Phantom이라는 이름이 붙었다.
+A는 같은 트랜잭션 안에서 같은 행을 두 번 읽었지만 서로 다른 값을 받았다. 한 번 읽은 결과를 같은 조건으로 다시 얻을 수 없다는 의미에서 Non-repeatable Read라고 한다.
 
-이 현상들은 “동시 요청이 있으면 무조건 생긴다”가 아니라 격리 수준과 읽기 종류에 따라 허용 여부가 달라진다.
+### 조건에 맞는 행의 수가 달라지는 경우
 
-세 현상을 기준으로 삼으면 각 격리 수준이 무엇을 막고 무엇을 허용하는지 비교할 수 있다. 먼저 SQL 표준이 정의한 최소 경계를 보고, 그다음 InnoDB가 이를 어떻게 구현하는지 내려가 보자.
+```text
+Transaction A: status = 'READY'인 행 조회
+               → 3행
 
-## SQL 표준의 네 격리 수준
+Transaction B: READY 상태의 행 1개를 INSERT한 뒤 Commit
+
+Transaction A: 같은 조건으로 다시 조회
+               → 4행
+```
+
+이번에는 기존 행의 값이 바뀐 것이 아니다. 같은 조건에 맞는 행 하나가 새로 나타나 결과 집합이 달라졌다. 이런 현상을 Phantom Read라고 한다.
+
+세 현상은 다음 질문으로 구분할 수 있다.
+
+```text
+Dirty Read
+→ Commit되지 않은 값을 보았는가?
+
+Non-repeatable Read
+→ 같은 행을 다시 읽었더니 값이 달라졌는가?
+
+Phantom Read
+→ 같은 조건으로 다시 읽었더니 행의 집합이 달라졌는가?
+```
+
+이제 각 격리 수준이 세 현상을 어디까지 허용하는지 비교할 수 있다.
+
+## 네 가지 격리 수준은 허용하는 현상이 다르다
+
+다음 그림과 표에서는 격리 수준이 높아질수록 어떤 읽기 현상을 더 막는지 확인하면 된다.
 
 ![트랜잭션 격리 수준별 Dirty Read, Non-repeatable Read, Phantom Read 비교](/images/posts/transaction-isolation-and-mvcc/legacy-03.svg "격리 수준별 읽기 현상 비교")
 
@@ -69,121 +91,384 @@ Transaction A: 같은 조건 조회 → 4행
 | Repeatable Read | 방지 | 방지 | 허용 가능 |
 | Serializable | 방지 | 방지 | 방지 |
 
-이 표는 표준이 허용하는 최소 경계를 설명한다. 실제 데이터베이스 구현은 더 강하게 동작할 수 있다. MySQL InnoDB의 기본 격리 수준은 Repeatable Read이며 Consistent Read와 Next-Key Lock을 조합한다.
+표는 다음처럼 읽을 수 있다.
 
-격리 수준이 높아질수록 무조건 좋은 것은 아니다. 더 강한 일관성을 제공하려면 동시 실행을 제한하거나 더 많은 Lock과 관리 비용이 필요할 수 있다. 애플리케이션은 데이터베이스의 기본값을 맹목적으로 바꾸기보다, 업무에서 허용할 수 없는 현상이 무엇인지 먼저 정해야 한다.
+- Read Uncommitted는 다른 트랜잭션이 Commit하기 전의 값까지 볼 수 있다.
+- Read Committed는 Commit된 값만 읽지만, 같은 트랜잭션의 두 조회 결과가 달라질 수 있다.
+- Repeatable Read는 같은 트랜잭션의 일반 조회가 같은 읽기 기준을 유지한다.
+- Serializable은 트랜잭션을 순서대로 실행한 것에 가까운 결과를 얻도록 동시 실행을 가장 강하게 제한한다.
 
-표만으로는 Lock 없이 같은 값을 반복해서 읽을 수 있는 이유가 보이지 않는다. InnoDB의 Consistent Read를 이해하려면 현재 행에서 과거 Version을 복원하는 MVCC 구조를 살펴봐야 한다.
+다만 이 표는 SQL 표준이 정의한 경계다. 데이터베이스마다 이를 구현하는 방법과 실제 보장 범위는 다를 수 있다. MySQL InnoDB의 기본 격리 수준은 Repeatable Read이며, 일반 조회에는 MVCC를 이용하고 잠금이 필요한 범위 조회에는 Next-Key Lock을 활용해 표보다 강한 방식으로 Phantom 문제를 다룬다.
 
-## MVCC가 이전 값을 만드는 방법
+격리 수준은 높을수록 무조건 좋은 것이 아니다. 더 많은 이상 현상을 막는 대신 동시에 처리할 수 있는 범위가 줄거나 Lock 대기와 관리 비용이 늘 수 있다. 가장 높은 수준을 고르는 것이 목표가 아니라, 업무에서 어떤 현상을 허용하면 안 되는지 먼저 정해야 한다.
 
-![트랜잭션별 Read View가 판단하는 가시성 범위](/images/posts/transaction-isolation-and-mvcc/legacy-01.png "Read View")
+여기까지 보면 한 가지 의문이 남는다. Repeatable Read에서는 B가 100을 120으로 바꾸고 Commit했는데도 A가 어떻게 다시 100을 읽을 수 있을까? 처음 읽은 순간부터 해당 행을 계속 잠그고 있는 것일까?
+
+## InnoDB는 필요한 과거 값을 골라 보여준다
+
+InnoDB의 일반 `SELECT`는 행을 처음 읽은 뒤 계속 잠그는 방식으로 반복 가능한 읽기를 만들지 않는다. 현재 값뿐 아니라 과거 상태를 복원할 수 있게 해두고, 각 트랜잭션에 보여도 되는 버전을 골라 반환한다.
+
+이처럼 하나의 행에 대해 여러 시점의 상태를 다루면서 동시 실행을 제어하는 방식을 Multi-Version Concurrency Control, 줄여서 MVCC라고 한다.
+
+```text
+Multi-Version
+→ 하나의 행에 대해 여러 시점의 상태를 다룰 수 있음
+
+Concurrency Control
+→ 여러 트랜잭션을 동시에 처리하면서 읽기 결과를 조정함
+```
+
+MVCC가 동작하려면 두 가지 질문에 답해야 한다.
+
+```text
+과거 값은 어디에서 가져오는가?
+→ Undo Log
+
+여러 버전 중 어떤 값을 보여주는가?
+→ Read View
+```
+
+역할이 다른 두 요소를 나눠서 살펴보자.
+
+## Undo Log는 과거 값을 복원할 재료를 남긴다
+
+InnoDB가 행을 수정할 때는 이전 상태를 다시 구성하는 데 필요한 정보를 Undo Log에 남긴다.
+
+```text
+현재 행
+balance = 120
+trx_id = 30
+
+        ↓ 이전 상태 복원
+
+이전 행
+balance = 100
+trx_id = 20
+```
+
+현재 행에는 가장 최근 값이 있지만, 그 값을 만든 트랜잭션의 식별자와 이전 상태로 이어지는 정보도 함께 관리된다. 현재 행에서 이전 상태, 다시 그 이전 상태로 따라갈 수 있는 연결을 흔히 Version Chain이라고 표현한다.
+
+다음 그림에서는 현재 레코드에서 Undo Log를 따라 이전 버전으로 이동하는 흐름에 집중하면 된다.
 
 ![Undo Log의 이전 버전이 연결되는 Record History](/images/posts/transaction-isolation-and-mvcc/legacy-02.png "InnoDB Record History")
 
-InnoDB가 행을 변경하면 이전 값을 복원할 수 있는 정보를 Undo Log에 남긴다. 트랜잭션은 Read View를 기준으로 어떤 Transaction ID의 변경을 볼 수 있는지 판단한다.
+그렇다고 UPDATE할 때마다 행 전체의 복사본을 영원히 하나씩 보관한다는 뜻은 아니다. InnoDB는 이전 값을 복원하는 데 필요한 정보를 관리하며, 더 이상 어떤 트랜잭션도 과거 버전을 필요로 하지 않으면 정리할 수 있다.
+
+Undo Log가 과거 값을 복원할 수 있게 해주더라도 아무 버전이나 보여줄 수는 없다. 이제 현재 트랜잭션이 볼 수 있는 버전을 판단할 기준이 필요하다.
+
+## Read View는 보여줄 수 있는 버전을 판단한다
+
+Read View는 현재 트랜잭션의 입장에서 어떤 트랜잭션의 변경까지 볼 수 있는지 판단하는 기준이다. 사진처럼 데이터베이스 전체를 복제한 물리적인 사본이 아니라, 읽을 수 있는 데이터의 범위를 정하는 정보에 가깝다.
+
+다음 그림에서는 Read View를 만든 트랜잭션마다 보이는 변경 범위가 달라질 수 있다는 점을 보면 된다.
+
+![트랜잭션별 Read View가 판단하는 가시성 범위](/images/posts/transaction-isolation-and-mvcc/legacy-01.png "Read View")
+
+조회 흐름을 단순화하면 다음과 같다.
 
 ```text
-현재 행: balance = 120, trx_id = 30
-    ↓ Undo Log
-이전 행: balance = 100, trx_id = 20
+현재 행 확인
+↓
+Read View 기준으로 볼 수 있는 버전인가?
+↓
+YES → 현재 값 사용
+
+NO
+↓
+Undo Log를 따라 이전 버전 확인
+↓
+볼 수 있는 버전을 찾을 때까지 반복
 ```
 
-현재 행이 아직 보여서는 안 되는 Version이라면 Undo Log를 따라가 과거 Version을 재구성한다. 그래서 일반 `SELECT`는 다른 트랜잭션이 쓰고 있는 행을 읽을 때 반드시 그 쓰기가 끝나기를 기다리지 않아도 된다.
+정리하면 Undo Log는 과거 값을 복원할 재료이고, Read View는 어떤 버전을 보여줄지 판단하는 기준이다. 일반 `SELECT`는 이 둘을 이용해 다른 트랜잭션의 쓰기가 끝날 때까지 항상 기다리지 않고도 현재 트랜잭션에 맞는 값을 읽을 수 있다.
 
-여기서 Read View는 “어떤 트랜잭션의 변경까지 볼 수 있는가”를 기록한 가시성 기준이고, Undo Log는 과거 값을 복원할 재료다. 둘의 역할을 나누면 MVCC 흐름을 이해하기 쉽다.
+InnoDB 문서에서는 이런 일반 조회를 Consistent Nonlocking Read라고 설명한다. 이 글에서는 이해를 돕기 위해 일반 `SELECT` 또는 일관된 읽기(Consistent Read)라고 부르겠다. 여기서 일관되다는 말은 언제나 최신이라는 뜻이 아니라, 같은 트랜잭션이 이해할 수 있는 읽기 기준에 맞는다는 뜻이다.
+
+## 실무에서 하나 더: 트랜잭션을 오래 열어두면?
+
+과거 버전은 더 이상 필요하지 않을 때 Purge 과정에서 정리할 수 있다. 하지만 오래된 Read View를 사용하는 트랜잭션이 남아 있다면 상황이 달라진다.
 
 ```text
-Read View로 현재 행을 볼 수 있는지 판단
-→ 볼 수 있으면 현재 값 반환
-→ 아직 볼 수 없으면 Undo Log에서 이전 Version 탐색
-→ Read View에 보이는 Version을 찾을 때까지 반복
+오래된 Read View를 사용하는 트랜잭션 존재
+↓
+해당 트랜잭션이 과거 버전을 아직 필요로 할 수 있음
+↓
+InnoDB가 관련 Undo 정보를 바로 정리할 수 없음
+↓
+Undo 정보와 삭제 표시된 레코드가 오래 유지될 수 있음
 ```
 
-MVCC가 행 전체의 복사본을 무한히 저장한다는 뜻은 아니다. 변경 전 값을 복원할 정보를 Version Chain으로 연결하고, 더 이상 어떤 트랜잭션도 필요로 하지 않는 과거 정보는 정리한다.
+따라서 읽기 전용 트랜잭션이라도 필요 이상으로 오래 열어두면 Undo 정리를 늦추고 저장 공간과 조회 비용에 영향을 줄 수 있다. “데이터를 바꾸지 않으니 오래 열어도 괜찮다”는 뜻은 아니다.
 
-Undo Log는 무한히 남지 않는다. 이전 Version을 필요로 하는 오래된 트랜잭션이 사라지면 Purge 대상이 된다. 장시간 열린 트랜잭션은 오래된 Version 정리를 막고 Undo 공간을 늘릴 수 있으므로 읽기 전용 작업도 필요 이상으로 오래 유지하면 안 된다.
+이제 과거 값을 어떻게 찾는지는 알았다. 다음 질문은 읽기 기준을 언제 만들고 언제까지 유지하는가다. 이 시점이 Read Committed와 Repeatable Read의 결과를 가른다.
 
-과거 Version을 만들 수 있다는 것만으로 어떤 Version을 선택하는지는 설명되지 않는다. 그 선택 시점을 달리하는 것이 Repeatable Read와 Read Committed의 중요한 차이다.
+## Read Committed와 Repeatable Read는 읽기 기준을 만드는 시점이 다르다
 
-## Repeatable Read와 Read Committed의 Snapshot
+Read Committed도 다른 트랜잭션이 Commit하지 않은 값은 읽지 않는다. Repeatable Read도 마찬가지다. 그런데 왜 같은 트랜잭션에서 두 번 조회한 결과는 달라질 수 있을까?
 
-InnoDB Repeatable Read에서 일반적인 Consistent Read는 첫 번째 읽기가 만든 Snapshot을 같은 트랜잭션 동안 재사용한다.
+차이는 일반 `SELECT`가 사용할 Read View를 만드는 주기에 있다.
 
 ```text
-Transaction A: SELECT balance → 100
-Transaction B: UPDATE balance = 120 → COMMIT
-Transaction A: SELECT balance → 100
+Read Committed
+→ 일반 SELECT마다 새로운 Read View를 만듦
+
+Repeatable Read
+→ 첫 번째 일반 SELECT에서 만든 Read View를
+   같은 트랜잭션의 다음 일반 SELECT에서도 재사용함
 ```
 
-Read Committed에서는 Consistent Read마다 새 Snapshot을 만든다. 따라서 두 번째 `SELECT`는 120을 볼 수 있다.
+Read View가 정한 읽기 기준을 Snapshot이라고도 표현한다. 특정 시점의 데이터베이스 전체를 복사한다는 뜻이 아니라, 이 트랜잭션에서 어떤 변경까지 볼 것인지 정한 기준이다.
 
-두 격리 수준의 차이는 “Commit된 데이터만 읽는가”만으로 설명되지 않는다. 둘 다 다른 트랜잭션이 Commit하지 않은 값은 읽지 않지만 Snapshot을 만드는 주기가 다르다.
+Repeatable Read에서 다음 순서로 실행했다고 하자.
 
 ```text
-Read Committed  : SELECT 문마다 새로운 Read View
-Repeatable Read : 트랜잭션의 첫 Consistent Read에서 만든 Read View 재사용
+Transaction A: SELECT balance
+               → 100
+
+Transaction B: balance를 120으로 UPDATE
+Transaction B: COMMIT
+
+Transaction A: SELECT balance
+               → 100
 ```
 
-여기서 말하는 것은 `SELECT ... FOR UPDATE`가 아닌 일반 `SELECT`다. Locking Read와 `UPDATE`, `DELETE`는 최신 상태를 기준으로 Lock을 획득하므로 같은 Repeatable Read 트랜잭션 안에서도 일반 Consistent Read와 서로 다른 시점을 볼 수 있다.
+이 시점의 상태를 나누면 다음과 같다.
 
-Snapshot은 일관된 조회를 제공하지만 이후의 변경 순서를 예약하지는 않는다. 읽은 값을 기준으로 곧바로 수정해야 한다면 과거 Version을 보는 것만으로는 부족하고 현재 행에 대한 Lock이 필요할 수 있다.
+```text
+데이터베이스의 최신 상태
+→ 120
 
-## 읽기 Lock은 언제 필요한가
+Transaction A의 Read View에서 보이는 상태
+→ 100
+```
 
-![Record Lock, Gap Lock과 Next-Key Lock의 범위](/images/posts/transaction-isolation-and-mvcc/legacy-04.png "InnoDB의 Record·Gap·Next-Key Lock")
+A가 Java 객체에 저장해 둔 100을 재사용하는 것은 아니다. 두 번째 SQL도 데이터베이스에서 실행되며, InnoDB가 A의 Read View에 맞는 과거 버전을 찾아 100을 반환할 수 있다.
 
-조회한 값을 바탕으로 곧바로 변경할 때 단순 Snapshot만으로는 다른 트랜잭션의 변경을 막을 수 없다.
+반면 Read Committed에서는 두 번째 일반 `SELECT`가 새로운 Read View를 만든다. B가 이미 Commit했다면 새로운 읽기 기준에는 B의 변경이 포함되므로 120을 볼 수 있다.
+
+이 설명은 일반 `SELECT`에 해당한다. 지금 읽은 값을 기준으로 곧바로 수정해야 한다면 과거 버전을 보는 것만으로는 부족할 수 있다.
+
+## 일반 SELECT와 SELECT FOR UPDATE의 목적은 다르다
+
+재고를 단순히 화면에 보여주려면 현재 트랜잭션의 기준에 맞는 값만 일관되게 읽으면 된다.
+
+```sql
+SELECT stock
+  FROM product
+ WHERE id = 1;
+```
+
+그러나 읽은 재고를 바로 차감하려면 조회와 수정 사이에 다른 트랜잭션이 값을 바꾸는 일을 막아야 할 수 있다.
 
 ```sql
 SELECT stock
   FROM product
  WHERE id = 1
- FOR UPDATE;
+   FOR UPDATE;
 ```
 
-`FOR UPDATE`는 조회한 Index Record에 배타적 Lock을 잡고 트랜잭션이 끝날 때까지 다른 변경을 기다리게 한다. 범위 조건에서는 Record Lock뿐 아니라 Gap 또는 Next-Key Lock이 생길 수 있다.
+두 읽기의 목적을 비교하면 동작 차이가 보인다.
 
-일반 `SELECT`는 과거 Version을 읽어 쓰기 작업을 기다리지 않을 수 있지만, `FOR UPDATE`는 곧 변경할 현재 행을 선점하려는 읽기다. 따라서 오래된 Snapshot이 아니라 최신 상태를 확인하고 Lock을 획득한다. 같은 `SELECT` 문처럼 보여도 목적과 동작이 다른 것이다.
+| 읽기 | 목적 | 동작 |
+| --- | --- | --- |
+| 일반 `SELECT` | 현재 트랜잭션의 기준에 맞는 값을 일관되게 조회 | Snapshot에 맞는 과거 버전을 볼 수 있으며 읽기 Lock을 설정하지 않음 |
+| `SELECT ... FOR UPDATE` | 읽은 현재 상태를 기준으로 이어서 변경 | 가장 최근 상태를 기준으로 필요한 Lock을 획득하며 다른 트랜잭션이 기다릴 수 있음 |
 
-- Record Lock: 실제로 존재하는 인덱스 레코드를 잠금
-- Gap Lock: 인덱스 레코드 사이의 빈 구간을 잠금
-- Next-Key Lock: Record Lock과 앞쪽 Gap Lock을 결합
+Repeatable Read라고 해서 `SELECT ... FOR UPDATE`가 오래된 Snapshot만 읽는 것은 아니다. 일반 Consistent Read는 읽기의 일관성이 목적이고, Locking Read는 지금부터 변경할 현재 행을 확보하는 것이 목적이기 때문이다. `UPDATE`와 `DELETE`도 일반 Consistent Read와 달리 가장 최근 상태를 기준으로 잠금 대상을 찾는다.
 
-범위 조건에서 Gap까지 잠그는 이유는 다른 트랜잭션이 조건 범위 안에 새 행을 삽입해 결과 집합을 바꾸는 일을 막기 위해서다.
+이 차이 때문에 한 Repeatable Read 트랜잭션 안에서 일반 조회와 잠금 조회를 섞으면 서로 다른 시점의 상태가 보일 수 있다. MySQL 공식 문서도 이런 혼합은 해석하기 어려운 결과를 만들 수 있다고 주의를 준다. 어떤 값을 읽고 무엇을 변경하려는지 트랜잭션의 목적을 먼저 분명히 해야 한다.
 
-Lock은 정합성을 보호하지만 대기와 Deadlock 가능성을 만든다. 단순 조회에는 MVCC Consistent Read를 사용하고, 읽은 현재 상태를 기준으로 반드시 이어서 변경해야 할 때만 Locking Read를 선택하는 편이 좋다.
+MVCC와 Lock은 둘 중 하나만 선택하는 기술이 아니다.
 
-이 모든 동작은 트랜잭션이 어디서 시작하고 끝나는지에 따라 유지 시간과 영향 범위가 달라진다. Spring 애플리케이션에서는 그 경계를 주로 `@Transactional`로 선언한다.
+```text
+일관된 값을 조회하고 싶음
+→ MVCC를 이용한 일반 SELECT
+
+현재 값을 읽은 뒤 그 상태를 기준으로 변경해야 함
+→ Locking Read가 필요할 수 있음
+```
+
+제목의 “락 없이”도 모든 Lock이 사라진다는 의미가 아니다. 일반적인 읽기에서 매번 공유 Lock을 잡지 않고도 일관된 값을 보여줄 수 있다는 뜻이다. `UPDATE`, `DELETE`, `SELECT ... FOR UPDATE` 같은 작업에는 여전히 Lock이 사용된다.
+
+## 범위 조회는 빈 구간까지 잠글 수 있다
+
+Primary Key나 Unique Index의 모든 열을 정확히 지정해 한 행을 찾는 경우에는 보통 해당 인덱스 레코드만 잠근다.
+
+```sql
+SELECT stock
+  FROM product
+ WHERE id = 1
+   FOR UPDATE;
+```
+
+하지만 범위 조건에서는 현재 존재하는 행만 잠그는 것으로 충분하지 않을 수 있다.
+
+```sql
+SELECT id, price
+  FROM product
+ WHERE price BETWEEN 1000 AND 2000
+   FOR UPDATE;
+```
+
+트랜잭션이 유지되는 동안 다른 트랜잭션이 이 가격 범위에 새 상품을 INSERT하면 같은 조건의 결과 집합이 달라진다. 이를 막기 위해 InnoDB는 검색 과정에서 만난 인덱스 레코드뿐 아니라 레코드 사이의 빈 구간도 잠글 수 있다.
+
+```text
+현재 인덱스 값
+10           20
+
+다른 트랜잭션이 15를 INSERT
+→ 같은 범위 조회의 결과가 달라짐
+```
+
+이제 Lock 이름을 붙이면 다음과 같다.
+
+- Record Lock은 실제 인덱스 레코드를 잠근다.
+- Gap Lock은 인덱스 레코드 사이 또는 양 끝의 빈 구간에 새 값이 들어오지 못하게 한다.
+- Next-Key Lock은 인덱스 레코드와 그 앞의 Gap을 함께 잠근다.
+
+다음 그림에서는 실제 레코드뿐 아니라 레코드 사이 빈 구간도 Lock 대상이 될 수 있다는 점을 보면 된다.
+
+![Record Lock, Gap Lock과 Next-Key Lock의 범위](/images/posts/transaction-isolation-and-mvcc/legacy-04.png "InnoDB의 Record·Gap·Next-Key Lock")
+
+실제로 잡히는 Lock의 범위는 격리 수준, 사용한 인덱스와 검색 조건에 따라 달라진다. InnoDB Repeatable Read에서 Unique Index를 완전한 유일 조건으로 조회하면 발견한 인덱스 레코드만 잠그지만, 범위 검색이나 유일하지 않은 조건은 스캔한 범위에 Gap Lock 또는 Next-Key Lock을 만들 수 있다. Read Committed에서는 일반 검색과 인덱스 스캔의 Gap Lock을 대부분 사용하지 않으며 외래 키와 중복 키 검사 같은 경우에는 예외가 있다.
+
+Lock은 정합성을 지키는 대신 대기와 Deadlock 가능성을 만든다. 따라서 모든 조회를 습관적으로 잠그기보다 현재 상태를 확보하고 이어서 변경해야 하는 구간에 사용해야 한다.
+
+지금까지 살펴본 Read View와 Lock은 모두 트랜잭션이 유지되는 동안 의미가 있었다. 그렇다면 Spring 애플리케이션에서는 이 경계를 어디에서 정할까?
 
 ## @Transactional은 데이터베이스 작업의 경계를 정한다
 
-Spring의 `@Transactional`은 트랜잭션 경계와 전파, Rollback 규칙을 선언한다. 반면 데이터베이스 격리 수준과 MVCC는 그 경계 안에서 동시 읽기·쓰기를 처리하는 방식이다. 둘은 함께 동작하지만 같은 개념은 아니다.
+Spring의 `@Transactional`은 어느 작업부터 어느 작업까지 하나의 데이터베이스 트랜잭션으로 묶을지 선언한다.
 
-`@Transactional`을 붙였다고 Lost Update가 자동으로 사라지지는 않는다. 같은 값을 읽은 두 트랜잭션이 각각 계산한 결과를 덮어쓰면 둘 다 정상 Commit할 수 있다. 이 문제에는 원자적 SQL, 낙관적 Lock이나 비관적 Lock처럼 별도의 동시성 제어가 필요하다.
+```java
+@Service
+@RequiredArgsConstructor
+public class TransferService {
 
-`@Transactional(readOnly = true)`도 단순한 설명용 표시는 아니다. Spring과 Hibernate는 Flush Mode를 조정할 수 있고, DataSource와 Driver 설정에 따라 데이터베이스에 Read-only Transaction 설정과 Commit을 전달할 수 있다. 한 운영 환경에서는 MySQL General Log를 확인했을 때 `SELECT` 외에도 Auto Commit과 Session Transaction 설정, Commit 요청이 추가되는 것을 관찰했다.
+    private final AccountRepository accountRepository;
 
-그렇다고 모든 조회 트랜잭션을 제거해야 한다는 뜻은 아니다. 같은 Snapshot에서 여러 조회를 묶어야 하거나 지연 로딩이 필요한 경우, 읽기 전용 DataSource Routing에 사용하는 경우에는 명확한 역할이 있다. 반대로 단건 조회마다 관성적으로 붙였다면 실제 SQL과 Connection 점유 시간을 측정할 가치가 있다.
+    @Transactional
+    public void transfer(long fromId, long toId, long amount) {
+        Account from = accountRepository.findByIdForUpdate(fromId);
+        Account to = accountRepository.findByIdForUpdate(toId);
 
-Class 전체에 넓게 선언하면 필요하지 않은 Method와 외부 API 대기까지 트랜잭션에 들어오기 쉽다. 원자적으로 묶어야 하는 데이터베이스 작업을 먼저 찾고 필요한 Method 범위에 경계를 두는 편이 의도를 읽기 쉽다. `@Transactional`은 동시성을 자동으로 해결하는 어노테이션이 아니라 **어떤 데이터베이스 작업을 하나의 Commit 또는 Rollback으로 묶을지 정하는 도구**다.
+        from.withdraw(amount);
+        to.deposit(amount);
+    }
+}
+```
+
+위 메서드에서는 출금과 입금이 하나의 Commit 또는 Rollback으로 묶인다. `@Transactional`과 데이터베이스 기능의 역할은 다음처럼 구분할 수 있다.
+
+| 구분 | 역할 |
+| --- | --- |
+| `@Transactional` | 트랜잭션의 시작과 끝, 전파 방식, 격리 수준과 Rollback 규칙을 선언 |
+| Isolation Level | 다른 트랜잭션의 변경을 어느 범위까지 읽을지 결정 |
+| MVCC | 일반 조회에 보여줄 버전을 선택해 일관된 읽기를 제공 |
+| Lock | 현재 상태를 보호해야 하는 읽기와 쓰기의 충돌을 조정 |
+
+따라서 `@Transactional`을 붙였다고 Lost Update가 자동으로 사라지지는 않는다.
+
+```text
+Transaction A: stock 10 조회
+Transaction B: stock 10 조회
+
+Transaction A: 1을 빼서 stock 9 저장
+Transaction B: 1을 빼서 stock 9 저장
+
+두 트랜잭션 모두 Commit
+→ 두 번 차감했지만 최종 재고는 9
+```
+
+두 작업은 각각 원자적으로 끝났지만 B가 A의 결과를 덮어썼다. 이 문제에는 원자적 UPDATE, 낙관적 Lock 또는 비관적 Lock처럼 상황에 맞는 별도의 동시성 제어가 필요하다.
+
+## 실무에서 하나 더: readOnly는 무엇을 보장하는가
+
+```java
+@Transactional(readOnly = true)
+public ProductDetail getProduct(long productId) {
+    return productRepository.findDetail(productId);
+}
+```
+
+`readOnly = true`는 이 트랜잭션이 읽기 전용이라는 의도를 전달하고, 실행 환경이 지원한다면 최적화할 수 있게 하는 힌트다. 하지만 모든 구성에서 쓰기 SQL을 물리적으로 차단하는 안전장치는 아니다. Spring 공식 문서도 실제 트랜잭션 시스템이 이 힌트를 이해하지 못하면 무시할 수 있고, 쓰기 시도가 반드시 실패하는 것은 아니라고 설명한다.
+
+Hibernate의 Flush 처리, JDBC Connection 설정, 읽기 전용 DataSource Routing처럼 실제 효과는 Transaction Manager와 ORM, Driver, 데이터베이스 구성에 따라 달라진다. 그러므로 `readOnly = true`의 효과를 단정하기보다 사용하는 조합에서 실제 SQL과 Connection 동작을 확인해야 한다.
+
+그렇다고 조회 트랜잭션이 불필요하다는 뜻도 아니다. 같은 Snapshot에서 여러 조회를 묶어야 하거나 지연 로딩이 필요한 경우처럼 명확한 이유가 있다면 읽기 전용 트랜잭션은 유용하다. 중요한 것은 조회 메서드마다 관성적으로 붙이는 대신 필요한 경계를 의식하는 것이다.
+
+## 트랜잭션 안에 외부 대기까지 넣지 않는다
+
+Class 전체에 `@Transactional`을 선언하면 데이터베이스 작업과 무관한 외부 API 대기까지 트랜잭션에 포함되기 쉽다.
+
+```java
+@Transactional
+public void placeOrder(PlaceOrderCommand command) {
+    Order order = orderRepository.save(Order.create(command));
+
+    paymentClient.approve(order.getId(), order.getTotalAmount());
+    // 외부 결제 API가 5초 지연되면 트랜잭션도 그만큼 오래 유지될 수 있다.
+
+    order.markPaid();
+}
+```
+
+이 구조에서는 결제 서버를 기다리는 동안 Connection과 트랜잭션이 유지되고, 앞에서 획득한 Lock도 Commit 또는 Rollback까지 오래 남을 수 있다. 외부 호출의 성공과 데이터베이스 변경을 어떻게 조정할지 별도로 설계하고, 데이터베이스에서 원자적으로 처리해야 하는 최소 메서드 범위에 트랜잭션 경계를 두는 편이 좋다.
 
 ## 정리
 
-- 격리 수준은 동시 실행에서 어떤 읽기 현상을 허용할지 정한다.
-- InnoDB MVCC는 Read View와 Undo Log로 과거 행 Version을 재구성한다.
-- Repeatable Read는 같은 트랜잭션의 Consistent Read가 같은 Snapshot을 재사용한다.
-- 일반 `SELECT`와 `SELECT ... FOR UPDATE`는 읽는 시점과 Lock 동작이 다르다.
-- 오래 열린 트랜잭션은 Undo Log 정리를 지연시킬 수 있다.
-- `@Transactional`은 데이터베이스 작업의 경계를 정하며 동시성 문제를 자동으로 해결하지는 않는다.
+전체 흐름을 다시 연결하면 다음과 같다.
+
+```text
+여러 트랜잭션이 동시에 실행됨
+↓
+서로의 변경을 어디까지 보여줄지 정해야 함
+↓
+Isolation Level
+↓
+일반 SELECT에서 일관된 읽기가 필요함
+↓
+MVCC
+↓
+Read View로 볼 수 있는 버전을 판단함
+↓
+필요하면 Undo Log에서 과거 버전을 복원함
+↓
+Read Committed와 Repeatable Read는
+Read View를 만드는 시점이 다름
+↓
+현재 값을 읽고 바로 변경해야 한다면
+Snapshot만으로 부족할 수 있음
+↓
+Locking Read
+↓
+Spring에서는 @Transactional로
+이 동작이 유지될 트랜잭션 경계를 정함
+```
+
+핵심만 다시 나누면 다음과 같다.
+
+- Undo Log는 과거 값을 복원할 재료다.
+- Read View는 어떤 버전을 볼 수 있는지 판단하는 기준이다.
+- Read Committed는 일반 조회마다 새로운 읽기 기준을 만든다.
+- Repeatable Read는 첫 일반 조회에서 만든 읽기 기준을 같은 트랜잭션에서 재사용한다.
+- 일반 `SELECT`는 일관되게 읽는 것이 목적이다.
+- `SELECT ... FOR UPDATE`는 현재 상태를 확보해 이어서 변경하는 것이 목적이다.
+- `@Transactional`은 트랜잭션의 경계를 정하지만 동시성 문제를 자동으로 해결하지는 않는다.
+
+**MVCC는 Lock을 전혀 사용하지 않는 기술이 아니다. 데이터베이스는 가능한 일반 조회를 서로 기다리지 않게 하면서도 각 트랜잭션에 맞는 과거 버전을 보여준다. 다만 현재 상태를 기준으로 변경해야 하는 작업에는 여전히 Lock과 별도의 동시성 제어가 필요할 수 있다.**
 
 ## 참고 자료
 
 ### 공식 자료
 
+- [MySQL - Consistent Nonlocking Reads](https://dev.mysql.com/doc/refman/8.4/en/innodb-consistent-read.html)
 - [MySQL - Transaction Isolation Levels](https://dev.mysql.com/doc/refman/8.4/en/innodb-transaction-isolation-levels.html)
 - [MySQL - InnoDB Multi-Versioning](https://dev.mysql.com/doc/refman/8.4/en/innodb-multi-versioning.html)
+- [MySQL - InnoDB Locking](https://dev.mysql.com/doc/refman/8.4/en/innodb-locking.html)
 - [MySQL - Locking Reads](https://dev.mysql.com/doc/refman/8.4/en/innodb-locking-reads.html)
+- [Spring Framework - Using @Transactional](https://docs.spring.io/spring-framework/reference/data-access/transaction/declarative/annotations.html)
+- [Spring Framework API - @Transactional](https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/transaction/annotation/Transactional.html)
 
 ### 국내 기술 블로그
 
