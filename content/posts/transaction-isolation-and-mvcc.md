@@ -3,7 +3,7 @@ title = 'MVCC는 락 없이 일관된 읽기를 어떻게 제공하는가'
 slug = '5'
 aliases = ['/posts/005/']
 date = 2026-03-24T19:00:00+09:00
-lastmod = 2026-08-10T11:26:30+09:00
+lastmod = 2026-08-10T11:42:41+09:00
 draft = false
 description = '트랜잭션 격리 수준에서 출발해 InnoDB의 MVCC, Undo Log, Read View와 일반 조회·잠금 조회의 차이를 차례로 살펴봅니다.'
 categories = ['데이터베이스']
@@ -80,25 +80,18 @@ Phantom Read
 
 ## 네 가지 격리 수준은 허용하는 현상이 다르다
 
-다음 그림과 표에서는 격리 수준이 높아질수록 어떤 읽기 현상을 더 막는지 확인하면 된다.
+다음 그림에서는 격리 수준이 높아질수록 어떤 읽기 현상을 더 막는지 확인하면 된다.
 
 ![트랜잭션 격리 수준별 Dirty Read, Non-repeatable Read, Phantom Read 비교](/images/posts/transaction-isolation-and-mvcc/legacy-03.svg "격리 수준별 읽기 현상 비교")
 
-| 격리 수준 | Dirty Read | Non-repeatable Read | Phantom Read |
-| --- | --- | --- | --- |
-| Read Uncommitted | 허용 가능 | 허용 가능 | 허용 가능 |
-| Read Committed | 방지 | 허용 가능 | 허용 가능 |
-| Repeatable Read | 방지 | 방지 | 허용 가능 |
-| Serializable | 방지 | 방지 | 방지 |
-
-표는 다음처럼 읽을 수 있다.
+그림은 다음처럼 읽을 수 있다.
 
 - Read Uncommitted는 다른 트랜잭션이 Commit하기 전의 값까지 볼 수 있다.
 - Read Committed는 Commit된 값만 읽지만, 같은 트랜잭션의 두 조회 결과가 달라질 수 있다.
 - Repeatable Read는 같은 트랜잭션의 일반 조회가 같은 읽기 기준을 유지한다.
 - Serializable은 트랜잭션을 순서대로 실행한 것에 가까운 결과를 얻도록 동시 실행을 가장 강하게 제한한다.
 
-다만 이 표는 SQL 표준이 정의한 경계다. 데이터베이스마다 이를 구현하는 방법과 실제 보장 범위는 다를 수 있다. MySQL InnoDB의 기본 격리 수준은 Repeatable Read이며, 일반 조회에는 MVCC를 이용하고 잠금이 필요한 범위 조회에는 Next-Key Lock을 활용해 표보다 강한 방식으로 Phantom 문제를 다룬다.
+다만 이 그림은 SQL 표준이 정의한 경계다. 데이터베이스마다 이를 구현하는 방법과 실제 보장 범위는 다를 수 있다. MySQL InnoDB의 기본 격리 수준은 Repeatable Read이며, 일반 조회에는 MVCC를 이용하고 잠금이 필요한 범위 조회에는 Next-Key Lock을 활용해 표준보다 강한 방식으로 Phantom 문제를 다룬다.
 
 격리 수준은 높을수록 무조건 좋은 것이 아니다. 더 많은 이상 현상을 막는 대신 동시에 처리할 수 있는 범위가 줄거나 Lock 대기와 관리 비용이 늘 수 있다. 가장 높은 수준을 고르는 것이 목표가 아니라, 업무에서 어떤 현상을 허용하면 안 되는지 먼저 정해야 한다.
 
