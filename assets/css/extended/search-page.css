@@ -1,3 +1,7 @@
+.menu {
+  overflow: visible;
+}
+
 .menu a[href$="/search/"] span {
   position: relative;
   display: inline-flex;
@@ -128,7 +132,7 @@
 
 @media (max-width: 600px) {
   .menu {
-    overflow: visible;
+    flex-wrap: wrap;
   }
 
   .search-page {
