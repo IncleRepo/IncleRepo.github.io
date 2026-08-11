@@ -3,7 +3,7 @@ title = '캐시는 DB 부하를 어떻게 줄이고 Redis는 무엇을 맡는가
 slug = '6'
 aliases = ['/posts/006/']
 date = 2026-04-03T19:10:00+09:00
-lastmod = 2026-08-10T17:12:37+09:00
+lastmod = 2026-08-11T10:31:31+09:00
 draft = false
 description = '반복 조회가 만드는 비용부터 Redis에 데이터를 저장하고, 안전하게 변경하며, 장애 뒤 복구하는 방법까지 단계별로 살펴봅니다.'
 categories = ['데이터 접근 설계']
@@ -769,6 +769,8 @@ public void updateEquipment(long equipmentId, UpdateEquipmentCommand command) {
 }
 ```
 
+`beforeInvocation`의 기본값은 `false`다. 따라서 위 예제의 Cache 제거는 메서드가 예외 없이 끝난 뒤 실행된다. 다만 **메서드가 정상적으로 끝난 시점과 DB Transaction이 Commit된 시점이 항상 같다는 뜻은 아니다.** Cache 제거를 Commit 성공과 반드시 묶어야 한다면 `@TransactionalEventListener`처럼 Commit 단계에 동작을 연결하는 방법을 검토해야 한다. 이 Annotation은 기본적으로 `AFTER_COMMIT` 단계에 Listener를 실행한다.
+
 다음 조회에서는 Cache에 값이 없으므로 DB의 새 값을 읽어 다시 저장한다.
 
 같은 원본을 변경하는 경로가 여러 개라면 모든 경로에서 관련 Cache를 무효화해야 한다. 하나라도 빠지면 예전 값이 남을 수 있다. TTL은 이런 삭제 누락이 영구적인 불일치로 이어지지 않도록 돕는 안전망이 된다.
@@ -853,6 +855,7 @@ Redis를 도입하는 목적은 DB보다 빠른 저장소 하나를 추가하는
 - [Redis - Persistence](https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/)
 - [Spring Framework - Cache Abstraction](https://docs.spring.io/spring-framework/reference/integration/cache.html)
 - [Spring Framework - Annotation-based Caching](https://docs.spring.io/spring-framework/reference/integration/cache/annotations.html)
+- [Spring Framework - Transaction-bound Events](https://docs.spring.io/spring-framework/reference/data-access/transaction/event.html)
 
 ### 국내 기술 블로그
 

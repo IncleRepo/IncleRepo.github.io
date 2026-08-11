@@ -3,7 +3,7 @@ title = 'MySQL 인덱스와 실행 계획을 함께 읽어야 하는 이유'
 slug = '2'
 aliases = ['/posts/002/']
 date = 2026-03-03T19:00:00+09:00
-lastmod = 2026-08-10T17:12:37+09:00
+lastmod = 2026-08-11T10:31:31+09:00
 draft = false
 description = 'MySQL 인덱스가 범위를 줄이는 원리부터 복합 인덱스 설계와 EXPLAIN, EXPLAIN ANALYZE를 이용한 검증 방법까지 차례대로 알아봅니다.'
 categories = ['데이터베이스']
@@ -154,10 +154,10 @@ CREATE INDEX idx_post_status_created_id
 정렬된 값의 모양은 다음과 같다.
 
 ```text
-(DRAFT,     2026-08-01, 10)
 (DRAFT,     2026-08-02, 14)
-(PUBLISHED, 2026-07-30,  7)
+(DRAFT,     2026-08-01, 10)
 (PUBLISHED, 2026-08-01,  9)
+(PUBLISHED, 2026-07-30,  7)
 ```
 
 먼저 `status`로 묶이고, 같은 status 안에서 `created_at`이 정렬된다. 날짜까지 같다면 마지막으로 `id` 순서를 사용한다.
@@ -557,6 +557,7 @@ possible_keys / key / type / rows / filtered / Extra 확인
 
 - [MySQL - Clustered and Secondary Indexes](https://dev.mysql.com/doc/refman/8.4/en/innodb-index-types.html)
 - [MySQL - Column Indexes](https://dev.mysql.com/doc/refman/8.4/en/column-indexes.html)
+- [MySQL - Descending Indexes](https://dev.mysql.com/doc/refman/8.4/en/descending-indexes.html)
 - [MySQL - EXPLAIN Statement](https://dev.mysql.com/doc/refman/8.4/en/explain.html)
 
 ### 국내 기술 블로그

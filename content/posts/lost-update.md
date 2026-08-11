@@ -3,7 +3,7 @@ title = 'Lost Update는 왜 발생하고 어떤 동시성 제어를 선택해야
 slug = '4'
 aliases = ['/posts/004/']
 date = 2026-03-16T19:00:00+09:00
-lastmod = 2026-08-10T17:12:37+09:00
+lastmod = 2026-08-11T10:31:31+09:00
 draft = false
 description = '동시에 같은 데이터를 수정할 때 발생하는 Lost Update부터 단일 UPDATE, 낙관적·비관적 Lock과 Unique Constraint의 선택 기준까지 차례대로 알아봅니다.'
 categories = ['데이터베이스']
@@ -275,7 +275,9 @@ Transaction A: stock 9 저장 후 Commit, Lock 해제
 Transaction B: stock 9 조회 후 실행 재개 → stock 8 저장
 ```
 
-일반 조회까지 모두 멈추는 것은 아니다. InnoDB의 일반 `SELECT`는 MVCC를 이용한 과거 Version을 읽을 수 있다. 주로 같은 행을 변경하려는 `UPDATE`, `DELETE`와 다른 Locking Read가 기다리게 된다.
+일반 조회까지 모두 멈추는 것은 아니다. `READ COMMITTED`와 `REPEATABLE READ`에서 InnoDB의 일반 `SELECT`는 MVCC 기반 Consistent Read로 동작하므로 다른 Transaction의 행 Lock을 반드시 기다리지는 않는다. 주로 같은 행을 변경하려는 `UPDATE`, `DELETE`와 다른 Locking Read가 기다리게 된다.
+
+다만 이 설명을 모든 격리 수준에 그대로 적용할 수는 없다. `SERIALIZABLE`에서 Autocommit이 꺼져 있으면 InnoDB는 일반 `SELECT`를 `SELECT ... FOR SHARE`로 바꿔 실행한다.
 
 비관적 Lock은 재시도를 줄이고 최신 상태를 확보한 뒤 판단하기 쉽다는 장점이 있다. 대신 다른 요청이 기다리는 시간이 생기고, Lock Timeout과 Deadlock을 처리해야 한다.
 
@@ -436,4 +438,6 @@ Lock을 거는 것이 목적이 아니라, 어떤 상황에서도 지켜져야 �
 - [Jakarta Persistence - @Version](https://jakarta.ee/specifications/persistence/3.2/apidocs/jakarta.persistence/jakarta/persistence/version)
 - [Jakarta Persistence - OptimisticLockException](https://jakarta.ee/specifications/persistence/3.2/apidocs/jakarta.persistence/jakarta/persistence/optimisticlockexception)
 - [MySQL - Locking Reads](https://dev.mysql.com/doc/refman/8.4/en/innodb-locking-reads.html)
+- [MySQL - Transaction Isolation Levels](https://dev.mysql.com/doc/refman/8.4/en/innodb-transaction-isolation-levels.html)
+- [MySQL - Consistent Nonlocking Reads](https://dev.mysql.com/doc/refman/8.4/en/innodb-consistent-read.html)
 - [MySQL - Deadlocks in InnoDB](https://dev.mysql.com/doc/refman/8.4/en/innodb-deadlocks.html)

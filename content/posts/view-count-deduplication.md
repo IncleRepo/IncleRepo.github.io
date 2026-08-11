@@ -3,7 +3,7 @@ title = '조회수 중복 방지와 동시성 문제는 왜 따로 설계해야 
 slug = '8'
 aliases = ['/posts/008/']
 date = 2026-04-20T19:00:00+09:00
-lastmod = 2026-08-10T17:12:37+09:00
+lastmod = 2026-08-11T10:31:31+09:00
 draft = false
 description = '조회수 증가분이 사라지는 동시성 문제와 반복 조회 정책을 분리하고, DB에서 Redis 지연 반영까지 단계별 선택 기준을 정리합니다.'
 categories = ['애플리케이션 아키텍처']
@@ -473,6 +473,8 @@ return 0
 
 Redis는 Script 실행 중 다른 명령이 끼어들지 않게 처리한다. 따라서 중복 Key 생성에 성공한 경우에만 Counter를 증가시키는 조건과 두 변경을 하나의 실행 단위로 묶을 수 있다.
 
+여기서 하나의 실행 단위란 Script가 실행되는 동안 다른 Client의 명령이 중간에 끼어들지 않는다는 뜻이다. 관계형 DB Transaction처럼 실행 중 오류가 발생했을 때 앞선 변경까지 자동으로 되돌린다는 뜻은 아니다. `redis.call()`에서 Runtime Error가 발생하면 오류가 Client로 반환되고, `redis.pcall()`을 사용하면 Script 안에서 오류를 직접 처리할 수 있다. 따라서 Script는 쓰기 전에 Key Type과 입력값을 확인하고, 필요한 오류 처리 범위를 정해 두어야 한다.
+
 `MULTI`와 `EXEC`으로 여러 명령을 연속 실행할 수도 있다. 다만 Redis Transaction은 관계형 DB Transaction처럼 실행 중 오류를 만나면 앞선 명령을 자동 Rollback하는 구조가 아니며, 앞 명령의 결과를 보고 조건부로 다음 명령을 실행하는 흐름은 Lua Script나 Function이 더 직접적이다.
 
 Redis Cluster에서 Script가 여러 Key를 다룬다면 관련 Key가 같은 Hash Slot에 있어야 한다. 예제처럼 Key 이름에 같은 Hash Tag를 넣어 함께 배치하는 방법을 검토할 수 있다.
@@ -805,6 +807,7 @@ Retry
 - [Redis - INCR](https://redis.io/docs/latest/commands/incr/)
 - [Redis - Transactions](https://redis.io/docs/latest/develop/using-commands/transactions/)
 - [Redis - Scripting with Lua](https://redis.io/docs/latest/develop/programmability/eval-intro/)
+- [Redis - Lua API](https://redis.io/docs/latest/develop/interact/programmability/lua-api/)
 
 ### 국내 기술 블로그
 
