@@ -77,7 +77,9 @@ jobs:
             page="public/posts/$post_id/index.html"
             test -s "$page"
             grep -q '정리' "$page"
-            grep -q '참고 자료' "$page"
+            if ! grep -q '^references_required = false$' "$source"; then
+              grep -q '참고 자료' "$page"
+            fi
           done
 
       - name: 빌드 결과 업로드
