@@ -7,6 +7,8 @@
   display: inline-flex;
   align-items: center;
   font-size: 0;
+  line-height: 1;
+  vertical-align: middle;
 }
 
 .menu-search-icon {
@@ -21,7 +23,7 @@
 .menu a[href$="/search/"] .active::after {
   position: absolute;
   right: 1px;
-  bottom: -8px;
+  bottom: -5px;
   left: 1px;
   height: 2px;
   background: currentColor;
