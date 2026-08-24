@@ -2,7 +2,7 @@
 title = 'Controller, Service, Repository로 이해하는 레이어드 아키텍처'
 slug = '14'
 date = 2026-08-21T20:49:00+09:00
-lastmod = 2026-08-21T23:10:00+09:00
+lastmod = 2026-08-24T20:30:00+09:00
 draft = false
 references_required = true
 description = 'Spring에서 익숙한 Controller, Service, Repository 구조를 따라가며 레이어드 아키텍처의 책임과 의존 방향, 장점과 한계를 살펴봅니다.'
@@ -41,19 +41,7 @@ Controller는 요청을 받고, Service는 필요한 업무를 처리하며, Rep
 
 코드를 역할에 따라 나누고 서로 참조하는 방향을 정했기 때문이다. 우리가 자주 사용하던 이 구조가 **레이어드 아키텍처**(Layered Architecture)의 대표적인 모습이다.
 
-## Controller, Service, Repository는 무엇을 맡는가
-
-레이어드 아키텍처를 이해하려면 먼저 Controller, Service와 Repository가 각각 무엇을 맡는지 알아야 한다.
-
-- Controller는 외부 요청을 애플리케이션이 이해할 형태로 받고 처리 결과를 반환한다.
-- Service는 요청을 처리하는 흐름과 업무 규칙을 담당한다.
-- Repository는 데이터 저장과 조회에 필요한 접근을 제공한다.
-
-예를 들어 주문 서비스에서 `결제가 끝난 주문만 취소할 수 있다`, `회원 등급에 따라 할인 금액을 계산한다`, `재고가 있어야 주문할 수 있다`와 같은 조건은 서비스가 지켜야 할 업무 규칙이다. 이런 서비스 고유의 규칙을 흔히 **비즈니스 로직**이라고 부른다.
-
-DTO는 Controller나 Service 같은 계층이 아니다. **DTO**(Data Transfer Object)는 외부와 데이터를 주고받거나 계층 사이에서 데이터를 전달하기 위한 객체다.
-
-## 회원 조회 요청을 따라가 보자
+## 회원 조회 요청에서 각 계층은 무엇을 맡는가
 
 `GET /users/1` 요청으로 1번 회원을 조회한다고 해보자. 요청은 먼저 Controller에 도착한다.
 
@@ -71,7 +59,7 @@ public class UserController {
 }
 ```
 
-Controller는 URL에서 회원 ID를 받아 Service에 전달한다. 회원을 어디에서 조회하고 어떤 형태로 조립할지는 Service에 맡긴다.
+Controller는 URL에서 회원 ID를 꺼내 Service에 전달하고 처리 결과를 HTTP 응답으로 반환한다. 이처럼 외부 요청과 응답을 다루는 부분을 **Presentation Layer**라고 하며, REST API에서는 Controller가 대표적이다.
 
 ```java
 @Service
@@ -89,24 +77,22 @@ public class UserService {
 }
 ```
 
-Service는 Repository를 통해 회원을 조회하고 API 응답에 사용할 DTO로 변환한다. Repository는 실제 데이터 접근을 Spring Data JPA에 맡긴다.
+Service는 회원 조회라는 작업의 흐름을 맡는다. Repository에서 회원을 찾고 그 결과를 API 응답에 사용할 형태로 변환한다. 이런 애플리케이션의 작업 흐름을 다루는 부분을 **Application Layer** 또는 **Business Layer**라고 부른다.
+
+지금 예제의 흐름은 단순하지만 실제 Service에는 업무 규칙이 함께 들어갈 수 있다. `결제가 끝난 주문만 취소할 수 있다`, `회원 등급에 따라 할인 금액을 계산한다`, `재고가 있어야 주문할 수 있다`와 같은 조건이 대표적이다. 이런 업무의 조건과 계산 규칙을 흔히 **비즈니스 로직**이라고 부른다.
+
+마지막으로 Service가 호출하는 Repository를 보자.
 
 ```java
 public interface UserRepository extends JpaRepository<User, Long> {
 }
 ```
 
-회원 조회라는 하나의 작업도 요청 처리, 업무 흐름과 데이터 접근을 서로 다른 코드가 맡는다. 각 역할에 일반적으로 사용하는 계층 이름을 붙이면 다음과 같다.
+Repository는 회원을 어떻게 저장하고 조회할지에 필요한 접근 방법을 제공한다. 이 부분을 **Persistence Layer** 또는 **Data Access Layer**라고 하며 Repository와 DAO가 여기에 해당한다. 위 코드에서는 실제 데이터 접근을 Spring Data JPA에 맡긴다.
 
-- 외부 요청과 응답을 다루는 부분은 **Presentation Layer**다. REST API에서는 Controller가 대표적이다.
-- 애플리케이션 흐름과 업무 처리를 담당하는 부분은 **Application Layer** 또는 **Business Layer**라고 부른다.
-- 데이터 저장과 조회를 담당하는 부분은 **Persistence Layer** 또는 **Data Access Layer**라고 부른다. Repository나 DAO가 여기에 해당한다.
+코드에 등장한 `UserResponse`는 계층이 아니다. **DTO**(Data Transfer Object)는 외부와 데이터를 주고받거나 계층 사이에서 데이터를 전달하기 위한 객체다.
 
-자료에 따라 Business Layer와 Application Layer를 구분하고 별도의 Domain Layer를 두기도 한다. 여기서는 이해하기 쉽도록 Service가 맡는 부분을 Business/Application Layer로 묶어서 보자. Database도 별도 계층으로 그리거나 Persistence Layer 바깥의 저장소로 보기도 한다.
-
-![User Interface부터 Data까지 여러 계층으로 나눈 레이어드 아키텍처](/images/posts/layered-architecture/layered-architecture.png "계층을 더 세분화한 레이어드 아키텍처의 한 가지 예")
-
-위 그림처럼 계층을 더 세분화할 수도 있다. 중요한 것은 3계층인지 4계층인지 외우는 일이 아니다. **서로 다른 책임을 나누고 각 책임 사이의 관계를 정했다는 점**이 핵심이다.
+자료에 따라 Application Layer와 Business Layer를 구분하거나 업무 규칙을 담는 Domain Layer를 별도로 두기도 한다. Database 역시 하나의 계층으로 그리기도 하고 Persistence Layer 바깥의 저장소로 보기도 한다. 중요한 것은 3계층인지 4계층인지 외우는 일이 아니라, **서로 다른 책임을 나누고 각 책임 사이의 관계를 정했다는 점**이다.
 
 ## 계층 사이에는 방향이 있다
 
