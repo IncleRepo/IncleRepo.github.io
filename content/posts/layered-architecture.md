@@ -2,7 +2,7 @@
 title = 'Controller, Service, Repository로 이해하는 레이어드 아키텍처'
 slug = '14'
 date = 2026-08-21T20:49:00+09:00
-lastmod = 2026-08-21T22:40:00+09:00
+lastmod = 2026-08-21T22:50:00+09:00
 draft = false
 references_required = true
 description = 'Spring에서 익숙한 Controller, Service, Repository 구조를 따라가며 레이어드 아키텍처의 책임과 의존 방향, 장점과 한계를 살펴봅니다.'
@@ -253,9 +253,11 @@ public class OrderService {
 
 즉, Controller와 Service, Repository를 나누는 것과 업무 코드에서 HTTP나 JPA 같은 기술을 분리하는 것은 서로 다른 문제다. 프로젝트가 단순하다면 이러한 의존성을 받아들이는 편이 실용적일 수 있다. 반대로 기술 변경이 업무 코드까지 자주 퍼진다면 의존성을 더 엄격하게 통제하는 아키텍처를 검토할 수 있다. 구체적인 분리 방법은 클린 아키텍처와 헥사고날 아키텍처에서 다시 살펴본다.
 
-## 얇은 Service는 언제 문제가 될까?
+## 단순 전달이 많아지면 Architecture Sinkhole을 의심한다
 
-Service가 Repository 호출을 그대로 전달하기만 하는 코드를 보자.
+레이어드 아키텍처에서는 보통 상위 계층이 바로 아래 계층을 거쳐야 한다. 이러한 계층을 **닫힌 계층**이라고 한다. Controller가 Repository를 직접 호출하지 않고 Service를 거치는 구조도 여기에 해당한다.
+
+다음 Service를 보자.
 
 ```java
 public UserResponse getUser(long id) {
@@ -264,7 +266,7 @@ public UserResponse getUser(long id) {
 }
 ```
 
-Controller는 이 Service를 호출한다.
+Controller는 이 Service를 거쳐 회원을 조회한다.
 
 ```java
 @GetMapping("/users/{id}")
@@ -273,21 +275,15 @@ public UserResponse getUser(@PathVariable long id) {
 }
 ```
 
-코드만 보면 Service는 받은 값을 Repository에 넘기고 결과를 돌려줄 뿐이다. 이런 메서드가 하나 있다고 해서 바로 잘못된 구조가 되는 것은 아니다. 코드가 짧은 것과 책임이 없는 것은 다르기 때문이다.
+이 흐름에서는 Service가 별도의 업무 규칙, 검증이나 데이터 변환을 수행하지 않는다. 요청과 응답이 별다른 처리 없이 여러 계층을 그대로 통과하는 이러한 상황을 **Architecture Sinkhole Anti-Pattern**이라고 부른다.
 
-Service가 다음과 같은 경계를 맡고 있다면 메서드가 짧아도 존재할 이유가 있다.
+그렇다고 이 메서드를 발견하자마자 없애고 Controller에서 Repository를 직접 호출해야 한다는 뜻은 아니다. 레이어드 아키텍처에는 이런 요청이 일부 생기는 것이 자연스럽다. Service를 일관된 진입점으로 유지하면 Controller가 데이터 접근 방식에 직접 의존하지 않고, 나중에 트랜잭션이나 업무 규칙이 추가되어도 같은 위치에서 처리할 수 있기 때문이다. Service가 트랜잭션, 인가나 여러 작업의 조정을 맡고 있다면 코드가 짧더라도 단순 전달 계층이라고 보기 어렵다.
 
-- 트랜잭션 범위 설정
-- 권한 검사와 감사 기록
-- 공통 예외 변환과 업무 정책 적용
-- 여러 Repository나 외부 API의 호출 순서 조정
-- Controller가 데이터 접근 방식에 직접 의존하지 않도록 애플리케이션 진입점 제공
+판단해야 할 대상은 메서드 하나가 아니라 **애플리케이션의 전체 요청 흐름**이다. 《소프트웨어 아키텍처 101》에서는 전체 요청의 약 20%만 단순 통과한다면 받아들일 만하지만, 반대로 약 80%가 이런 흐름이라면 레이어드 아키텍처가 해당 문제에 잘 맞지 않는 신호로 보라고 설명한다. 이 비율은 반드시 지켜야 하는 규칙이 아니라 구조를 점검하기 위한 경험적 기준이다.
 
-반대로 대부분의 Service가 아무 처리 없이 Repository 메서드와 일대일로 대응하고, 필드 하나를 바꿀 때마다 Controller, Service와 Repository를 기계적으로 함께 수정한다면 계층이 형식만 남았는지 살펴봐야 한다. 이처럼 요청이 의미 있는 처리 없이 여러 계층을 통과하는 구조를 **Architecture Sinkhole Pattern**이라고 부르기도 한다.
+단순 전달 요청이 일부라면 계층의 일관성과 변경 격리를 위해 지금 구조를 유지할 수 있다. 반면 대부분의 요청이 아무 처리 없이 모든 계층을 통과한다면 계층 수를 줄이거나, 일부 계층을 건너뛸 수 있도록 열거나, 문제에 더 단순한 아키텍처를 선택하는 방안을 검토할 수 있다. 이때도 메서드마다 임의로 Controller가 Repository를 직접 호출하게 만들기보다는 팀의 의존 규칙으로 정해야 한다.
 
-문제는 메서드 호출 한 번의 성능 비용이 아니다. 실제 책임은 늘어나지 않는데 전달 코드와 수정할 파일만 계속 많아진다는 점이다. 단순한 조회라면 프로젝트 규칙에 따라 계층을 줄이거나 조회 전용 구성요소를 둘 수도 있다. 반대로 일관된 Service 경계가 더 중요하다면 얇은 Service를 그대로 유지할 수도 있다.
-
-결론적으로 **얇은 Service는 사용해도 된다.** 다만 “모든 요청은 반드시 모든 계층을 지나야 한다”는 이유만으로 책임 없는 Service를 반복해서 만드는 것은 피해야 한다. 판단 기준은 코드의 길이가 아니라 그 Service가 지키는 경계와 맡은 책임이다.
+결론적으로 **얇은 Service 하나는 문제가 아니다. 단순 전달이 시스템 대부분을 차지하는데도 형식을 위해 모든 계층을 유지하는 상태가 문제다.**
 
 ## 레이어드 아키텍처는 언제 잘 맞을까?
 
@@ -331,8 +327,12 @@ Controller-Service-Repository 구조가 익숙한 이유는 코드를 기술 역
 
 - [Microsoft Azure Architecture Center - N-tier Architecture Style](https://learn.microsoft.com/en-us/azure/architecture/guide/architecture-styles/n-tier)
 - [Spring Data JPA - Core Concepts](https://docs.spring.io/spring-data/jpa/reference/repositories/core-concepts.html)
+- [O'Reilly - Fundamentals of Software Architecture](https://www.oreilly.com/library/view/fundamentals-of-software/9781492043447/)
 
 ### 추가 자료
 
 - [Martin Fowler - Presentation Domain Data Layering](https://martinfowler.com/bliki/PresentationDomainDataLayering.html)
 - [Herberto Graca - Layered Architecture](https://herbertograca.com/2017/08/03/layered-architecture/)
+- [Klarc - Layered Architecture with Sinkhole](https://klarciel.net/wiki/architecture/architecture-layered/)
+- [매일메일 - 레이어드 아키텍처란 무엇인가요?](https://www.maeil-mail.kr/question/310)
+- [andrew.log - 그 서비스, 진짜 일하고 있나요?](https://velog.io/@sh1623/%EA%B7%B8-%EC%84%9C%EB%B9%84%EC%8A%A4-%EC%A7%84%EC%A7%9C-%EC%9D%BC%ED%95%98%EA%B3%A0-%EC%9E%88%EB%82%98%EC%9A%94-%EC%8B%B1%ED%81%AC%ED%99%80-%EC%95%88%ED%8B%B0%ED%8C%A8%ED%84%B4)
