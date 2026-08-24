@@ -47,9 +47,17 @@ Controller는 요청을 받고, Service는 필요한 업무를 처리하며, Rep
 
 ![User Interface부터 Data까지 여러 계층으로 나눈 레이어드 아키텍처](/images/posts/layered-architecture/layered-architecture.png "계층을 더 세분화한 레이어드 아키텍처의 한 가지 예")
 
-위 그림은 레이어드 아키텍처를 비교적 세분화한 예다. User Interface와 Presentation은 사용자와의 상호작용을 맡고, Application과 Domain Model은 작업의 흐름과 업무 규칙을 처리한다. Persistence는 데이터 접근을 담당하며, Data는 실제 데이터베이스나 외부 저장소를 나타낸다. Infrastructure는 Framework와 Logging처럼 여러 계층의 구현을 지원하는 기술을 모아 표현한 부분이다.
+위 그림은 레이어드 아키텍처를 비교적 세분화한 예다. 그림 안의 계층을 역할에 따라 묶으면 다음과 같다.
 
-모든 프로젝트가 그림과 같은 수와 이름으로 계층을 나누는 것은 아니다. Spring 애플리케이션에서는 이를 Controller, Service와 Repository로 단순하게 구성하는 경우가 많다. 중요한 것은 계층 이름을 외우는 일이 아니라 서로 다른 책임을 구분하는 일이다. 이제 회원 조회 요청 하나가 이 세 계층을 어떻게 지나는지 살펴보자.
+- **User Interface와 Presentation**은 사용자와의 상호작용을 맡는다.
+- **Application과 Domain Model**은 작업의 흐름과 업무 규칙을 처리한다.
+- **Persistence와 Data**는 데이터 접근과 실제 저장을 담당한다.
+
+오른쪽의 Infrastructure는 Framework와 Logging처럼 여러 계층의 구현을 지원하는 기술을 모아 표현한 부분이다.
+
+모든 프로젝트가 그림과 같은 수와 이름으로 계층을 나누는 것은 아니다. Spring 애플리케이션에서는 이를 Controller, Service와 Repository로 단순하게 구성하는 경우가 많다.
+
+중요한 것은 계층 이름을 외우는 일이 아니라 서로 다른 책임을 구분하는 일이다. 이제 회원 조회 요청 하나가 이 세 계층을 어떻게 지나는지 살펴보자.
 
 ## 회원 조회 요청에서 각 계층은 무엇을 맡는가
 
