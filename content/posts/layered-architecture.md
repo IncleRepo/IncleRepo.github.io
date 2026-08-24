@@ -2,7 +2,7 @@
 title = 'Controller, Service, Repository로 이해하는 레이어드 아키텍처'
 slug = '14'
 date = 2026-08-21T20:49:00+09:00
-lastmod = 2026-08-24T22:55:00+09:00
+lastmod = 2026-08-24T23:15:00+09:00
 draft = false
 references_required = true
 description = 'Spring에서 익숙한 Controller, Service, Repository 구조를 따라가며 레이어드 아키텍처의 책임과 의존 방향, 장점과 한계를 살펴봅니다.'
@@ -207,39 +207,11 @@ Controller와 Repository에서 코드를 분리했어도 Service 안에서는 `�
 
 Service가 비대해지는 문제는 계층 분리보다 도메인 모델링과 더 밀접하다. 레이어드 아키텍처를 유지하면서도 업무 규칙을 별도의 도메인 객체로 나눌 수 있다.
 
-업무 규칙을 어디에 둘 것인지 정해도 한 가지 문제가 더 남는다. Service가 JPA나 HTTP 같은 구체적인 기술을 어디까지 알아도 되는지는 계층만 나눠서는 정해지지 않는다.
+하지만 업무 규칙만 나눈다고 Service의 변경 이유가 모두 줄어드는 것은 아니다. 계층 사이에서 어떤 객체를 주고받느냐에 따라 HTTP 요청이나 데이터 저장 방식의 변경까지 Service에 모일 수 있다.
 
-## 기술 의존성도 업무 코드 안쪽으로 퍼질 수 있다
+## 계층을 나눠도 DTO와 Entity가 그대로 이어질 수 있다
 
-계층을 나누면 Controller, Service와 Repository의 역할은 구분된다. 하지만 계층 사이에서 어떤 객체를 주고받을지는 별개의 문제다.
-
-### JPA Entity를 Service가 직접 다룰 때
-
-먼저 Service가 JPA Repository와 Entity를 직접 사용하는 경우를 보자.
-
-```java
-@Service
-@RequiredArgsConstructor
-public class OrderService {
-
-    private final JpaOrderRepository orderRepository;
-
-    public void cancel(long orderId) {
-        OrderEntity order = orderRepository.findById(orderId)
-            .orElseThrow();
-
-        order.cancel();
-    }
-}
-```
-
-코드만 보면 자연스럽다. 그러나 `JpaOrderRepository`와 `OrderEntity`는 모두 JPA를 사용한다는 사실이 드러나는 타입이다. 나중에 저장 방식을 JDBC로 바꾸거나 조회 전용 모델을 따로 만들면 Repository 구현만 교체해서 끝나지 않는다. 이 타입을 직접 사용하는 Service와 테스트도 함께 수정해야 한다.
-
-JPA를 계속 사용하더라도 비슷한 일이 생길 수 있다. 데이터베이스 매핑을 위해 Entity의 필드나 연관 관계를 바꿨는데, Service가 그 필드에 직접 접근하고 있다면 업무 코드까지 영향을 받는다. 문제는 Entity가 바뀐다는 사실 자체가 아니라 **저장 방식 때문에 생긴 변경이 Service까지 번진다는 점**이다.
-
-### 요청 DTO가 Service까지 이어질 때
-
-HTTP 요청 DTO를 안쪽 계층까지 그대로 전달할 때도 같은 문제가 생긴다.
+주문 수정 요청이 Controller에서 Service로 전달되는 과정을 보자.
 
 ```java
 @PutMapping("/orders/{id}")
@@ -260,7 +232,12 @@ public void update(long id, UpdateOrderRequest request) {
 }
 ```
 
-`UpdateOrderRequest`는 JSON 요청 형식을 표현하는 객체다. 프론트엔드 요구에 따라 `memo`를 `reason`으로 바꾸거나 요청 구조를 둘로 나누면 Controller DTO만 바뀌는 것이 아니라 Service의 매개변수와 테스트도 함께 바뀐다. 이 DTO를 Repository까지 전달했다면 데이터 접근 코드도 HTTP 요청 형식에 영향을 받는다.
+클래스는 Controller, Service와 Repository로 나뉘어 있다. 하지만 Service의 `update` 메서드에는 양쪽 계층의 데이터 구조가 모두 드러난다.
+
+- `UpdateOrderRequest`는 HTTP 요청의 JSON 구조를 표현한다.
+- `OrderEntity`는 JPA가 데이터베이스와 연결하는 구조를 표현한다.
+
+프론트엔드 요구에 따라 요청의 `memo`를 `reason`으로 바꾸면 `UpdateOrderRequest`만 수정하면 될 것처럼 보인다. Service가 이 DTO를 직접 받기 때문에 메서드 내부와 테스트도 함께 수정해야 한다. 요청 DTO를 Repository까지 전달했다면 데이터 접근 코드까지 영향을 받는다.
 
 ```text
 HTTP 요청 형식 변경
@@ -272,15 +249,13 @@ Service와 테스트 변경
 Repository까지 전달했다면 데이터 접근 코드도 변경
 ```
 
-필요하다면 Controller에서 요청 DTO를 Service가 사용할 입력값으로 변환하고, Service에서는 JPA Entity가 아닌 업무 객체나 필요한 값만 다루도록 경계를 나눌 수 있다. 그러면 HTTP나 저장 방식이 바뀌어도 변경 범위를 해당 계층 가까이에 묶기 쉬워진다.
+데이터 저장 방식도 마찬가지다. JPA를 JDBC로 바꾸거나 조회 전용 모델을 따로 만들면 `OrderEntity`를 사용하는 Service와 테스트도 수정해야 한다. JPA를 계속 사용하더라도 데이터베이스 매핑을 위해 Entity의 필드나 연관 관계를 바꾸면 그 필드를 사용하는 업무 코드까지 영향을 받을 수 있다.
 
-### 분리가 필요한 시점을 본다
+단순한 CRUD에서는 요청 DTO와 JPA Entity를 그대로 사용하는 편이 간결하다. 반면 API와 저장 방식의 변경이 Service까지 반복해서 번지거나, 같은 Service를 HTTP뿐 아니라 배치와 메시지 소비자도 호출한다면 계층 사이의 데이터 구조를 분리할 이유가 생긴다.
 
-그렇다고 모든 프로젝트에서 계층마다 전용 객체를 따로 만들고 요청 DTO와 JPA Entity를 변환해야 하는 것은 아니다. 단순한 CRUD에서는 같은 객체를 이어서 사용하는 편이 훨씬 간결할 수 있다. API와 저장 방식이 자주 바뀌거나 하나의 Service를 HTTP, 배치와 메시지 소비자가 함께 호출하기 시작할 때 분리의 이점이 커진다.
+이때 Controller는 요청 DTO를 Service가 사용할 입력값으로 변환하고, Service는 업무 처리에 필요한 값이나 객체만 다룰 수 있다. 핵심은 계층마다 객체를 무조건 추가하는 것이 아니라 **변경이 반복해서 넘어오는 경계에서 타입을 분리하는 것**이다.
 
-결국 Controller와 Service, Repository를 나누는 것과 HTTP나 JPA의 변경 범위를 통제하는 것은 서로 다른 문제다. 기술 변경이 업무 코드까지 반복해서 번질 때는 계층을 더 만드는 것이 아니라 **계층 사이에 어떤 타입을 노출할지** 다시 살펴봐야 한다.
-
-지금까지는 계층 안에 책임과 의존성이 많이 쌓이는 경우를 봤다. 반대로 계층을 반드시 거쳐야 한다는 형식만 남으면, 실제 책임 없이 요청을 전달하는 코드가 늘어날 수 있다.
+지금까지는 Service에 업무 규칙과 바깥 계층의 변경이 함께 쌓이는 경우를 살펴봤다. 반대로 Service가 아무 책임도 맡지 않고 다음 계층으로 요청만 전달하는 경우도 있다.
 
 ## 형식적인 계층 통과가 반복되면 Architecture Sinkhole이 된다
 
