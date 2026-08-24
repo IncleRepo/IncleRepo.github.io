@@ -2,7 +2,7 @@
 title = 'Controller, Service, Repository로 이해하는 레이어드 아키텍처'
 slug = '14'
 date = 2026-08-24T10:49:00+09:00
-lastmod = 2026-08-24T11:08:00+09:00
+lastmod = 2026-08-24T11:13:00+09:00
 draft = false
 references_required = true
 description = 'Spring에서 익숙한 Controller, Service, Repository 구조를 따라가며 레이어드 아키텍처의 책임과 의존 방향, 장점과 한계를 살펴봅니다.'
@@ -39,7 +39,7 @@ DB
 
 Controller는 요청을 받고, Service는 필요한 업무를 처리하며, Repository는 데이터를 조회하거나 저장한다. 너무 익숙해서 단순한 Spring 관례처럼 느껴지지만, 사실 이 구조에도 아키텍처가 담겨 있다.
 
-각 코드를 서로 다른 책임으로 나누고 그 사이에 방향을 정했기 때문이다. 우리가 자주 사용하던 이 구조가 **레이어드 아키텍처(Layered Architecture)**의 대표적인 모습이다.
+각 코드를 서로 다른 책임으로 나누고 그 사이에 방향을 정했기 때문이다. 우리가 자주 사용하던 이 구조가 **레이어드 아키텍처**(Layered Architecture)의 대표적인 모습이다.
 
 ## 폴더가 아니라 책임을 나눈 구조다
 
