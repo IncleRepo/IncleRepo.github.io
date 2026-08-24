@@ -2,8 +2,8 @@
 title = 'JPA를 유지하면서 JDBC를 선택해야 하는 순간'
 slug = '10'
 aliases = ['/posts/010/']
-date = 2026-04-27T00:59:00+09:00
-lastmod = 2026-08-10T17:12:37+09:00
+date = 2026-04-27T20:59:00+09:00
+lastmod = 2026-08-10T21:12:37+09:00
 draft = false
 description = 'JPA와 JDBC의 계층 관계부터 Bulk DML과 Batch의 차이, JDBC를 직접 사용할 기준과 공정한 성능 비교 방법까지 정리합니다.'
 categories = ['데이터 접근 설계']

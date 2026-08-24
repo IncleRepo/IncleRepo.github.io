@@ -2,8 +2,8 @@
 title = '@Async는 언제 충분하고 언제 메시지 큐가 필요한가'
 slug = '12'
 aliases = ['/posts/012/']
-date = 2026-05-12T19:30:00+09:00
-lastmod = 2026-08-10T17:43:18+09:00
+date = 2026-05-12T21:30:00+09:00
+lastmod = 2026-08-10T21:43:18+09:00
 draft = false
 description = '느린 부수 작업을 분리하는 @Async부터 작업 유실, Kafka, Transactional Outbox, 순서와 중복 처리까지 단계적으로 알아봅니다.'
 categories = ['비동기 처리']

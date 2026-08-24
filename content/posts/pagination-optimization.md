@@ -2,8 +2,8 @@
 title = 'Offset과 Keyset Pagination은 언제 선택해야 하는가'
 slug = '3'
 aliases = ['/posts/003/']
-date = 2026-03-05T19:00:00+09:00
-lastmod = 2026-08-10T17:12:37+09:00
+date = 2026-03-05T21:00:00+09:00
+lastmod = 2026-08-10T21:12:37+09:00
 draft = false
 description = 'Offset이 깊은 페이지에서 느려지는 이유부터 Keyset Cursor 설계, Page·Slice·Window와 Count 비용, 데이터 변경 중 안정성까지 차례대로 알아봅니다.'
 categories = ['데이터 접근 설계']

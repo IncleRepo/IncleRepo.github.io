@@ -2,8 +2,8 @@
 title = 'MVCC는 락 없이 일관된 읽기를 어떻게 제공하는가'
 slug = '5'
 aliases = ['/posts/005/']
-date = 2026-03-24T19:00:00+09:00
-lastmod = 2026-08-10T17:12:37+09:00
+date = 2026-03-24T21:00:00+09:00
+lastmod = 2026-08-10T21:12:37+09:00
 draft = false
 description = '트랜잭션 격리 수준에서 출발해 InnoDB의 MVCC, Undo Log, Read View와 일반 조회·잠금 조회의 차이를 차례로 살펴봅니다.'
 categories = ['데이터베이스']

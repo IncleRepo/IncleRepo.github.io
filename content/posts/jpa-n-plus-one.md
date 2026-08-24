@@ -2,8 +2,8 @@
 title = 'N+1 문제를 Fetch Join만으로 해결할 수 없는 이유'
 slug = '1'
 aliases = ['/posts/001/']
-date = 2026-02-20T19:00:00+09:00
-lastmod = 2026-08-10T17:12:37+09:00
+date = 2026-02-20T21:00:00+09:00
+lastmod = 2026-08-10T21:12:37+09:00
 draft = false
 description = 'JPA 목록 조회 뒤 Getter에서 추가 쿼리가 실행되는 이유부터 Fetch Join, Batch Fetching, EntityGraph와 DTO Projection의 선택 기준까지 차례대로 알아봅니다.'
 categories = ['JPA']

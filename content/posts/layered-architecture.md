@@ -1,8 +1,8 @@
 +++
 title = 'Controller, Service, Repository로 이해하는 레이어드 아키텍처'
 slug = '14'
-date = 2026-08-24T10:49:00+09:00
-lastmod = 2026-08-24T11:29:00+09:00
+date = 2026-08-21T20:49:00+09:00
+lastmod = 2026-08-21T21:29:00+09:00
 draft = false
 references_required = true
 description = 'Spring에서 익숙한 Controller, Service, Repository 구조를 따라가며 레이어드 아키텍처의 책임과 의존 방향, 장점과 한계를 살펴봅니다.'
