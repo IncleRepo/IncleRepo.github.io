@@ -38,10 +38,11 @@ enableRobotsTXT = true
     Content = '백엔드 개발 과정에서 공부한 내용을 기록합니다.'
 
   [params.assets]
-    favicon = '/favicon-moon.svg'
-    favicon16x16 = '/favicon-moon-16x16.png'
-    favicon32x32 = '/favicon-moon-32x32.png'
-    apple_touch_icon = '/apple-touch-icon-moon.png'
+    favicon = '/favicon-dev-archive.svg'
+    favicon16x16 = '/favicon-dev-archive-16x16.png'
+    favicon32x32 = '/favicon-dev-archive-32x32.png'
+    apple_touch_icon = '/apple-touch-icon-dev-archive.png'
+    safari_pinned_tab = '/safari-pinned-tab-dev-archive.svg'
 
   [params.schema]
     publisherType = 'Person'
