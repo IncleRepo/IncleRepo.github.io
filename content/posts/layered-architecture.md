@@ -2,7 +2,7 @@
 title = 'Controller, Service, Repository로 이해하는 레이어드 아키텍처'
 slug = '14'
 date = 2026-08-21T20:49:00+09:00
-lastmod = 2026-08-21T23:00:00+09:00
+lastmod = 2026-08-21T23:10:00+09:00
 draft = false
 references_required = true
 description = 'Spring에서 익숙한 Controller, Service, Repository 구조를 따라가며 레이어드 아키텍처의 책임과 의존 방향, 장점과 한계를 살펴봅니다.'
@@ -298,7 +298,25 @@ Service를 일관된 진입점으로 유지하면 Controller가 데이터 접근
 
 단순 전달 요청이 일부라면 계층의 일관성과 변경 격리를 위해 지금 구조를 유지할 수 있다.
 
-반면 대부분의 요청이 아무 처리 없이 모든 계층을 통과한다면 계층 수를 줄이거나, 일부 계층을 건너뛸 수 있도록 열거나, 문제에 더 단순한 아키텍처를 선택하는 방안을 검토할 수 있다. 이때도 메서드마다 임의로 Controller가 Repository를 직접 호출하게 만들기보다는 팀의 의존 규칙으로 정해야 한다.
+반면 대부분의 요청이 아무 처리 없이 모든 계층을 통과한다면 계층 수를 줄이거나, 일부 계층을 건너뛸 수 있도록 열거나, 문제에 더 단순한 아키텍처를 선택하는 방안을 검토할 수 있다.
+
+예를 들어 Service 계층을 열면 단순 조회 요청은 Service를 거치지 않고 Repository로 바로 전달할 수 있다.
+
+```java
+@GetMapping("/users/{id}")
+public UserResponse getUser(@PathVariable long id) {
+    return userRepository.findResponseById(id)
+        .orElseThrow();
+}
+```
+
+```text
+Controller → Repository → DB
+```
+
+이렇게 하면 아무 일도 하지 않는 전달 메서드는 사라진다. 대신 Controller가 Repository와 조회 결과에 직접 의존한다. 이후 트랜잭션이나 업무 규칙이 필요해지면 다시 호출 경계를 정리해야 할 수도 있다.
+
+따라서 Controller에서 Repository를 직접 호출하는 것이 언제나 더 좋은 해답은 아니다. 허용한다면 단순 조회처럼 범위를 명확히 정하고, 메서드마다 개발자가 임의로 계층을 건너뛰지 않도록 팀의 의존 규칙으로 관리해야 한다.
 
 > **핵심:** 얇은 Service 하나는 문제가 아니다. 단순 전달이 시스템 대부분을 차지하는데도 형식을 위해 모든 계층을 유지하는 상태가 문제다.
 
