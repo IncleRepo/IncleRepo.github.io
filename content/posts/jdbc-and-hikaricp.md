@@ -3,7 +3,7 @@ title = 'JDBC 커넥션은 왜 재사용하고 HikariCP는 어떻게 관리하�
 slug = '9'
 aliases = ['/posts/009/']
 date = 2026-04-23T20:00:00+09:00
-lastmod = 2026-08-10T21:12:37+09:00
+lastmod = 2026-08-24T21:20:00+09:00
 draft = false
 description = 'SQL이 JDBC를 거쳐 데이터베이스에 도달하는 과정부터 Connection Pool의 대여·반납·대기·교체와 HikariCP 병목 진단까지 설명합니다.'
 categories = ['데이터 접근 설계']
@@ -33,7 +33,7 @@ Connection Pool은 이 비용을 매 요청마다 반복하지 않도록 이미 
 
 ## Java의 SQL은 JDBC를 거쳐 데이터베이스로 간다
 
-MySQL과 PostgreSQL은 통신 규칙과 Driver가 다르다. 그렇다고 Java 애플리케이션이 데이터베이스마다 완전히 다른 방식으로 SQL을 실행할 필요는 없다.
+MySQL과 PostgreSQL은 통신 규칙과 Driver가 다르지만, Java 애플리케이션은 JDBC라는 공통 API로 SQL을 실행할 수 있다.
 
 Java는 `Connection`, `PreparedStatement`, `ResultSet`과 같은 공통 API를 제공한다. 실제 데이터베이스 Protocol과 Socket 통신은 MySQL Connector/J나 PostgreSQL JDBC Driver 같은 구현체가 맡는다. 이 공통 규격이 JDBC다.
 
@@ -91,7 +91,7 @@ try (Connection connection = dataSource.getConnection();
 
 ## Connection 생성은 Java 객체 생성보다 비싸다
 
-코드에서 `Connection`은 하나의 Java 객체로 보인다. 하지만 이 객체는 단순히 메모리에 만들어진 값이 아니라 데이터베이스 Session과 연결된 통신 경로를 나타낸다.
+코드에서 `Connection`은 하나의 Java 객체로 보이지만, 내부적으로는 데이터베이스 Session과 연결된 통신 경로를 나타낸다.
 
 일반 객체는 다음처럼 애플리케이션 안에서 생성할 수 있다.
 
@@ -235,7 +235,7 @@ Pool Size = 10
 
 `try-with-resources`를 사용하면 정상 종료뿐 아니라 예외가 발생한 경우에도 자동으로 `close()`가 호출된다. `Connection`, `PreparedStatement`, `ResultSet`처럼 닫아야 하는 JDBC 자원에 이 문법을 사용하는 이유다.
 
-다만 Connection 객체가 많이 쌓였다고 해서 항상 애플리케이션이 `close()`를 빠뜨린 것은 아니다. 뒤에서 살펴볼 Driver 내부 정리 지연처럼 Pool Leak과 비슷한 증상을 만드는 다른 원인도 있다.
+Connection 객체가 많이 쌓이는 원인은 반납 누락 외에도 있다. 뒤에서 살펴볼 Driver 내부 정리 지연도 Pool Leak과 비슷한 증상을 만들 수 있다.
 
 ## 모든 Connection이 사용 중이면 요청은 기다린다
 
@@ -276,7 +276,7 @@ Connection 대여 시도
 
 ### getConnection이 느리면 SQL보다 앞을 봐야 한다
 
-DB 요청이 느리다고 해서 항상 SQL 실행이 느린 것은 아니다.
+DB 요청 시간에는 SQL 실행뿐 아니라 Connection을 빌리는 대기 시간도 포함된다.
 
 ```text
 요청 시작
@@ -325,13 +325,13 @@ Connection 증가
 → 전체 응답 시간이 오히려 길어질 수 있음
 ```
 
-Connection Pool은 요청을 빠르게 만드는 무한 확장 장치가 아니다. 생성 비용을 줄여주는 동시에 데이터베이스로 들어가는 동시 작업 수를 제한하는 장치이기도 하다.
+Connection Pool은 Connection 생성 비용을 줄이는 동시에 데이터베이스로 들어가는 동시 작업 수를 제한한다.
 
 ![Pool 크기에 따른 TPS와 응답 시간 실험 결과](/images/posts/jdbc-and-hikaricp/legacy-04.png "maximumPoolSize 실험 결과")
 
-### 웹 Thread 수와 같게 맞추는 값이 아니다
+### 웹 Thread 수와 DB 동시 작업 수를 구분한다
 
-Tomcat이 요청 Thread를 200개 사용한다고 해서 `maximumPoolSize`도 200이어야 하는 것은 아니다.
+Tomcat의 요청 Thread 수와 HikariCP의 `maximumPoolSize`는 같은 값일 필요가 없다.
 
 ```text
 요청 Thread
@@ -353,7 +353,7 @@ Connection Pool
 → DB Connection을 재사용
 ```
 
-중요한 것은 전체 Request Thread 수가 아니라 **동시에 DB Connection을 필요로 하는 요청 수와 Connection 점유 시간**이다. 같은 요청량이라도 SQL이 느리거나 Transaction이 길어지면 Connection이 늦게 돌아오므로 더 쉽게 Pool이 가득 찬다.
+Pool 크기를 정할 때는 **동시에 DB Connection을 필요로 하는 요청 수와 Connection 점유 시간**을 본다. 같은 요청량이라도 SQL이 느리거나 Transaction이 길어지면 Connection이 늦게 돌아오므로 더 쉽게 Pool이 가득 찬다.
 
 ### 초기값을 추정하는 공식
 
@@ -371,7 +371,7 @@ connections = (core_count × 2) + effective_spindle_count
 (4 × 2) + 1 = 9
 ```
 
-이 값은 그대로 복사할 정답이 아니다. HikariCP 문서도 예상 부하를 재현해 공식 주변의 여러 크기를 시험하라고 설명한다. 특히 SSD·NVMe와 Cloud Storage 환경에서는 `effective_spindle_count`를 단순히 계산하기 어렵다. 공식은 웹 Thread 수에 맞춰 Pool을 크게 잡는 대신 작은 값에서 측정을 시작하기 위한 기준에 가깝다.
+HikariCP 문서도 예상 부하를 재현해 공식 주변의 여러 크기를 시험하라고 설명한다. 특히 SSD·NVMe와 Cloud Storage 환경에서는 `effective_spindle_count`를 단순히 계산하기 어렵다. 이 공식은 작은 값에서 측정을 시작하기 위한 기준으로 사용한다.
 
 또한 이 공식이 추정하는 것은 DB 서버가 감당할 수 있는 전체 Active Connection의 출발점이다. 애플리케이션 인스턴스가 여러 개라면 이 숫자를 각 Pool에 그대로 적용하는 것이 아니라 전체 Connection 예산을 나누어야 한다.
 
@@ -450,7 +450,7 @@ Pool이 물리 Connection 하나를 재사용할 수 있는 최대 수명이다.
 
 `connectionTimeout`이 요청의 대기 시간을 다룬다면 `maxLifetime`은 Connection 자체의 교체 주기를 다룬다.
 
-HikariCP는 사용 중인 Connection을 수명이 됐다는 이유로 강제로 끊지 않는다. Connection이 반환되면 Pool에서 제거한다. 따라서 `maxLifetime`이 30분이라고 해서 30분째 실행 중인 SQL을 즉시 중단한다는 뜻은 아니다.
+HikariCP는 사용 중인 Connection을 수명이 됐다는 이유로 강제로 끊지 않는다. Connection이 반환되면 Pool에서 제거한다. 따라서 `maxLifetime`은 실행 중인 SQL의 제한 시간이 아니라 Connection을 재사용할 수 있는 수명에 가깝다.
 
 HikariCP는 데이터베이스나 네트워크 인프라가 적용하는 Connection 제한 시간보다 `maxLifetime`을 몇 초 짧게 설정할 것을 권장한다. 이유는 다음과 같은 엇갈림을 줄이기 위해서다.
 
@@ -546,7 +546,7 @@ Active, Idle, Pending과 Timeout은 증상을 보여준다. 원인은 SQL, Trans
 
 겉으로는 Connection 객체가 계속 늘어났기 때문에 애플리케이션이 `close()`를 빠뜨린 Pool Leak처럼 보일 수 있었다. 하지만 Pool 지표만으로 원인을 찾을 수 없었고, Heap Dump에서 `connectionFinalizerPhantomRefs`와 `AbandonedConnectionCleanupThread`로 이어지는 참조 경로를 확인한 뒤 Driver 내부 정리 병목임을 알 수 있었다.
 
-`PhantomReference`의 JVM 동작을 모두 알아야 이 사례를 이해할 필요는 없다. 핵심은 폐기된 Connection 관련 자원을 Driver가 별도 Thread에서 정리하고 있었고, Connection을 버리는 속도가 정리 속도보다 빨라 대기 대상이 쌓였다는 점이다.
+이 사례에서는 폐기된 Connection 관련 자원을 Driver가 별도 Thread에서 정리했고, Connection을 버리는 속도가 정리 속도보다 빨라 대기 대상이 쌓였다. 이 흐름을 이해하는 데 `PhantomReference`의 JVM 동작 전체까지 알 필요는 없다.
 
 해당 팀은 장애 전환을 위한 짧은 수명이라는 목적을 유지하면서 Connector/J를 지원되는 버전으로 올리고 Cleanup Thread 비활성화 옵션을 적용했다. Connector/J 8.0.22부터는 `com.mysql.cj.disableAbandonedConnectionCleanup` 시스템 속성으로 이 Thread를 비활성화할 수 있다.
 

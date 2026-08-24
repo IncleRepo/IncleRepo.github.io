@@ -3,7 +3,7 @@ title = 'Lost Update는 왜 발생하고 어떤 동시성 제어를 선택해야
 slug = '4'
 aliases = ['/posts/004/']
 date = 2026-03-16T21:00:00+09:00
-lastmod = 2026-08-11T20:31:31+09:00
+lastmod = 2026-08-24T21:20:00+09:00
 draft = false
 description = '동시에 같은 데이터를 수정할 때 발생하는 Lost Update부터 단일 UPDATE, 낙관적·비관적 Lock과 Unique Constraint의 선택 기준까지 차례대로 알아봅니다.'
 categories = ['데이터베이스']
@@ -14,7 +14,7 @@ tags = ['동시성', 'Lost Update', '낙관적 락', '비관적 락']
 
 두 서비스 메서드에 모두 `@Transactional`이 붙어 있다면 한 요청이 끝날 때까지 다른 요청이 기다리지 않을까?
 
-그렇지 않다. `@Transactional`은 한 요청 안에서 실행되는 작업을 하나의 Transaction으로 묶어 Commit하거나 Rollback할 수 있게 한다. 서로 다른 요청에서 시작된 두 Transaction을 자동으로 한 줄로 세우지는 않는다.
+`@Transactional`은 한 요청 안에서 실행되는 작업을 하나의 Transaction으로 묶어 Commit하거나 Rollback할 수 있게 한다. 서로 다른 요청에서 시작된 두 Transaction은 각각 독립적으로 실행될 수 있다.
 
 여러 요청이 같은 데이터를 거의 동시에 읽고 수정하면 실행 순서에 따라 예상하지 못한 결과가 생길 수 있다. 이런 문제를 동시에 실행되는 순서에 따라 결과가 달라지는 Race Condition이라고 한다. 그중 한쪽의 변경 결과가 다른 변경에 덮여 사라지는 문제가 Lost Update다.
 
@@ -73,7 +73,7 @@ B: stock에 9 저장
 
 두 번째 SQL은 “현재 값에서 1을 빼라”가 아니라 “값을 9로 덮어써라”는 명령이다. 데이터베이스는 A와 B가 모두 9를 저장하는 일을 오류로 판단하지 않는다. 두 `UPDATE`가 정상 실행되면서 A의 차감 결과만 사라진다.
 
-여기서 Lost Update를 발견했다고 곧바로 Lock부터 선택할 필요는 없다. 지금 작업이 현재 숫자에서 1을 빼는 것뿐이라면, 애플리케이션에서 값을 읽고 계산하는 단계 자체를 없앨 수 있다.
+현재 숫자에서 1을 빼는 작업이라면 Lock을 추가하기 전에 애플리케이션에서 값을 읽고 계산하는 단계부터 없앨 수 있다.
 
 ## 먼저 한 번의 UPDATE로 끝낼 수 있는지 확인한다
 
@@ -134,7 +134,7 @@ stock = 0
 
 단순한 숫자 증감과 재고 차감에는 이 방법이 짧고 Lock을 잡는 시간도 작다. 하지만 JPQL 일괄 변경이나 직접 작성한 변경 쿼리는 영속성 컨텍스트에 이미 들어 있는 Entity를 자동으로 고쳐주지 않는다. 같은 Transaction에서 Product를 먼저 조회했다면 데이터베이스의 최신 값과 Entity의 값이 달라질 수 있으므로 Clear하거나 다시 조회해야 한다.
 
-모든 변경을 한 SQL로 자연스럽게 표현할 수 있는 것은 아니다. 상품 상태, 쿠폰 조건과 재고를 함께 확인하고 가격을 계산한 뒤 여러 필드를 바꿔야 한다면 애플리케이션에서 값을 읽고 판단하는 과정이 필요하다.
+상품 상태, 쿠폰 조건과 재고를 함께 확인하고 가격을 계산한 뒤 여러 필드를 바꾸는 작업은 한 SQL로 표현하기 어렵다. 이런 작업에는 애플리케이션에서 값을 읽고 판단하는 과정이 필요하다.
 
 ```text
 상품 상태 확인
@@ -200,7 +200,7 @@ WHERE version = 3
 → 충돌 발견
 ```
 
-Version의 목적은 최신 번호를 관리하는 데 있지 않다. 핵심은 한 문장으로 정리할 수 있다. **내가 읽었던 상태가 저장하는 순간에도 그대로인지 확인한다.** Version이 달라져 `UPDATE`할 행을 찾지 못하면 JPA Provider는 `OptimisticLockException`으로 충돌을 알려준다.
+Version은 **내가 읽었던 상태가 저장하는 순간에도 그대로인지 확인하는 값**이다. Version이 달라져 `UPDATE`할 행을 찾지 못하면 JPA Provider는 `OptimisticLockException`으로 충돌을 알려준다.
 
 ```text
 낙관적 Lock
@@ -215,7 +215,7 @@ B 실행
 → 나중 요청은 충돌로 실패
 ```
 
-낙관적 Lock은 동시 실행을 미리 막는 기술이 아니라, 실제 충돌이 발생했을 때 나중에 발견하는 기술이다. Lock 대기는 적지만 실패한 요청이 수행한 계산은 버려야 한다.
+낙관적 Lock은 동시 실행을 허용하고 저장 시점에 충돌을 발견한다. Lock 대기는 적지만 실패한 요청이 수행한 계산은 버려야 한다.
 
 ### 충돌을 발견한 요청은 어떻게 처리할까
 
@@ -275,7 +275,7 @@ Transaction A: stock 9 저장 후 Commit, Lock 해제
 Transaction B: stock 9 조회 후 실행 재개 → stock 8 저장
 ```
 
-일반 조회까지 모두 멈추는 것은 아니다. `READ COMMITTED`와 `REPEATABLE READ`에서 InnoDB의 일반 `SELECT`는 MVCC 기반 Consistent Read로 동작하므로 다른 Transaction의 행 Lock을 반드시 기다리지는 않는다. 주로 같은 행을 변경하려는 `UPDATE`, `DELETE`와 다른 Locking Read가 기다리게 된다.
+`READ COMMITTED`와 `REPEATABLE READ`에서 InnoDB의 일반 `SELECT`는 MVCC 기반 Consistent Read로 동작한다. 따라서 다른 Transaction의 행 Lock을 기다리는 대상은 주로 같은 행을 변경하려는 `UPDATE`, `DELETE`와 다른 Locking Read다.
 
 다만 이 설명을 모든 격리 수준에 그대로 적용할 수는 없다. `SERIALIZABLE`에서 Autocommit이 꺼져 있으면 InnoDB는 일반 `SELECT`를 `SELECT ... FOR SHARE`로 바꿔 실행한다.
 
@@ -332,7 +332,7 @@ if (!participantRepository.existsByEventIdAndMemberId(eventId, memberId)) {
 }
 ```
 
-문제는 `exists()`와 `INSERT`가 하나의 연산이 아니라는 데 있다. A가 존재 여부를 확인한 뒤 저장하기 전에 B도 같은 조회를 실행할 수 있다.
+`exists()`와 `INSERT` 사이에는 다른 요청이 끼어들 수 있다. A가 존재 여부를 확인한 뒤 저장하기 전에 B도 같은 조회를 실행할 수 있다.
 
 ```text
 Request A: 참여 기록 없음 확인
@@ -369,7 +369,7 @@ Request B: INSERT 시 Unique Constraint 위반
 | Lock과 Version 검사 | 같은 데이터를 동시에 다루는 순서를 조정하거나 충돌을 발견 |
 | Constraint | 데이터베이스에 저장되면 안 되는 값을 거부 |
 
-`@Transactional`이 있다고 해서 모든 동시성 문제가 해결되지 않고, Lock을 사용한다고 해서 중복 데이터의 규칙까지 가장 잘 표현하는 것도 아니다. Transaction 경계를 기본으로 두고 그 안에서 보호할 규칙에 맞는 수단을 추가해야 한다.
+Transaction 경계를 기본으로 두고 그 안에서 보호할 규칙에 맞는 수단을 추가해야 한다. 값의 갱신 충돌에는 Lock이나 조건부 변경을 사용하고, 중복 데이터 금지에는 Unique Constraint를 사용하는 식이다.
 
 ## 보호하려는 규칙에 따라 가장 작은 수단을 선택한다
 
@@ -383,7 +383,7 @@ Request B: INSERT 시 Unique Constraint 위반
 한 주문의 결제 금액은 중복으로 차감되면 안 된다.
 ```
 
-이처럼 어떤 실행 순서에서도 반드시 유지해야 하는 규칙을 불변식(Invariant)이라고 한다. 동시성 제어의 목적은 특정 Lock 기술을 사용하는 것이 아니라 이 불변식을 안전하게 지키는 데 있다.
+이처럼 어떤 실행 순서에서도 반드시 유지해야 하는 규칙을 불변식(Invariant)이라고 한다. 동시성 제어는 이 불변식을 가장 작은 범위에서 안전하게 지키는 수단을 선택하는 일이다.
 
 | 상황 | 먼저 검토할 방법 | 함께 확인할 비용과 주의점 |
 | --- | --- | --- |
@@ -392,7 +392,7 @@ Request B: INSERT 시 Unique Constraint 위반
 | 충돌이 잦고 현재 상태 선점이 필요 | 비관적 Lock | Lock 대기, Timeout과 Deadlock |
 | 중복 생성 금지 | Unique Constraint | 제약 위반을 업무 오류로 변환 |
 
-선택할 때는 다음 순서로 생각해볼 수 있다. 절대적인 공식이 아니라 불필요하게 무거운 Lock부터 선택하지 않기 위한 출발점이다.
+다음 순서는 불필요하게 무거운 Lock부터 선택하지 않기 위한 출발점으로 사용할 수 있다.
 
 ```text
 동시성 문제가 있다
@@ -421,7 +421,7 @@ YES
 Unique Constraint 검토
 ```
 
-Lock을 거는 것이 목적이 아니라, 어떤 상황에서도 지켜져야 하는 업무 규칙을 가장 작은 범위에서 안전하게 지키는 것이 목적이다.
+어떤 상황에서도 지켜져야 하는 업무 규칙을 가장 작은 범위에서 안전하게 보호하는 수단을 선택해야 한다.
 
 ## 정리
 

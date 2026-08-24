@@ -3,7 +3,7 @@ title = 'JPA를 유지하면서 JDBC를 선택해야 하는 순간'
 slug = '10'
 aliases = ['/posts/010/']
 date = 2026-04-27T20:59:00+09:00
-lastmod = 2026-08-10T21:12:37+09:00
+lastmod = 2026-08-24T21:20:00+09:00
 draft = false
 description = 'JPA와 JDBC의 계층 관계부터 Bulk DML과 Batch의 차이, JDBC를 직접 사용할 기준과 공정한 성능 비교 방법까지 정리합니다.'
 categories = ['데이터 접근 설계']
@@ -132,7 +132,7 @@ UPDATE member SET point = 340 WHERE id = 2;
 UPDATE member SET point = 275 WHERE id = 3;
 ```
 
-각 행의 값이 다르므로 앞선 예처럼 하나의 단순한 `UPDATE`로 합치기 어렵다. 그렇다고 요청할 때마다 애플리케이션과 데이터베이스를 왕복하면 네트워크 비용이 반복된다. 여러 SQL 실행을 일정한 묶음으로 전달해 왕복을 줄이는 방식이 **JDBC Batch**다.
+각 행의 값이 다르므로 앞선 예처럼 하나의 단순한 `UPDATE`로 합치기 어렵다. 이때 여러 SQL 실행을 일정한 묶음으로 전달해 반복되는 네트워크 왕복을 줄이는 방식이 **JDBC Batch**다.
 
 여기서 Bulk와 Batch를 구분해야 한다.
 
@@ -141,11 +141,11 @@ UPDATE member SET point = 275 WHERE id = 3;
 | Bulk | 한 SQL이 여러 행을 처리 | SQL 실행 횟수와 Entity 적재 |
 | Batch | 여러 SQL 실행을 묶어서 전달 | 애플리케이션과 DB 사이의 반복 왕복 |
 
-Batch Size가 100이라고 해서 100개의 `UPDATE`가 하나의 SQL로 합쳐지는 것은 아니다. JDBC Driver가 여러 실행 요청을 모아 전달하며, 실제 패킷 구성이나 SQL 재작성 방식은 Driver와 설정에 따라 달라진다. Batch의 핵심은 “SQL 한 문장”이 아니라 **반복 전송을 줄일 기회**를 만드는 데 있다.
+Batch Size는 한 번에 모아 전달할 실행 요청 수를 정한다. 예를 들어 100으로 설정하면 구현체는 호환되는 요청을 최대 100개 단위로 JDBC Driver에 전달할 수 있다. 실제 패킷 구성이나 SQL 재작성 방식은 Driver와 설정에 따라 달라진다. Batch는 여러 `UPDATE`를 한 문장으로 만드는 대신 **반복 전송을 줄일 기회**를 만든다.
 
 ### Hibernate도 내부에서 JDBC Batch를 사용할 수 있다
 
-JDBC Batch는 JDBC API가 제공하는 기능이다. 다만 개발자가 `JdbcTemplate`으로 직접 호출해야만 사용할 수 있는 것은 아니다. JPA 구현체인 Hibernate도 자신이 만든 여러 `INSERT`와 `UPDATE`를 JDBC Batch API에 모아 전달할 수 있다.
+JDBC Batch는 JDBC API가 제공하는 기능이다. 개발자가 `JdbcTemplate`으로 직접 사용할 수도 있고, JPA 구현체인 Hibernate가 자신이 만든 여러 `INSERT`와 `UPDATE`를 JDBC Batch API에 모아 전달할 수도 있다.
 
 두 방식의 차이는 Batch 기능 자체보다 누가 SQL을 만들고 JDBC Batch를 호출하는지에 있다.
 
@@ -154,7 +154,7 @@ JDBC Batch는 JDBC API가 제공하는 기능이다. 다만 개발자가 `JdbcTe
 
 Entity의 생성 규칙이나 Callback처럼 JPA의 상태 관리가 필요하다면 애플리케이션 코드는 JPA를 유지하면서 Hibernate가 JDBC Batch를 사용하도록 설정할 수 있다.
 
-먼저 `saveAll()`의 역할부터 분리해서 봐야 한다. Spring Data JPA의 `saveAll()`은 전달받은 Entity마다 `save()`를 호출해 `persist()` 또는 `merge()`가 실행되도록 돕는 편의 메서드다. `saveAll()`이 JDBC Batch를 시작하거나 활성화하는 것은 아니다.
+먼저 `saveAll()`의 역할부터 분리해서 봐야 한다. Spring Data JPA의 `saveAll()`은 전달받은 Entity마다 `save()`를 호출해 `persist()` 또는 `merge()`가 실행되도록 돕는 편의 메서드다. JDBC Batch의 활성화 여부는 `saveAll()`이 아니라 Hibernate와 JDBC Driver 설정으로 결정된다.
 
 ```java
 @Transactional
@@ -176,7 +176,7 @@ public void saveMembers(List<Member> members) {
 }
 ```
 
-반대로 각 `save()`가 서로 다른 트랜잭션에서 즉시 Flush된다면 SQL을 Batch로 모을 수 없다. 핵심은 `saveAll()` 사용 여부가 아니라 **여러 호환 가능한 SQL이 같은 Flush 구간에 모이는가**이다.
+각 `save()`가 서로 다른 트랜잭션에서 즉시 Flush되면 SQL을 Batch로 모을 수 없다. **여러 호환 가능한 SQL이 같은 Flush 구간에 모여야** Hibernate가 Batch로 전달할 수 있다.
 
 #### Hibernate Batch를 활성화하는 설정과 조건
 
@@ -323,7 +323,7 @@ jdbcTemplate.batchUpdate(sql, rows, 500, (statement, row) -> {
 | 연관 관계 변경 | CTE·Window Function 기반 집계 |
 | Entity Callback이 필요한 처리 | 대용량 파일 Export |
 
-조회 전용이라는 이유만으로 반드시 JDBC를 직접 사용할 필요는 없다. JPA의 DTO Projection, QueryDSL, Native Query로도 Entity 전체를 만들지 않고 필요한 결과만 조회할 수 있다. **Entity 관리가 필요 없고, SQL과 전송 단위를 직접 제어할 가치까지 충분할 때** `JdbcTemplate` 같은 직접 접근을 검토하면 된다.
+조회 전용 작업에는 JPA의 DTO Projection, QueryDSL, Native Query로도 Entity 전체를 만들지 않고 필요한 결과만 가져올 수 있다. **Entity 관리가 필요 없고, SQL과 전송 단위를 직접 제어할 가치까지 충분할 때** `JdbcTemplate` 같은 직접 접근을 검토하면 된다.
 
 Native SQL을 작성한다는 사실도 JDBC 직접 사용을 뜻하지 않는다. JPA의 Native Query도 결국 Hibernate가 JDBC를 통해 실행한다. SQL 문법을 직접 작성하는지와 Hibernate의 Entity 관리·Mapping을 거치는지는 서로 다른 선택이다.
 
@@ -351,7 +351,7 @@ JPA와 Hibernate를 거친 코드가 5초, `JdbcTemplate`으로 JDBC를 직접 �
 
 예를 들어 두 방식이 모두 Index 없이 같은 조건을 조회한다면 데이터베이스는 똑같이 Full Scan을 수행할 수 있다. 이 경우 Hibernate를 거치던 코드를 `JdbcTemplate`으로 바꾸어도 가장 큰 병목은 남는다.
 
-반대로 50만 건을 Entity로 만들고 Snapshot까지 보관하던 코드를 `JdbcTemplate`으로 일정 단위 처리하도록 바꾸었다면 Heap 사용량과 객체 생성 비용이 크게 줄 수 있다. 이때의 개선 원인은 단순히 “JDBC라서”가 아니라 **Hibernate의 불필요한 Entity 상태 관리를 제거했기 때문**이다.
+50만 건을 Entity로 만들고 Snapshot까지 보관하던 코드를 `JdbcTemplate`으로 일정 단위 처리하도록 바꾸면 Heap 사용량과 객체 생성 비용이 크게 줄 수 있다. 이때는 **Hibernate의 불필요한 Entity 상태 관리를 제거한 것**이 개선의 직접적인 원인이다.
 
 공정한 비교를 위해서는 최소한 다음 조건을 같게 맞춘다.
 
@@ -393,13 +393,13 @@ SQL 로그 역시 필요한 구간에서만 사용한다. 수십만 건의 SQL�
 ## 정리
 
 - JPA의 Dirty Checking은 Entity 변경을 편리하게 만들지만 Entity와 Snapshot 관리 비용을 동반한다.
-- 대량 처리라고 곧바로 JDBC를 직접 사용하지 않는다. 같은 규칙은 먼저 현재 JPA 구조에서 Bulk DML로 표현할 수 있는지 확인한다.
+- 대량 처리는 먼저 현재 JPA 구조에서 Bulk DML로 표현할 수 있는지 확인한 뒤, 필요한 제어 수준에 따라 Hibernate Batch나 JDBC 직접 사용을 검토한다.
 - Bulk는 한 SQL로 여러 행을 처리하고, Batch는 여러 SQL 실행을 묶어 반복 왕복을 줄인다.
 - JPA 코드가 만든 SQL도 Hibernate를 통해 JDBC Batch로 전달할 수 있지만, `saveAll()` 호출만으로 이를 보장하지는 않는다.
 - Entity 상태 관리가 필요하면 JPA와 Hibernate를 유지하고, 그 관리가 필요 없으며 SQL을 직접 제어할 가치가 클 때 `JdbcTemplate`을 선택적으로 사용한다.
 - 기술을 바꾸기 전에 실행 계획, SQL 수, 왕복 횟수와 메모리 사용량을 측정해 실제 병목을 찾는다.
 
-JPA와 JDBC 중 하나를 애플리케이션 전체의 정답으로 고를 필요는 없다. JPA 방식도 내부에서 JDBC를 사용하므로 실제 선택은 **Hibernate의 Entity 관리를 이용할지, SQL을 직접 제어할지**에 가깝다. Entity 관리의 가치가 큰 업무에는 JPA와 Hibernate의 장점을 사용하고, 그 관리보다 SQL과 전송 단위의 제어가 중요한 구간에는 Bulk DML, Hibernate의 JDBC Batch와 `JdbcTemplate`을 단계적으로 검토하면 된다. 중요한 것은 어느 기술이 더 빠르다고 외우는 일이 아니라, 현재 작업에서 어떤 비용을 줄이려는지 설명할 수 있는 선택을 하는 것이다.
+실제 선택은 **Hibernate의 Entity 관리를 이용할지, SQL을 직접 제어할지**에 가깝다. Entity 관리의 가치가 큰 업무에는 JPA와 Hibernate의 장점을 사용하고, SQL과 전송 단위의 제어가 중요한 구간에는 Bulk DML, Hibernate의 JDBC Batch와 `JdbcTemplate`을 단계적으로 검토하면 된다. 현재 작업에서 어떤 비용을 줄이려는지 설명할 수 있어야 한다.
 
 ## 참고 자료
 
