@@ -2,7 +2,7 @@
 title = 'Controller, Service, Repository로 이해하는 레이어드 아키텍처'
 slug = '14'
 date = 2026-08-21T20:49:00+09:00
-lastmod = 2026-08-24T22:20:00+09:00
+lastmod = 2026-08-24T22:45:00+09:00
 draft = false
 references_required = true
 description = 'Spring에서 익숙한 Controller, Service, Repository 구조를 따라가며 레이어드 아키텍처의 책임과 의존 방향, 장점과 한계를 살펴봅니다.'
@@ -116,19 +116,7 @@ Repository는 회원을 어떻게 저장하고 조회할지에 필요한 접근 
 
 ## 계층 사이에는 방향이 있다
 
-앞의 회원 조회 코드를 다시 보면 참조 방향이 눈에 들어온다.
-
-```text
-Controller
-   ↓
-Service
-   ↓
-Repository
-   ↓
-DB
-```
-
-Controller는 Service를 알고, Service는 Repository를 안다. 반대로 Repository는 Controller가 존재하는지 몰라도 데이터를 조회할 수 있다.
+앞의 회원 조회 흐름에서 Controller는 Service를 알고, Service는 Repository를 안다. 반대로 Repository는 Controller가 존재하는지 몰라도 데이터를 조회할 수 있다.
 
 Repository를 작성할 때 외부 요청이 REST API인지 GraphQL인지까지 알 필요는 없다. 데이터 저장과 조회에만 집중하면 된다. Service 역시 요청을 보낸 클라이언트가 웹인지 모바일인지 몰라도 회원 조회 흐름을 처리할 수 있다.
 
@@ -163,33 +151,17 @@ repository
 
 구조가 단순할 때는 역할별 코드를 한눈에 보기 쉽다. 반면 주문 기능 하나를 수정하려면 여러 패키지를 오가야 한다.
 
-업무 기능을 먼저 나누고 그 안에서 계층을 구성할 수도 있다.
+반대로 글의 처음에서 본 것처럼 `user`라는 업무 기능을 먼저 만들고 그 안에 Controller, Service와 Repository를 둘 수도 있다. `order`와 `payment`도 같은 방식으로 나눈다.
 
-```text
-user
-├── controller
-├── service
-└── repository
-
-order
-├── controller
-├── service
-└── repository
-```
-
-이 구조는 **Package by Feature** 또는 **Package by Domain**이라고 부른다. 최상위 폴더가 달라졌을 뿐, 각 기능 안에서는 여전히 Controller가 Service를 호출하고 Service가 Repository를 호출한다. 따라서 기능별 패키징을 선택해도 레이어드 아키텍처를 사용할 수 있다.
+이를 **Package by Feature** 또는 **Package by Domain**이라고 부른다. 최상위 폴더가 달라졌을 뿐, 각 기능 안에서는 여전히 Controller가 Service를 호출하고 Service가 Repository를 호출한다. 따라서 기능별 패키징을 선택해도 레이어드 아키텍처를 사용할 수 있다.
 
 정리하면 레이어드 아키텍처는 책임과 의존 방향에 관한 구조이고, Package by Layer는 파일을 기술 역할별 폴더에 모으는 방법이다. 패키지를 기능별로 나누더라도 각 기능 안에서 계층의 책임과 방향은 그대로 유지할 수 있다. 어떤 패키징을 선택하든 역할과 호출 흐름을 예측할 수 있다는 점은 같다.
 
 ## 이 구조가 널리 사용되는 이유
 
-이러한 예측 가능성은 다음과 같은 장점으로 이어진다.
+Controller, Service와 Repository라는 이름만으로도 코드의 역할과 요청 흐름을 어느 정도 예상할 수 있다. 이러한 예측 가능성은 다음과 같은 장점으로 이어진다.
 
-### 역할을 이해하기 쉽다
-
-요청을 처리하는 코드는 Controller, 업무를 처리하는 코드는 Service, 데이터를 다루는 코드는 Repository에서 찾을 수 있다. 처음 보는 프로젝트에서도 클래스가 맡은 역할을 이름만으로 어느 정도 예상할 수 있다.
-
-### 한 클래스에 서로 다른 코드가 섞이는 일을 줄인다
+### 서로 다른 관심사를 나누기 쉽다
 
 Controller 하나에서 HTTP 요청 값을 읽고, 업무 조건을 검사하고, SQL을 실행한 뒤 JSON 응답까지 만든다고 생각해보자. 기능이 조금만 늘어도 서로 다른 이유로 바뀌는 코드가 한곳에 뒤섞인다.
 
@@ -267,13 +239,7 @@ public class OrderService {
 
 레이어드 아키텍처에서는 상위 계층이 바로 아래 계층을 거치도록 제한할 수 있다. 이를 **닫힌 계층**이라고 한다. Controller가 Repository를 직접 호출하지 않고 반드시 Service를 거치는 구조가 대표적이다.
 
-회원 조회 요청이 다음과 같이 흐른다고 해보자.
-
-```text
-Controller → Service → Repository → DB
-```
-
-그런데 Service에는 Repository 호출을 전달하는 코드만 있다.
+앞에서 본 회원 조회 요청을 다시 살펴보자. Service에는 Repository 호출을 전달하는 코드만 있다.
 
 ```java
 public UserResponse getUser(long id) {
@@ -319,8 +285,6 @@ Controller → Repository → DB
 
 따라서 `단순 조회만 허용`처럼 계층을 건너뛸 범위를 팀 규칙으로 정한다. 개발자가 메서드마다 임의로 경로를 선택하게 두면 요청 흐름을 예측하기 어려워진다.
 
-> **핵심:** 각 계층이 실제 책임을 수행하는지, 단순 전달 요청이 전체에서 얼마나 반복되는지를 기준으로 판단한다.
-
 레이어드 아키텍처는 책임이 한 계층에 몰리는 상황과 책임 없이 계층만 통과하는 상황을 모두 경계해야 한다. 그렇다면 어떤 프로젝트에서 이 단순한 구조의 장점이 한계보다 클까?
 
 ## 레이어드 아키텍처는 언제 잘 맞을까?
@@ -336,22 +300,17 @@ Controller → Repository → DB
 
 아키텍처는 유명한 이름보다 프로젝트가 가진 문제와 복잡도에 맞춰 선택해야 한다. 단순한 문제에는 단순한 구조가 더 좋은 답일 수 있다.
 
-반대로 Service에 업무 규칙이 계속 쌓이고, JPA나 외부 API 같은 기술 변경이 핵심 코드까지 흔들며, 형식적인 전달 코드가 늘어난다면 계층을 나눈 다음의 설계 과제를 고민할 시점이다.
+반대로 다음과 같은 신호가 반복된다면 계층을 나눈 다음의 설계 과제를 고민할 시점이다.
 
-## 계층을 나눈 다음에는 무엇을 고민해야 할까?
+- Service에 업무 규칙이 계속 쌓이면 도메인 책임과 모델을 다시 살펴본다.
+- JPA나 외부 API 같은 기술 변경이 핵심 코드까지 번지면 기술 의존성을 어디에서 끊을지 정한다.
+- 형식적인 전달 코드가 많아지면 모든 요청이 같은 계층을 거쳐야 하는지 검토한다.
 
-Controller, Service와 Repository를 나누면 애플리케이션의 기본 책임과 흐름을 빠르게 정리할 수 있다. 시스템이 복잡해지면 다음 문제를 별도의 설계 과제로 다뤄야 한다.
-
-- Service에 비즈니스 규칙이 계속 쌓인다면, 비즈니스 로직 자체는 어디에 두는 것이 좋을까?
-- Service가 JPA Repository나 `KafkaTemplate` 같은 구체적인 기술을 직접 알아야 할까?
-- 계층의 경계와 의존 방향을 코드에서 더 엄격하게 관리하려면 어떻게 해야 할까?
-
-이러한 질문은 계층의 개수를 늘리는 것만으로 해결되지 않는다. 레이어드 아키텍처를 출발점으로 삼고, 실제로 복잡해진 지점에 맞춰 도메인 책임과 기술 경계를 보완해야 한다.
+이 문제는 계층의 개수를 늘리는 것만으로 해결되지 않는다. 레이어드 아키텍처를 출발점으로 삼고, 실제로 복잡해진 부분의 책임과 경계를 보완해야 한다.
 
 ## 정리
 
-- Controller, Service와 Repository 구조는 서로 다른 책임을 계층으로 나눈 레이어드 아키텍처의 대표적인 모습이다.
-- Controller는 외부 요청과 응답, Service는 업무 흐름, Repository는 데이터 접근을 담당한다.
+- 레이어드 아키텍처는 코드를 책임에 따라 나누며, Spring에서는 Controller가 요청과 응답, Service가 업무 흐름, Repository가 데이터 접근을 맡는 구조가 대표적이다.
 - 레이어드 아키텍처는 책임과 의존 방향에 관한 구조이고, Package by Layer는 파일을 기술 역할별로 배치하는 방법이다. 기능별 패키지 안에서도 레이어드 아키텍처를 사용할 수 있다.
 - 계층 분리와 HTTP나 JPA 같은 기술과의 결합을 통제하는 일은 서로 다른 설계 과제다.
 - 대부분의 요청이 의미 있는 처리 없이 계층을 통과하면 Architecture Sinkhole이 된다. 단순 조회에서 Service를 생략하더라도 허용 범위와 의존 규칙을 팀에서 함께 정해야 한다.
