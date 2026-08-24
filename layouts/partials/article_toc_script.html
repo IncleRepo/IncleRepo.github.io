@@ -18,7 +18,7 @@
 
   const setActiveLink = () => {
     const threshold = 140;
-    let current = entries[0];
+    let current = null;
 
     for (const entry of entries) {
       if (entry.heading.getBoundingClientRect().top <= threshold) {
@@ -28,10 +28,11 @@
       }
     }
 
-    if (activeLink === current.link) return;
+    const currentLink = current?.link;
+    if (activeLink === currentLink) return;
 
     for (const entry of entries) {
-      const isActive = entry.link === current.link;
+      const isActive = entry.link === currentLink;
       entry.link.classList.toggle("is-active", isActive);
       if (isActive) {
         entry.link.setAttribute("aria-current", "location");
@@ -40,7 +41,9 @@
       }
     }
 
-    activeLink = current.link;
+    activeLink = currentLink;
+
+    if (!activeLink) return;
 
     const linkTop = activeLink.offsetTop;
     const linkBottom = linkTop + activeLink.offsetHeight;
