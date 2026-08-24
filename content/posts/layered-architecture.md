@@ -2,7 +2,7 @@
 title = 'Controller, Service, Repository로 이해하는 레이어드 아키텍처'
 slug = '14'
 date = 2026-08-21T20:49:00+09:00
-lastmod = 2026-08-21T22:10:00+09:00
+lastmod = 2026-08-21T22:20:00+09:00
 draft = false
 references_required = true
 description = 'Spring에서 익숙한 Controller, Service, Repository 구조를 따라가며 레이어드 아키텍처의 책임과 의존 방향, 장점과 한계를 살펴봅니다.'
@@ -132,6 +132,49 @@ Repository를 작성할 때 외부 요청이 REST API인지 GraphQL인지까지 
 
 다만 참조 방향이 한쪽이라고 해서 코드 변경의 영향까지 한쪽으로만 전달되는 것은 아니다. Repository의 메서드 반환형을 바꾸면 이를 사용하는 Service도 수정해야 할 수 있다. 의존 방향의 목적은 변경을 없애는 것이 아니라, **누가 누구를 참조하는지 예측할 수 있게 만들어 구조를 단순하게 유지하는 데 있다.**
 
+## 레이어와 패키징은 다른 문제다
+
+레이어드 아키텍처를 사용하면 반드시 최상위 폴더를 `controller`, `service`, `repository`로 나눠야 할까?
+
+다음은 기술 역할별로 코드를 모은 **Package by Layer** 구조다.
+
+```text
+controller
+├── UserController
+├── OrderController
+└── PaymentController
+
+service
+├── UserService
+├── OrderService
+└── PaymentService
+
+repository
+├── UserRepository
+├── OrderRepository
+└── PaymentRepository
+```
+
+구조가 단순할 때는 역할별 코드를 한눈에 보기 쉽다. 반면 주문 기능 하나를 수정하려면 여러 패키지를 오가야 한다.
+
+업무 기능을 먼저 나누고 그 안에서 계층을 구성할 수도 있다.
+
+```text
+user
+├── controller
+├── service
+└── repository
+
+order
+├── controller
+├── service
+└── repository
+```
+
+이 구조는 **Package by Feature** 또는 **Package by Domain**이라고 부른다. 최상위 폴더가 달라졌을 뿐, 각 기능 안에서는 여전히 Controller가 Service를 호출하고 Service가 Repository를 호출한다. 따라서 기능별 패키징을 선택해도 레이어드 아키텍처를 사용할 수 있다.
+
+정리하면 레이어드 아키텍처는 책임과 의존 방향에 관한 구조이고, Package by Layer는 파일을 기술 역할별 폴더에 모으는 방법이다. 둘은 함께 자주 보이지만 같은 개념은 아니다.
+
 ## 이 구조가 널리 사용되는 이유
 
 이 구조가 널리 사용되는 데에는 분명한 이유가 있다.
@@ -246,49 +289,6 @@ orderService.create(
 ```
 
 결국 패키지를 나누는 것만으로는 부족하다. Service가 HTTP 요청 형식과 JPA Entity를 직접 알아도 되는지, 변경 영향을 줄이기 위해 별도의 입력이나 저장 계약이 필요한지를 함께 결정해야 한다. 작은 CRUD에서는 구조를 단순하게 유지하는 편이 나을 수도 있다. 반대로 기술 변경의 영향이 업무 코드까지 자주 퍼진다면 의존성을 더 엄격하게 나누는 방법을 고민할 수 있다.
-
-## 레이어와 패키징은 다른 문제다
-
-레이어드 아키텍처를 사용하면 반드시 최상위 폴더를 `controller`, `service`, `repository`로 나눠야 할까?
-
-다음은 기술 역할별로 코드를 모은 **Package by Layer** 구조다.
-
-```text
-controller
-├── UserController
-├── OrderController
-└── PaymentController
-
-service
-├── UserService
-├── OrderService
-└── PaymentService
-
-repository
-├── UserRepository
-├── OrderRepository
-└── PaymentRepository
-```
-
-구조가 단순할 때는 역할별 코드를 한눈에 보기 쉽다. 반면 주문 기능 하나를 수정하려면 여러 패키지를 오가야 한다.
-
-업무 기능을 먼저 나누고 그 안에서 계층을 구성할 수도 있다.
-
-```text
-user
-├── controller
-├── service
-└── repository
-
-order
-├── controller
-├── service
-└── repository
-```
-
-이 구조는 **Package by Feature** 또는 **Package by Domain**이라고 부른다. 최상위 폴더가 달라졌을 뿐, 각 기능 안에서는 여전히 Controller가 Service를 호출하고 Service가 Repository를 호출한다. 따라서 기능별 패키징을 선택해도 레이어드 아키텍처를 사용할 수 있다.
-
-정리하면 레이어드 아키텍처는 책임과 의존 방향에 관한 구조이고, Package by Layer는 파일을 기술 역할별 폴더에 모으는 방법이다. 둘은 함께 자주 보이지만 같은 개념은 아니다.
 
 ## 모든 요청이 모든 계층을 지나야 할까?
 
