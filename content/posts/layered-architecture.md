@@ -2,7 +2,7 @@
 title = 'Controller, Service, Repository로 이해하는 레이어드 아키텍처'
 slug = '14'
 date = 2026-08-21T20:49:00+09:00
-lastmod = 2026-08-24T23:55:00+09:00
+lastmod = 2026-08-24T23:58:00+09:00
 draft = false
 references_required = true
 description = 'Spring에서 익숙한 Controller, Service, Repository 구조를 따라가며 레이어드 아키텍처의 책임과 의존 방향, 장점과 한계를 살펴봅니다.'
@@ -254,13 +254,25 @@ JPA와 데이터베이스
 - **요청 DTO를 Repository까지 전달:** Service뿐 아니라 데이터 접근 코드도 요청 형식에 영향을 받는다.
 - **저장 기술이나 Entity 구조 변경:** Entity를 직접 사용하는 Service와 테스트도 바뀔 수 있다.
 
-### 언제 데이터 구조를 나눌까
+### 언제 Service 입력 객체를 따로 만들까
 
-단순한 CRUD이고 API와 저장 구조도 안정적이라면 요청 DTO와 JPA Entity를 그대로 사용하는 편이 간결하다.
+단순한 CRUD에서는 요청 DTO를 그대로 Service에 넘겨도 된다. 요청 DTO가 바뀔 때마다 Service도 함께 고쳐야 한다면 다음처럼 Service용 입력 객체로 변환할 수 있다.
 
-API 요청 형식이 바뀔 때마다 Service도 함께 고쳐야 하거나, 같은 Service를 배치와 메시지 소비자도 호출한다면 Service가 사용할 입력 객체를 따로 둘 수 있다. 예를 들어 Controller가 `UpdateOrderRequest`를 `UpdateOrderCommand`로 바꾸어 전달하면 Service는 HTTP 요청 형식이 바뀌어도 영향을 덜 받는다.
+```java
+public record UpdateOrderCommand(
+    OrderStatus status,
+    String memo
+) {
+}
 
-모든 계층마다 객체를 만들 필요는 없다. **API 변경 때문에 Service까지 반복해서 수정하게 될 때 분리를 검토하면 된다.**
+UpdateOrderCommand command = new UpdateOrderCommand(
+    request.status(),
+    request.memo()
+);
+orderService.update(id, command);
+```
+
+Service는 `UpdateOrderCommand`만 받으므로 HTTP 요청 형식에 직접 의존하지 않는다. 이런 변경이 반복되지 않는다면 별도 객체를 추가할 필요도 없다.
 
 지금까지는 Service에 업무 규칙과 바깥 계층의 변경이 함께 쌓이는 경우를 살펴봤다. 반대로 Service가 아무 책임도 맡지 않고 다음 계층으로 요청만 전달하는 경우도 있다.
 
