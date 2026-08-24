@@ -2,7 +2,7 @@
 title = 'Controller, Service, Repository로 이해하는 레이어드 아키텍처'
 slug = '14'
 date = 2026-08-21T20:49:00+09:00
-lastmod = 2026-08-21T21:29:00+09:00
+lastmod = 2026-08-21T22:10:00+09:00
 draft = false
 references_required = true
 description = 'Spring에서 익숙한 Controller, Service, Repository 구조를 따라가며 레이어드 아키텍처의 책임과 의존 방향, 장점과 한계를 살펴봅니다.'
@@ -186,9 +186,9 @@ Controller와 Repository에서 코드를 분리했어도 Service 안에서는 `�
 
 따라서 Service가 비대해진다고 해서 레이어드 아키텍처가 잘못된 것은 아니다. 계층 분리와 도메인 모델링은 서로 다른 문제다.
 
-## 계층을 나눠도 기술 의존성이 안쪽까지 퍼질 수 있다
+## 계층을 나눠도 Service가 JPA와 HTTP 구조를 알 수 있다
 
-그림에서 Database가 가장 아래에 있다고 해서 프로젝트가 자동으로 DB 중심 설계가 되는 것은 아니다. 실제로 살펴봐야 하는 것은 비즈니스 코드에 구체적인 저장 기술이 얼마나 직접 드러나는가다.
+Controller, Service, Repository를 서로 다른 패키지에 두었다고 해서 각 계층의 기술까지 자동으로 분리되는 것은 아니다. 다음 `OrderService`를 보자.
 
 ```java
 @Service
@@ -196,26 +196,56 @@ Controller와 Repository에서 코드를 분리했어도 Service 안에서는 `�
 public class OrderService {
 
     private final JpaOrderRepository orderRepository;
+
+    public void cancel(long orderId) {
+        OrderEntity order = orderRepository.findById(orderId)
+            .orElseThrow();
+
+        order.cancel();
+    }
 }
 ```
 
-위 `OrderService`는 JPA 전용 Repository를 직접 의존한다. 모든 계층이 같은 JPA Entity를 공유하거나 Repository의 조회 결과 형태에 맞춰 업무 코드가 바뀐다면, 패키지는 나뉘어 있어도 실제 결합은 강할 수 있다.
+`OrderService`는 Repository가 주문을 찾아준다는 사실만 아는 것이 아니다. JPA에서 사용하는 `OrderEntity`와 `JpaOrderRepository`도 직접 알고 있다. 이 구조가 항상 잘못된 것은 아니지만, 저장 기술이나 Entity 구조가 바뀌면 Service도 함께 수정될 가능성이 커진다.
 
-API 요청 DTO를 Service와 데이터 접근 코드까지 그대로 전달하는 경우도 비슷하다.
+필요하다면 Service가 원하는 저장 기능을 별도의 인터페이스로 표현할 수 있다.
 
-```text
-HTTP 요청 구조
-↓
-Controller DTO
-↓
-Service
-↓
-Persistence
+```java
+public interface OrderRepository {
+
+    Order findById(long orderId);
+}
 ```
 
-그러면 API 요청 형식이 바뀌었을 뿐인데 안쪽 코드까지 함께 수정해야 할 수 있다. 즉, 계층을 나눈 것과 계층 사이에서 데이터 구조와 구현 기술을 분리한 것은 같은 일이 아니다.
+JPA를 사용하는 클래스는 이 인터페이스를 구현하고, Service는 `OrderRepository`와 `Order`만 사용한다. 그러면 JPA Entity의 필드나 조회 방식이 바뀌더라도 변경을 Repository 구현 안에서 처리할 여지가 생긴다.
 
-애플리케이션이 필요로 하는 Repository 계약을 인터페이스로 정의하고 실제 저장 기술이 이를 구현하게 만들면 이런 의존성을 줄이는 데 도움이 된다. 하지만 인터페이스 하나를 추가했다고 모든 결합이 사라지는 것은 아니다. 계약의 위치, Entity 공유 범위와 의존 방향까지 함께 설계해야 한다. 이런 의존성을 더 엄격하게 통제하려는 고민은 이후 다른 아키텍처로 이어진다.
+다만 다음처럼 인터페이스가 JPA Entity를 그대로 반환한다면 이름만 바뀌었을 뿐 Service의 JPA 의존성은 남아 있다.
+
+```java
+public interface OrderRepository {
+
+    OrderEntity findById(long orderId);
+}
+```
+
+API 요청 DTO를 안쪽 계층까지 그대로 전달하는 경우도 같은 문제를 만든다.
+
+```java
+@PostMapping("/orders")
+public void create(@RequestBody CreateOrderRequest request) {
+    orderService.create(request);
+}
+```
+
+`CreateOrderRequest`는 HTTP 요청을 받기 위한 객체다. Service와 Repository까지 이 객체를 사용하면 JSON 필드 이름이나 요청 형식이 바뀔 때 안쪽 코드도 함께 수정해야 한다. 필요하다면 Controller에서 Service가 사용할 입력으로 변환해 전달할 수 있다.
+
+```java
+orderService.create(
+    new CreateOrderCommand(request.productCode(), request.quantity())
+);
+```
+
+결국 패키지를 나누는 것만으로는 부족하다. Service가 HTTP 요청 형식과 JPA Entity를 직접 알아도 되는지, 변경 영향을 줄이기 위해 별도의 입력이나 저장 계약이 필요한지를 함께 결정해야 한다. 작은 CRUD에서는 구조를 단순하게 유지하는 편이 나을 수도 있다. 반대로 기술 변경의 영향이 업무 코드까지 자주 퍼진다면 의존성을 더 엄격하게 나누는 방법을 고민할 수 있다.
 
 ## 레이어와 패키징은 다른 문제다
 
