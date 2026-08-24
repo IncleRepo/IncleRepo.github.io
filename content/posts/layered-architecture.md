@@ -2,7 +2,7 @@
 title = 'Controller, Service, Repository로 이해하는 레이어드 아키텍처'
 slug = '14'
 date = 2026-08-21T20:49:00+09:00
-lastmod = 2026-08-24T20:30:00+09:00
+lastmod = 2026-08-24T20:45:00+09:00
 draft = false
 references_required = true
 description = 'Spring에서 익숙한 Controller, Service, Repository 구조를 따라가며 레이어드 아키텍처의 책임과 의존 방향, 장점과 한계를 살펴봅니다.'
@@ -40,6 +40,16 @@ DB
 Controller는 요청을 받고, Service는 필요한 업무를 처리하며, Repository는 데이터를 조회하거나 저장한다. 너무 익숙해서 단순한 Spring 관례처럼 느껴지지만, 사실 이 구조에도 아키텍처가 담겨 있다.
 
 코드를 역할에 따라 나누고 서로 참조하는 방향을 정했기 때문이다. 우리가 자주 사용하던 이 구조가 **레이어드 아키텍처**(Layered Architecture)의 대표적인 모습이다.
+
+## 레이어드 아키텍처란 무엇인가
+
+레이어드 아키텍처는 시스템의 코드를 서로 다른 책임을 맡는 계층으로 나누는 구조다. 외부 요청을 받는 부분, 업무를 처리하는 부분과 데이터를 다루는 부분을 구분하고 각 계층이 어떤 역할을 맡을지 정한다.
+
+![User Interface부터 Data까지 여러 계층으로 나눈 레이어드 아키텍처](/images/posts/layered-architecture/layered-architecture.png "계층을 더 세분화한 레이어드 아키텍처의 한 가지 예")
+
+위 그림은 레이어드 아키텍처를 비교적 세분화한 예다. User Interface와 Presentation은 사용자와의 상호작용을 맡고, Application과 Domain Model은 작업의 흐름과 업무 규칙을 처리한다. Persistence는 데이터 접근을 담당하며, Data는 실제 데이터베이스나 외부 저장소를 나타낸다. Infrastructure는 Framework와 Logging처럼 여러 계층의 구현을 지원하는 기술을 모아 표현한 부분이다.
+
+모든 프로젝트가 그림과 같은 수와 이름으로 계층을 나누는 것은 아니다. Spring 애플리케이션에서는 이를 Controller, Service와 Repository로 단순하게 구성하는 경우가 많다. 중요한 것은 계층 이름을 외우는 일이 아니라 서로 다른 책임을 구분하는 일이다. 이제 회원 조회 요청 하나가 이 세 계층을 어떻게 지나는지 살펴보자.
 
 ## 회원 조회 요청에서 각 계층은 무엇을 맡는가
 
