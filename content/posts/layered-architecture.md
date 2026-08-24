@@ -2,7 +2,7 @@
 title = 'Controller, Service, Repository로 이해하는 레이어드 아키텍처'
 slug = '14'
 date = 2026-08-21T20:49:00+09:00
-lastmod = 2026-08-24T23:58:00+09:00
+lastmod = 2026-08-24T23:59:00+09:00
 draft = false
 references_required = true
 description = 'Spring에서 익숙한 Controller, Service, Repository 구조를 따라가며 레이어드 아키텍처의 책임과 의존 방향, 장점과 한계를 살펴봅니다.'
@@ -203,19 +203,9 @@ Controller와 Repository에서 코드를 분리했어도 Service 안에서는 `�
 
 계층 구조를 유지하면서 업무 규칙을 도메인 객체로 나눌 수 있다. 그러나 계층 사이의 데이터 구조까지 그대로 공유하면 Service에는 HTTP 요청과 저장 방식의 변경도 함께 모일 수 있다.
 
-## 계층을 나눠도 DTO와 Entity가 그대로 이어질 수 있다
+## DTO와 Entity 변경이 Service까지 이어질 수 있다
 
-주문 수정 요청이 Controller에서 Service로 전달되는 과정을 보자.
-
-```java
-@PutMapping("/orders/{id}")
-public void updateOrder(
-    @PathVariable long id,
-    @RequestBody UpdateOrderRequest request
-) {
-    orderService.update(id, request);
-}
-```
+다음 Service는 주문 수정 요청 DTO를 받아 JPA Entity를 변경한다.
 
 ```java
 public void update(
@@ -232,47 +222,11 @@ public void update(
 }
 ```
 
-Service의 `update` 메서드는 HTTP 요청 DTO와 JPA Entity를 함께 사용한다.
+`UpdateOrderRequest`의 `memo`를 `reason`으로 바꾸면 Service와 테스트도 함께 수정될 수 있다. `OrderEntity`의 필드나 연관 관계가 바뀌어도 이를 직접 사용하는 Service가 영향을 받는다.
 
-```text
-HTTP 요청
-    │ UpdateOrderRequest
-    ▼
-Service
-    ▲
-    │ OrderEntity
-JPA와 데이터베이스
-```
+단순한 CRUD에서는 DTO와 Entity를 그대로 사용하는 편이 실용적이다.
 
-`UpdateOrderRequest`는 HTTP 요청 구조를, `OrderEntity`는 데이터베이스 매핑 구조를 담는다. Service는 두 구조를 모두 알게 된다.
-
-### 변경이 어디까지 이어질까
-
-처음에는 각 기술과 가까운 계층만 수정하면 될 것처럼 보인다. 하지만 Service가 그 계층의 객체를 직접 사용하면 변경 범위가 다음처럼 넓어진다.
-
-- **요청의 `memo`를 `reason`으로 변경:** Controller DTO와 함께 Service 메서드와 테스트도 수정될 수 있다.
-- **요청 DTO를 Repository까지 전달:** Service뿐 아니라 데이터 접근 코드도 요청 형식에 영향을 받는다.
-- **저장 기술이나 Entity 구조 변경:** Entity를 직접 사용하는 Service와 테스트도 바뀔 수 있다.
-
-### 언제 Service 입력 객체를 따로 만들까
-
-단순한 CRUD에서는 요청 DTO를 그대로 Service에 넘겨도 된다. 요청 DTO가 바뀔 때마다 Service도 함께 고쳐야 한다면 다음처럼 Service용 입력 객체로 변환할 수 있다.
-
-```java
-public record UpdateOrderCommand(
-    OrderStatus status,
-    String memo
-) {
-}
-
-UpdateOrderCommand command = new UpdateOrderCommand(
-    request.status(),
-    request.memo()
-);
-orderService.update(id, command);
-```
-
-Service는 `UpdateOrderCommand`만 받으므로 HTTP 요청 형식에 직접 의존하지 않는다. 이런 변경이 반복되지 않는다면 별도 객체를 추가할 필요도 없다.
+반면 API나 Entity 변경이 Service까지 반복해서 번지거나 같은 Service를 HTTP, 배치와 메시지 소비자가 함께 호출한다면 Service용 입력 모델을 따로 둘 수 있다. 레이어드 아키텍처가 반드시 요구하는 구조는 아니며, 실제 변경 범위가 커질 때 선택한다.
 
 지금까지는 Service에 업무 규칙과 바깥 계층의 변경이 함께 쌓이는 경우를 살펴봤다. 반대로 Service가 아무 책임도 맡지 않고 다음 계층으로 요청만 전달하는 경우도 있다.
 
