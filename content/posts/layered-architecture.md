@@ -2,7 +2,7 @@
 title = 'Controller, Service, Repository로 이해하는 레이어드 아키텍처'
 slug = '14'
 date = 2026-08-21T20:49:00+09:00
-lastmod = 2026-08-24T21:50:00+09:00
+lastmod = 2026-08-24T21:55:00+09:00
 draft = false
 references_required = true
 description = 'Spring에서 익숙한 Controller, Service, Repository 구조를 따라가며 레이어드 아키텍처의 책임과 의존 방향, 장점과 한계를 살펴봅니다.'
@@ -253,7 +253,7 @@ public class OrderService {
 
 이 구조는 실무에서도 흔히 사용한다. 대신 JPA Entity의 구조가 바뀌면 이를 사용하는 Service도 함께 수정될 수 있다. API 요청 DTO를 Service와 Repository까지 그대로 전달한다면 HTTP 요청 형식이 바뀔 때도 같은 일이 생긴다.
 
-즉, Controller와 Service, Repository를 나누는 것과 업무 코드에서 HTTP나 JPA 같은 기술을 분리하는 것은 서로 다른 문제다. 프로젝트가 단순하다면 이러한 의존성을 받아들이는 편이 실용적일 수 있다. 반대로 기술 변경이 업무 코드까지 자주 퍼진다면 의존성을 더 엄격하게 통제하는 아키텍처를 검토할 수 있다.
+즉, Controller와 Service, Repository를 나누는 것과 업무 코드에서 HTTP나 JPA 같은 기술을 분리하는 것은 서로 다른 문제다. 프로젝트가 단순하다면 이러한 의존성을 받아들이는 편이 실용적일 수 있다. 기술 변경의 영향이 업무 코드까지 반복해서 번진다면, 계층 분리와 별도로 기술 의존성을 통제할 방법이 필요하다.
 
 ## 단순 전달이 많아지면 Architecture Sinkhole을 의심한다
 
