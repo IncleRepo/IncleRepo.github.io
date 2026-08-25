@@ -2,7 +2,7 @@
 title = 'Controller, Service, Repository로 이해하는 레이어드 아키텍처'
 slug = '14'
 date = 2026-08-21T20:49:00+09:00
-lastmod = 2026-08-25T23:20:00+09:00
+lastmod = 2026-08-25T23:30:00+09:00
 draft = false
 references_required = true
 description = 'Spring에서 익숙한 Controller, Service, Repository 구조를 따라가며 레이어드 아키텍처의 책임과 의존 방향, 장점과 한계를 살펴봅니다.'
@@ -246,6 +246,7 @@ public class OrderService {
 
 레이어드 아키텍처는 책임을 나누고 의존 방향을 정하는 데 집중한다.
 업무 규칙을 어디에 둘지, 언제 계층을 건너뛸지, 외부 기술과 어떻게 분리할지는 별도로 정해야 한다.
+
 다만 이러한 추가 설계가 크게 필요하지 않은 다음 상황에서는 Controller, Service, Repository만으로도 충분할 수 있다.
 
 - 업무 규칙과 기능 흐름이 단순함
