@@ -2,7 +2,7 @@
 title = 'Controller, Service, Repository로 이해하는 레이어드 아키텍처'
 slug = '14'
 date = 2026-08-21T20:49:00+09:00
-lastmod = 2026-08-25T21:30:00+09:00
+lastmod = 2026-08-25T21:40:00+09:00
 draft = false
 references_required = true
 description = 'Spring에서 익숙한 Controller, Service, Repository 구조를 따라가며 레이어드 아키텍처의 책임과 의존 방향, 장점과 한계를 살펴봅니다.'
@@ -16,31 +16,15 @@ Spring 애플리케이션에서는 Controller, Service, Repository로 역할을 
 
 왜 굳이 세 부분으로 나눌까? 각기 다른 책임을 분리하고 코드의 참조 방향을 제한하기 위해서다.
 
-전형적인 레이어드 구조에서는 실행 흐름이 위에서 아래로 이어진다.
+회원 조회 요청 하나가 처리되는 과정을 단순화하면 다음과 같다.
 
 ```text
-실행 흐름
-
-HTTP 요청
-↓
-Controller
-↓
-Service
-↓
-Repository
-↓
-DB
+HTTP 요청 → Controller → Service → Repository → DB
 ```
 
-소스코드의 의존 방향도 같은 방향을 따른다.
+실행할 때는 Controller가 Service를 호출하고 Service가 Repository를 호출한다. 코드에서도 Controller는 Service를, Service는 Repository를 참조한다.
 
-```text
-코드 의존
-
-Controller → Service → Repository
-```
-
-Layer는 요청 흐름을 구분하는 동시에 책임과 의존성을 나누는 경계가 된다. 여기서는 실행 흐름과 코드 의존 방향이 같은 전형적인 **레이어드 아키텍처**(Layered Architecture)를 살펴본다.
+이 익숙한 흐름은 어떤 기준으로 나뉘며, 각 부분은 무엇을 맡아야 할까? 이 글에서는 전형적인 **레이어드 아키텍처**(Layered Architecture)의 역할과 의존 방향을 살펴보고, 이 구조가 잘 맞는 상황과 한계까지 정리한다.
 
 ## 레이어드 아키텍처란 무엇인가
 
