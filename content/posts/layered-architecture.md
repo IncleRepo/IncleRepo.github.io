@@ -2,7 +2,7 @@
 title = 'Controller, Service, Repository로 이해하는 레이어드 아키텍처'
 slug = '14'
 date = 2026-08-21T20:49:00+09:00
-lastmod = 2026-08-25T22:20:00+09:00
+lastmod = 2026-08-25T22:30:00+09:00
 draft = false
 references_required = true
 description = 'Spring에서 익숙한 Controller, Service, Repository 구조를 따라가며 레이어드 아키텍처의 책임과 의존 방향, 장점과 한계를 살펴봅니다.'
@@ -16,7 +16,7 @@ Spring 애플리케이션에서는 Controller, Service, Repository로 역할을 
 
 왜 굳이 세 부분으로 나눌까? 각기 다른 책임을 분리하고 코드의 참조 방향을 제한하기 위해서다.
 
-회원 조회 요청 하나가 처리되는 과정을 단순화하면 다음과 같다.
+주문 취소 요청 하나가 처리되는 과정을 단순화하면 다음과 같다.
 
 ```text
 HTTP 요청 → Controller → Service → Repository → DB
@@ -40,66 +40,68 @@ HTTP 요청 → Controller → Service → Repository → DB
 - **Application/Business Layer:** 하나의 애플리케이션 작업을 조정
 - **Persistence Layer:** 데이터 접근을 담당
 
-계층의 수보다 중요한 것은 **책임의 경계와 의존 규칙**이다. 회원 조회 요청을 따라가며 각 영역의 역할을 살펴보자.
+계층의 수보다 중요한 것은 **책임의 경계와 의존 규칙**이다. 주문 취소 요청을 따라가며 각 영역의 역할을 살펴보자.
 
-## 회원 조회 요청에서 각 계층은 무엇을 맡는가
+## 주문 취소 요청에서 각 계층은 무엇을 맡는가
 
-`GET /users/1`로 1번 회원을 조회해 보자. 요청은 먼저 Controller에 도착한다.
+1번 주문을 취소하는 요청은 먼저 Controller에 도착한다.
 
 ```java
 @RestController
 @RequiredArgsConstructor
-public class UserController {
+public class OrderController {
 
-    private final UserService userService;
+    private final OrderService orderService;
 
-    @GetMapping("/users/{id}")
-    public UserResponse getUser(@PathVariable long id) {
-        return userService.getUser(id);
+    @PostMapping("/orders/{id}/cancel")
+    public void cancelOrder(@PathVariable long id) {
+        orderService.cancel(id);
     }
 }
 ```
 
-Controller는 외부 요청을 애플리케이션 호출로 연결하고 그 결과를 응답으로 돌려준다. REST API에서 **Presentation Layer**를 대표하는 구성 요소다.
+Controller는 주문 ID를 받아 애플리케이션의 주문 취소 작업을 호출한다. REST API에서 **Presentation Layer**를 대표하는 구성 요소다.
 
 ```java
 @Service
 @RequiredArgsConstructor
-public class UserService {
+public class OrderService {
 
-    private final UserRepository userRepository;
+    private final OrderRepository orderRepository;
 
-    public UserResponse getUser(long id) {
-        User user = userRepository.findById(id)
+    @Transactional
+    public void cancel(long id) {
+        Order order = orderRepository.findById(id)
             .orElseThrow();
 
-        return UserResponse.from(user);
+        if (order.getStatus() == OrderStatus.SHIPPED
+                || order.getStatus() == OrderStatus.DELIVERED) {
+            throw new IllegalStateException("배송을 시작한 주문은 취소할 수 없습니다.");
+        }
+
+        order.cancel();
     }
 }
 ```
 
-`UserService`는 회원 조회라는 애플리케이션 작업을 맡는다. Repository에서 회원을 조회하고, 그 결과를 `UserResponse`로 변환해 Controller에 반환한다. 앞에서 나눈 세 영역 가운데 **Application/Business Layer**에 해당한다.
-
-`UserResponse`는 Layer가 아니라 응답 데이터를 담는 DTO다. 이 예제에서는 Service가 DTO를 만들지만, 변환 위치는 프로젝트 설계에 따라 달라질 수 있다.
-
-회원 조회는 단순해서 Service가 하는 일이 적어 보인다. 주문 취소처럼 상태를 바꾸는 작업이라면 Service는 주문을 조회하고, 취소 가능 여부를 확인한 뒤, 상태를 변경해 저장하는 전체 흐름을 조정한다.
+`OrderService`는 Repository에서 주문을 조회하고, 취소할 수 있는 상태인지 확인한 뒤 주문 상태를 변경한다. 주문 취소라는 하나의 애플리케이션 작업을 완성하는 흐름을 조정하며 **Application/Business Layer**에 해당한다.
 
 마지막으로 Service가 호출하는 Repository를 보자.
 
 ```java
-public interface UserRepository extends JpaRepository<User, Long> {
+public interface OrderRepository extends JpaRepository<Order, Long> {
 }
 ```
 
-Repository는 데이터 접근을 담당하는 **Persistence Layer**에 해당한다. 위 예제에서는 실제 저장과 조회를 Spring Data JPA에 맡긴다.
+Repository는 데이터 접근을 담당하는 **Persistence Layer**에 해당한다. 위 예제에서는 주문 조회와 변경된 상태의 저장을 Spring Data JPA에 맡긴다.
 
 각 계층의 역할을 나누면 이들이 서로 어느 방향으로 참조하는지도 중요해진다.
 
 ## 계층 사이에는 방향이 있다
 
-앞의 회원 조회 흐름에서 Controller는 Service를 참조하고, Service는 Repository를 참조한다. Repository가 Controller를 거꾸로 참조하지는 않는다.
+앞의 주문 취소 흐름에서 Controller는 Service를 참조하고, Service는 Repository를 참조한다. Repository가 Controller를 거꾸로 참조하지는 않는다.
 
-의존 방향을 제한하면 각 Layer가 알아야 할 세부사항의 범위도 정해진다. `UserRepository`는 회원 조회가 어떤 URL에서 시작됐는지 알 필요가 없고, `UserService`도 HTTP 상태 코드를 직접 다루지 않고 회원 조회 작업에 집중한다.
+의존 방향을 제한하면 각 Layer가 알아야 할 세부사항의 범위도 정해진다. `OrderRepository`는 주문 취소가 어떤 URL에서 시작됐는지 알 필요가 없고, `OrderService`도 HTTP 상태 코드를 직접 다루지 않고 주문 취소 작업에 집중한다.
 
 이처럼 위쪽 계층이 아래쪽 계층을 참조하는 것이 레이어드 아키텍처의 일반적인 모습이다. 프로젝트에 따라 바로 아래 계층만 호출하도록 제한하거나, 필요한 경우 한 계층을 건너뛸 수 있도록 허용한다.
 
@@ -194,7 +196,7 @@ public void completeOrder(long orderId) {
 
 레이어드 아키텍처에서는 상위 계층이 바로 아래 계층을 거치도록 제한할 수 있다. 이를 **닫힌 계층**이라고 한다. Controller가 Repository를 직접 호출하지 않고 반드시 Service를 거치는 구조가 대표적이다.
 
-앞에서 본 회원 조회 요청을 다시 살펴보자. 이번에는 Service가 Repository 호출만 전달한다.
+반면 회원 조회처럼 단순한 요청에서는 Service가 Repository 호출만 전달할 수도 있다.
 
 ```java
 public UserResponse getUser(long id) {
