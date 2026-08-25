@@ -2,7 +2,7 @@
 title = 'Controller, Service, Repository로 이해하는 레이어드 아키텍처'
 slug = '14'
 date = 2026-08-21T20:49:00+09:00
-lastmod = 2026-08-25T22:00:00+09:00
+lastmod = 2026-08-25T22:10:00+09:00
 draft = false
 references_required = true
 description = 'Spring에서 익숙한 Controller, Service, Repository 구조를 따라가며 레이어드 아키텍처의 책임과 의존 방향, 장점과 한계를 살펴봅니다.'
@@ -162,13 +162,13 @@ order
 └── repository
 ```
 
-이런 **Package by Feature/Domain** 구조는 한 기능과 관련된 코드를 가까이 모아준다. 기능별로 패키지를 나눠도 내부의 요청 흐름은 여전히 Controller, Service, Repository 순서로 구성할 수 있다.
+이런 구성은 기능을 기준으로 코드를 묶는 **Package by Feature**다. 예시처럼 `user`, `order` 같은 업무 영역을 최상위 패키지로 사용하면 **Package by Domain**이라고 부르기도 한다. 어느 이름을 사용하든 기능별로 패키지를 나눈 뒤 내부 요청 흐름은 Controller, Service, Repository 순서로 구성할 수 있다.
 
 두 방식 가운데 하나가 항상 더 좋은 것은 아니다. 코드가 단순할 때는 역할별 구성이 편하고, 기능이 늘어나 서로 관련된 코드를 함께 찾는 일이 많아지면 기능별 구성이 유리할 수 있다.
 
-## 업무 규칙이 많아지면 Service가 비대해질 수 있다
+## 업무 규칙이 Service에 모이면 비대해질 수 있다
 
-레이어드 아키텍처는 단순하고 익숙하지만, 업무가 복잡해지면 Service가 맡는 역할도 함께 커질 수 있다.
+업무가 복잡해질수록 조회, 검증과 상태 변경을 조정하는 Service에 코드가 모이기 쉽다.
 
 다음 코드는 결제된 주문을 완료 상태로 바꾸는 과정을 단순화한 예다.
 
@@ -262,7 +262,7 @@ public class OrderService {
 하지만 다음 문제에는 별도의 설계가 필요하다.
 
 - 복잡한 업무 규칙을 어떤 객체와 모델로 표현할 것인가?
-- 모든 요청이 반드시 같은 Layer를 지나야 하는가?
+- 모든 요청이 반드시 모든 Layer를 지나야 하는가?
 - 핵심 업무 코드와 JPA, Kafka 같은 외부 기술을 어떻게 분리할 것인가?
 
 단순함이 주는 이점이 현재 시스템에 충분하다면 레이어드 아키텍처는 좋은 선택이다. 업무 규칙과 기술 의존성이 복잡해질수록 **Layer를 나누는 것만으로 충분한가**라는 다음 질문이 생긴다.
@@ -273,7 +273,7 @@ Service 안에 쌓인 업무 규칙을 객체가 직접 맡게 하려면 어떻�
 
 ### 공식 자료
 
-- [Microsoft Azure Architecture Center - N-tier Architecture Style](https://learn.microsoft.com/en-us/azure/architecture/guide/architecture-styles/n-tier)
+- [Microsoft Azure Architecture Center - N-tier Architecture Style](https://learn.microsoft.com/ko-kr/azure/architecture/guide/architecture-styles/n-tier)
 - [Spring Data JPA - Core Concepts](https://docs.spring.io/spring-data/jpa/reference/repositories/core-concepts.html)
 - [O'Reilly - Fundamentals of Software Architecture](https://www.oreilly.com/library/view/fundamentals-of-software/9781492043447/)
 
