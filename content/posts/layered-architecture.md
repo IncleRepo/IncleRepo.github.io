@@ -2,7 +2,7 @@
 title = 'Controller, Service, Repository로 이해하는 레이어드 아키텍처'
 slug = '14'
 date = 2026-08-21T20:49:00+09:00
-lastmod = 2026-08-25T21:20:00+09:00
+lastmod = 2026-08-25T21:30:00+09:00
 draft = false
 references_required = true
 description = 'Spring에서 익숙한 Controller, Service, Repository 구조를 따라가며 레이어드 아키텍처의 책임과 의존 방향, 장점과 한계를 살펴봅니다.'
@@ -139,7 +139,50 @@ Controller 하나에서 HTTP 요청 처리, 업무 조건 검사, SQL 실행과 
 
 Spring 예제와 많은 웹 애플리케이션이 비슷한 구조를 사용한다. 새로 합류한 팀원도 익숙한 책임과 호출 흐름을 따라 코드를 찾기 쉽다. 업무 흐름이 단순한 서비스라면 이 정도의 예측 가능성만으로도 충분히 유용하다.
 
-물론 책임을 Layer로 나눴다고 해서 애플리케이션의 모든 설계 문제가 풀리는 것은 아니다.
+## 레이어드 구조를 패키징하는 두 가지 방법
+
+같은 책임과 호출 방향을 유지하면서도 실제 코드는 프로젝트 성격에 맞게 다르게 배치할 수 있다. 먼저 기술 역할별로 코드를 모아 보자.
+
+```text
+controller
+├── UserController
+├── OrderController
+└── PaymentController
+
+service
+├── UserService
+├── OrderService
+└── PaymentService
+
+repository
+├── UserRepository
+├── OrderRepository
+└── PaymentRepository
+```
+
+이런 **Package by Layer** 구조는 Controller, Service와 Repository를 한곳에서 찾기 쉽다. 구조가 단순하고 기능 수가 적을 때 이해하기 편하지만, 주문 기능 하나를 수정할 때 여러 패키지를 오가게 될 수 있다.
+
+반대로 업무 기능을 먼저 나누고 그 안에 각 Layer를 둘 수도 있다.
+
+```text
+user
+├── controller
+├── service
+├── repository
+├── entity
+└── dto
+
+order
+├── controller
+├── service
+└── repository
+```
+
+이런 **Package by Feature/Domain** 구조는 한 기능과 관련된 코드를 가까이 모아준다. 기능별로 패키지를 나눠도 내부의 요청 흐름은 여전히 Controller, Service, Repository 순서로 구성할 수 있다.
+
+두 방식 가운데 하나가 항상 더 좋은 것은 아니다. 코드가 단순할 때는 역할별 구성이 편하고, 기능이 늘어나 서로 관련된 코드를 함께 찾는 일이 많아지면 기능별 구성이 유리할 수 있다.
+
+패키지를 어떤 방식으로 구성하더라도 각 Layer에 책임이 적절히 나뉜다는 보장은 없다. 업무 규칙이 늘어나면 Service 한곳에 많은 코드가 모일 수 있다.
 
 ## 업무 규칙이 많아지면 Service가 비대해질 수 있다
 
@@ -227,49 +270,6 @@ public class OrderService {
 반면 Service가 계속 비대해지고 형식적인 Layer 통과가 늘어나거나, 기술 변경이 업무 코드까지 반복해서 영향을 준다면 다른 설계 방식을 검토할 이유가 생긴다.
 
 프로젝트 크기만으로 아키텍처를 결정할 수는 없다. **업무 복잡도, 변경 빈도, 의존성의 복잡도, 팀이 감당해야 하는 구조적 비용**을 함께 봐야 한다. 더 복잡한 구조를 도입해 얻는 이점이 그 비용보다 클 때 비로소 바꿀 이유가 생긴다.
-
-## 레이어드 구조를 패키징하는 두 가지 방법
-
-레이어드 아키텍처를 선택해도 코드를 한 가지 방식으로만 배치해야 하는 것은 아니다. 먼저 기술 역할별로 코드를 모을 수 있다.
-
-```text
-controller
-├── UserController
-├── OrderController
-└── PaymentController
-
-service
-├── UserService
-├── OrderService
-└── PaymentService
-
-repository
-├── UserRepository
-├── OrderRepository
-└── PaymentRepository
-```
-
-이런 **Package by Layer** 구조는 Controller, Service와 Repository를 한곳에서 찾기 쉽다. 구조가 단순하고 기능 수가 적을 때 이해하기 편하지만, 주문 기능 하나를 수정할 때 여러 패키지를 오가게 될 수 있다.
-
-반대로 업무 기능을 먼저 나누고 그 안에 각 Layer를 둘 수도 있다.
-
-```text
-user
-├── controller
-├── service
-├── repository
-├── entity
-└── dto
-
-order
-├── controller
-├── service
-└── repository
-```
-
-이런 **Package by Feature/Domain** 구조는 한 기능과 관련된 코드를 가까이 모아준다. 기능별로 패키지를 나눠도 내부의 요청 흐름은 여전히 Controller, Service, Repository 순서로 구성할 수 있다.
-
-두 방식 가운데 하나가 항상 더 좋은 것은 아니다. 코드가 단순할 때는 역할별 구성이 편하고, 기능이 늘어나 서로 관련된 코드를 함께 찾는 일이 많아지면 기능별 구성이 유리할 수 있다.
 
 ## 정리
 
