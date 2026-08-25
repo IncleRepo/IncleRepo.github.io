@@ -2,7 +2,7 @@
 title = 'Controller, Service, Repository로 이해하는 레이어드 아키텍처'
 slug = '14'
 date = 2026-08-21T20:49:00+09:00
-lastmod = 2026-08-25T22:10:00+09:00
+lastmod = 2026-08-25T22:20:00+09:00
 draft = false
 references_required = true
 description = 'Spring에서 익숙한 Controller, Service, Repository 구조를 따라가며 레이어드 아키텍처의 책임과 의존 방향, 장점과 한계를 살펴봅니다.'
@@ -78,13 +78,11 @@ public class UserService {
 }
 ```
 
-`UserService`는 회원 조회라는 애플리케이션 작업을 조정하며 **Application/Business Layer**에 해당한다. 이 예제에서는 Repository에서 회원을 조회한 뒤 응답 형태로 변환하는 일까지 맡는다. DTO 변환을 어디에서 처리할지는 프로젝트 설계에 따라 달라질 수 있다.
+`UserService`는 회원 조회라는 애플리케이션 작업을 맡는다. Repository에서 회원을 조회하고, 그 결과를 `UserResponse`로 변환해 Controller에 반환한다. 앞에서 나눈 세 영역 가운데 **Application/Business Layer**에 해당한다.
 
-자료마다 Application·Business·Domain을 별도의 Layer로 구분하는 방식은 다르다. 여기서는 단순한 Spring 구조에 맞춰 Service가 위치하는 부분을 Application/Business 영역으로 묶어 설명한다.
+`UserResponse`는 Layer가 아니라 응답 데이터를 담는 DTO다. 이 예제에서는 Service가 DTO를 만들지만, 변환 위치는 프로젝트 설계에 따라 달라질 수 있다.
 
-`UserResponse`는 Layer가 아니라 외부에 데이터를 전달하는 DTO다.
-
-조회 예제는 단순하지만, 실제 Service는 하나의 작업을 완성하기 위해 조회, 검증, 상태 변경, 저장의 흐름을 조정한다. 이때 `어떤 주문을 취소할 수 있는가`와 같은 업무 규칙까지 반드시 Service 안에 구현해야 하는 것은 아니다.
+회원 조회는 단순해서 Service가 하는 일이 적어 보인다. 주문 취소처럼 상태를 바꾸는 작업이라면 Service는 주문을 조회하고, 취소 가능 여부를 확인한 뒤, 상태를 변경해 저장하는 전체 흐름을 조정한다.
 
 마지막으로 Service가 호출하는 Repository를 보자.
 
