@@ -2,7 +2,7 @@
 title = 'Controller, Service, Repository로 이해하는 레이어드 아키텍처'
 slug = '14'
 date = 2026-08-21T20:49:00+09:00
-lastmod = 2026-08-25T21:40:00+09:00
+lastmod = 2026-08-25T21:50:00+09:00
 draft = false
 references_required = true
 description = 'Spring에서 익숙한 Controller, Service, Repository 구조를 따라가며 레이어드 아키텍처의 책임과 의존 방향, 장점과 한계를 살펴봅니다.'
@@ -78,7 +78,9 @@ public class UserService {
 }
 ```
 
-`UserService`는 회원 조회라는 애플리케이션 작업을 조정한다. 이 예제에서는 Repository에서 회원을 조회한 뒤 응답 형태로 변환하는 일까지 맡는다. DTO 변환을 어디에서 처리할지는 프로젝트 설계에 따라 달라질 수 있다.
+`UserService`는 회원 조회라는 애플리케이션 작업을 조정하며 **Application/Business Layer**에 해당한다. 이 예제에서는 Repository에서 회원을 조회한 뒤 응답 형태로 변환하는 일까지 맡는다. DTO 변환을 어디에서 처리할지는 프로젝트 설계에 따라 달라질 수 있다.
+
+자료마다 Application·Business·Domain을 별도의 Layer로 구분하는 방식은 다르다. 여기서는 단순한 Spring 구조에 맞춰 Service가 위치하는 부분을 Application/Business 영역으로 묶어 설명한다.
 
 `UserResponse`는 Layer가 아니라 외부에 데이터를 전달하는 DTO다.
 
@@ -92,8 +94,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
 ```
 
 Repository는 데이터 접근을 담당하는 **Persistence Layer**에 해당한다. 위 예제에서는 실제 저장과 조회를 Spring Data JPA에 맡긴다.
-
-자료마다 Application, Business, Domain Layer를 구분하는 방식은 다르다. 여기서는 단순한 Spring 구조에 맞춰 Service가 위치하는 부분을 Application/Business 영역으로 묶어 설명한다.
 
 각 계층의 역할을 나누면 이들이 서로 어느 방향으로 참조하는지도 중요해진다.
 
@@ -166,9 +166,9 @@ order
 
 두 방식 가운데 하나가 항상 더 좋은 것은 아니다. 코드가 단순할 때는 역할별 구성이 편하고, 기능이 늘어나 서로 관련된 코드를 함께 찾는 일이 많아지면 기능별 구성이 유리할 수 있다.
 
-패키지를 어떤 방식으로 구성하더라도 각 Layer에 책임이 적절히 나뉜다는 보장은 없다. 업무 규칙이 늘어나면 Service 한곳에 많은 코드가 모일 수 있다.
-
 ## 업무 규칙이 많아지면 Service가 비대해질 수 있다
+
+레이어드 아키텍처는 단순하고 익숙하지만, 업무가 복잡해지면 Service가 맡는 역할도 함께 커질 수 있다.
 
 다음 코드는 결제된 주문을 완료 상태로 바꾸는 과정을 단순화한 예다.
 
