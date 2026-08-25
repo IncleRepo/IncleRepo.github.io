@@ -2,7 +2,7 @@
 title = 'Controller, Service, Repository로 이해하는 레이어드 아키텍처'
 slug = '14'
 date = 2026-08-21T20:49:00+09:00
-lastmod = 2026-08-25T21:00:00+09:00
+lastmod = 2026-08-25T21:20:00+09:00
 draft = false
 references_required = true
 description = 'Spring에서 익숙한 Controller, Service, Repository 구조를 따라가며 레이어드 아키텍처의 책임과 의존 방향, 장점과 한계를 살펴봅니다.'
@@ -121,54 +121,9 @@ Repository는 데이터 접근을 담당하는 **Persistence Layer**에 해당�
 
 이처럼 위쪽 계층이 아래쪽 계층을 참조하는 것이 레이어드 아키텍처의 일반적인 모습이다. 프로젝트에 따라 바로 아래 계층만 호출하도록 제한하거나, 필요한 경우 한 계층을 건너뛸 수 있도록 허용한다.
 
+![Controller Layer에서 하위 Layer로 향하는 의존 방향과 한 계층을 건너뛰는 참조](/images/posts/layered-architecture/layer-dependency-direction.png "한 DDD 리팩터링 사례의 Layer 의존 방향. 출처: Özkan, Babur와 van den Brand (2023), Figure 3, CC BY 4.0")
+
 의존 방향을 정해도 변경의 영향까지 사라지지는 않는다. Repository의 반환형이 바뀌면 Service도 수정될 수 있다. 그래도 **누가 누구를 참조하는지 예측하기 쉬워진다.**
-
-역할과 참조 방향은 정했지만 실제 코드를 어떤 폴더에 배치할지는 아직 남아 있다. 이때 레이어와 패키징을 같은 개념으로 혼동하기 쉽다.
-
-## 레이어와 패키징은 다른 문제다
-
-레이어드 아키텍처를 사용하면 반드시 최상위 폴더를 `controller`, `service`, `repository`로 나눠야 할까?
-
-다음은 기술 역할별로 코드를 모은 **Package by Layer** 구조다.
-
-```text
-controller
-├── UserController
-├── OrderController
-└── PaymentController
-
-service
-├── UserService
-├── OrderService
-└── PaymentService
-
-repository
-├── UserRepository
-├── OrderRepository
-└── PaymentRepository
-```
-
-구조가 단순할 때는 역할별 코드를 한눈에 보기 쉽다. 반면 주문 기능 하나를 수정하려면 여러 패키지를 오가야 한다.
-
-업무 기능을 먼저 나눈 뒤 그 안에 Controller, Service, Repository를 두는 방법도 있다.
-
-```text
-user
-├── controller
-├── service
-├── repository
-├── entity
-└── dto
-
-order
-├── controller
-├── service
-└── repository
-```
-
-이처럼 기능이나 업무 영역을 기준으로 최상위 패키지를 나눈 구성은 **Package by Feature/Domain** 형태로 볼 수 있다. 패키지 안에서는 여전히 Controller가 Service를 호출하고 Service가 Repository를 호출한다.
-
-즉 **레이어링은 책임과 의존의 문제이고, 패키징은 코드를 배치하는 문제다.**
 
 ## 이 구조가 널리 사용되는 이유
 
@@ -273,6 +228,49 @@ public class OrderService {
 
 프로젝트 크기만으로 아키텍처를 결정할 수는 없다. **업무 복잡도, 변경 빈도, 의존성의 복잡도, 팀이 감당해야 하는 구조적 비용**을 함께 봐야 한다. 더 복잡한 구조를 도입해 얻는 이점이 그 비용보다 클 때 비로소 바꿀 이유가 생긴다.
 
+## 레이어드 구조를 패키징하는 두 가지 방법
+
+레이어드 아키텍처를 선택해도 코드를 한 가지 방식으로만 배치해야 하는 것은 아니다. 먼저 기술 역할별로 코드를 모을 수 있다.
+
+```text
+controller
+├── UserController
+├── OrderController
+└── PaymentController
+
+service
+├── UserService
+├── OrderService
+└── PaymentService
+
+repository
+├── UserRepository
+├── OrderRepository
+└── PaymentRepository
+```
+
+이런 **Package by Layer** 구조는 Controller, Service와 Repository를 한곳에서 찾기 쉽다. 구조가 단순하고 기능 수가 적을 때 이해하기 편하지만, 주문 기능 하나를 수정할 때 여러 패키지를 오가게 될 수 있다.
+
+반대로 업무 기능을 먼저 나누고 그 안에 각 Layer를 둘 수도 있다.
+
+```text
+user
+├── controller
+├── service
+├── repository
+├── entity
+└── dto
+
+order
+├── controller
+├── service
+└── repository
+```
+
+이런 **Package by Feature/Domain** 구조는 한 기능과 관련된 코드를 가까이 모아준다. 기능별로 패키지를 나눠도 내부의 요청 흐름은 여전히 Controller, Service, Repository 순서로 구성할 수 있다.
+
+두 방식 가운데 하나가 항상 더 좋은 것은 아니다. 코드가 단순할 때는 역할별 구성이 편하고, 기능이 늘어나 서로 관련된 코드를 함께 찾는 일이 많아지면 기능별 구성이 유리할 수 있다.
+
 ## 정리
 
 레이어드 아키텍처는 서로 다른 책임을 Layer로 나누고 코드의 참조 방향을 예측하기 쉽게 만든다. 구조가 단순하고 익숙하며, Package by Layer뿐 아니라 기능별 패키징과도 함께 사용할 수 있다.
@@ -302,3 +300,4 @@ Service 안에 쌓인 업무 규칙을 객체가 직접 맡게 하려면 어떻�
 - [Klarc - Layered Architecture with Sinkhole](https://klarciel.net/wiki/architecture/architecture-layered/)
 - [매일메일 - 레이어드 아키텍처란 무엇인가요?](https://www.maeil-mail.kr/question/310)
 - [andrew.log - 그 서비스, 진짜 일하고 있나요?](https://velog.io/@sh1623/%EA%B7%B8-%EC%84%9C%EB%B9%84%EC%8A%A4-%EC%A7%84%EC%A7%9C-%EC%9D%BC%ED%95%98%EA%B3%A0-%EC%9E%88%EB%82%98%EC%9A%94-%EC%8B%B1%ED%81%AC%ED%99%80-%EC%95%88%ED%8B%B0%ED%8C%A8%ED%84%B4)
+- [Özkan, Babur와 van den Brand - Refactoring with domain-driven design in an industrial context: An action research report](https://doi.org/10.1007/s10664-023-10310-1) (Figure 3, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/))
