@@ -2,7 +2,7 @@
 title = 'Controller, Service, Repository로 이해하는 레이어드 아키텍처'
 slug = '14'
 date = 2026-08-21T20:49:00+09:00
-lastmod = 2026-08-25T21:50:00+09:00
+lastmod = 2026-08-25T22:00:00+09:00
 draft = false
 references_required = true
 description = 'Spring에서 익숙한 Controller, Service, Repository 구조를 따라가며 레이어드 아키텍처의 책임과 의존 방향, 장점과 한계를 살펴봅니다.'
@@ -101,7 +101,7 @@ Repository는 데이터 접근을 담당하는 **Persistence Layer**에 해당�
 
 앞의 회원 조회 흐름에서 Controller는 Service를 참조하고, Service는 Repository를 참조한다. Repository가 Controller를 거꾸로 참조하지는 않는다.
 
-의존 방향을 제한하면 각 Layer가 알아야 할 세부사항의 범위도 정해진다. Repository가 Controller용 DTO를 알 필요는 없으며, Service 역시 HTTP 상태 코드를 알 필요가 없다.
+의존 방향을 제한하면 각 Layer가 알아야 할 세부사항의 범위도 정해진다. `UserRepository`는 회원 조회가 어떤 URL에서 시작됐는지 알 필요가 없고, `UserService`도 HTTP 상태 코드를 직접 다루지 않고 회원 조회 작업에 집중한다.
 
 이처럼 위쪽 계층이 아래쪽 계층을 참조하는 것이 레이어드 아키텍처의 일반적인 모습이다. 프로젝트에 따라 바로 아래 계층만 호출하도록 제한하거나, 필요한 경우 한 계층을 건너뛸 수 있도록 허용한다.
 
