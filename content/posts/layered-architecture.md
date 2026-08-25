@@ -2,7 +2,7 @@
 title = 'Controller, Service, Repository로 이해하는 레이어드 아키텍처'
 slug = '14'
 date = 2026-08-21T20:49:00+09:00
-lastmod = 2026-08-24T23:59:00+09:00
+lastmod = 2026-08-25T20:20:00+09:00
 draft = false
 references_required = true
 description = 'Spring에서 익숙한 Controller, Service, Repository 구조를 따라가며 레이어드 아키텍처의 책임과 의존 방향, 장점과 한계를 살펴봅니다.'
@@ -10,16 +10,7 @@ categories = ['애플리케이션 아키텍처']
 tags = ['레이어드 아키텍처', 'Controller', 'Service', 'Repository']
 +++
 
-Spring을 처음 배우면 대부분 다음과 같은 프로젝트 구조를 만나게 된다.
-
-```text
-user
-├── controller
-├── service
-├── repository
-├── entity
-└── dto
-```
+Spring을 처음 배우면 대부분 역할에 따라 패키지를 나눈 프로젝트 구조를 만나게 된다.
 
 ![Controller, DTO, Repository, Service로 나눈 패키지 구조](/images/posts/layered-architecture/project-directory.png "Spring에서 자주 만나는 패키지 구조")
 
@@ -147,7 +138,21 @@ repository
 
 구조가 단순할 때는 역할별 코드를 한눈에 보기 쉽다. 반면 주문 기능 하나를 수정하려면 여러 패키지를 오가야 한다.
 
-반대로 글의 처음에서 본 것처럼 `user`라는 업무 기능을 먼저 만들고 그 안에 Controller, Service와 Repository를 둘 수도 있다. `order`와 `payment`도 같은 방식으로 나눈다.
+반대로 업무 기능을 먼저 나누고 그 안에 Controller, Service와 Repository를 둘 수도 있다.
+
+```text
+user
+├── controller
+├── service
+├── repository
+├── entity
+└── dto
+
+order
+├── controller
+├── service
+└── repository
+```
 
 이를 **Package by Feature** 또는 **Package by Domain**이라고 부른다. 최상위 폴더가 달라졌을 뿐, 각 기능 안에서는 여전히 Controller가 Service를 호출하고 Service가 Repository를 호출한다. 따라서 기능별 패키징을 선택해도 레이어드 아키텍처를 사용할 수 있다.
 
@@ -201,34 +206,7 @@ OrderService
 
 Controller와 Repository에서 코드를 분리했어도 Service 안에서는 `조회 → if문 → setter → 저장`이라는 절차가 길어진다. 레이어드 아키텍처는 **복잡한 업무 규칙을 어떤 객체로 표현할지까지 정해 주지는 않기 때문이다.**
 
-계층 구조를 유지하면서 업무 규칙을 도메인 객체로 나눌 수 있다. 그러나 계층 사이의 데이터 구조까지 그대로 공유하면 Service에는 HTTP 요청과 저장 방식의 변경도 함께 모일 수 있다.
-
-## DTO와 Entity 변경이 Service까지 이어질 수 있다
-
-다음 Service는 주문 수정 요청 DTO를 받아 JPA Entity를 변경한다.
-
-```java
-public void update(
-    long id,
-    UpdateOrderRequest request
-) {
-    OrderEntity order = orderRepository.findById(id)
-        .orElseThrow();
-
-    order.update(
-        request.status(),
-        request.memo()
-    );
-}
-```
-
-`UpdateOrderRequest`의 `memo`를 `reason`으로 바꾸면 Service와 테스트도 함께 수정될 수 있다. `OrderEntity`의 필드나 연관 관계가 바뀌어도 이를 직접 사용하는 Service가 영향을 받는다.
-
-단순한 CRUD에서는 DTO와 Entity를 그대로 사용하는 편이 실용적이다.
-
-반면 API나 Entity 변경이 Service까지 반복해서 번지거나 같은 Service를 HTTP, 배치와 메시지 소비자가 함께 호출한다면 Service용 입력 모델을 따로 둘 수 있다. 레이어드 아키텍처가 반드시 요구하는 구조는 아니며, 실제 변경 범위가 커질 때 선택한다.
-
-지금까지는 Service에 업무 규칙과 바깥 계층의 변경이 함께 쌓이는 경우를 살펴봤다. 반대로 Service가 아무 책임도 맡지 않고 다음 계층으로 요청만 전달하는 경우도 있다.
+계층 구조를 유지하면서 업무 규칙을 도메인 객체로 나눌 수 있다. 반대로 업무 규칙이 거의 없는 요청까지 모든 계층을 거치게 하면 Service가 단순 전달만 맡는 경우도 생긴다.
 
 ## 형식적인 계층 통과가 반복되면 Architecture Sinkhole이 된다
 
@@ -294,7 +272,6 @@ Controller → Repository → DB
 반대로 다음과 같은 신호가 반복된다면 계층을 나눈 다음의 설계 과제를 고민할 시점이다.
 
 - Service에 업무 규칙이 계속 쌓이면 도메인 책임과 모델을 다시 살펴본다.
-- JPA나 외부 API 같은 기술 변경이 핵심 코드까지 번지면 기술 의존성을 어디에서 끊을지 정한다.
 - 형식적인 전달 코드가 많아지면 모든 요청이 같은 계층을 거쳐야 하는지 검토한다.
 
 계층을 더 추가하기보다 실제로 복잡해진 책임과 경계를 보완해야 한다.
@@ -303,7 +280,6 @@ Controller → Repository → DB
 
 - 레이어드 아키텍처는 코드를 책임에 따라 나누며, Spring에서는 Controller가 요청과 응답, Service가 업무 흐름, Repository가 데이터 접근을 맡는 구조가 대표적이다.
 - 레이어드 아키텍처는 책임과 의존 방향에 관한 구조이고, Package by Layer는 파일을 기술 역할별로 배치하는 방법이다. 기능별 패키지 안에서도 레이어드 아키텍처를 사용할 수 있다.
-- 계층 분리와 HTTP나 JPA 같은 기술과의 결합을 통제하는 일은 서로 다른 설계 과제다.
 - 대부분의 요청이 의미 있는 처리 없이 계층을 통과하면 Architecture Sinkhole이 된다. 단순 조회에서 Service를 생략하더라도 허용 범위와 의존 규칙을 팀에서 함께 정해야 한다.
 
 더 엄격하게 책임과 기술 의존성을 분리하는 방법은 클린 아키텍처와 헥사고날 아키텍처에서 다시 살펴본다.
