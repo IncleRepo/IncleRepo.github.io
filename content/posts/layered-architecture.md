@@ -2,7 +2,7 @@
 title = 'Controller, Service, Repository로 이해하는 레이어드 아키텍처'
 slug = '14'
 date = 2026-08-21T20:49:00+09:00
-lastmod = 2026-08-25T22:40:00+09:00
+lastmod = 2026-08-25T22:50:00+09:00
 draft = false
 references_required = true
 description = 'Spring에서 익숙한 Controller, Service, Repository 구조를 따라가며 레이어드 아키텍처의 책임과 의존 방향, 장점과 한계를 살펴봅니다.'
@@ -257,7 +257,7 @@ public class OrderService {
 
 ## 정리
 
-레이어드 아키텍처는 서로 다른 책임을 Layer로 나누고 코드의 참조 방향을 예측하기 쉽게 만든다. 구조가 단순하고 익숙하며, Package by Layer뿐 아니라 기능별 패키징과도 함께 사용할 수 있다.
+레이어드 아키텍처는 서로 다른 책임을 계층으로 나누고 코드가 어느 방향으로 참조되는지 예측하기 쉽게 만든다. 구조가 단순하고 익숙하며, 코드를 계층별로 묶든 기능별로 묶든 적용할 수 있다.
 
 하지만 다음 문제에는 별도의 설계가 필요하다.
 
