@@ -56,8 +56,6 @@ DDD는 기술보다 업무를 먼저 이해하고, 그 이해를 모델과 코�
 
 ![업무 이해에서 경계와 모델을 거쳐 실행으로 이어지는 DDD 개념의 흐름](/images/posts/domain-driven-design/ddd-concept-map.svg "DDD를 따라가는 네 단계")
 
-*DDD 개념을 처음 접할 때 따라가기 좋은 흐름*
-
 먼저 사람들의 언어를 맞추고, 하나의 모델이 유효한 경계를 찾는다. 그다음 업무 규칙을 Entity, Value Object와 Aggregate로 표현하고, 애플리케이션이 이 모델을 사용하도록 연결한다.
 
 이 글도 주문 취소 사례를 이 순서대로 따라간다.
@@ -106,9 +104,7 @@ shipment.stopDispatch();
 
 업무 흐름과 용어를 함께 찾을 때는 **이벤트 스토밍** 같은 방법을 활용할 수 있다. 업무에서 이미 일어난 사건을 시간 순서대로 펼쳐 놓고, 빠진 과정과 서로 다른 해석을 대화로 찾아가는 방식이다.
 
-![EventStorming을 활용해 업무의 사건과 경계를 함께 탐색하는 모습](/images/posts/domain-driven-design/event-storming.jpg "EventStorming을 활용해 업무의 사건과 경계를 함께 탐색하는 모습")
-
-*출처: [EventStorming 공식 사이트](https://www.eventstorming.com/)*
+![EventStorming을 활용해 업무의 사건과 경계를 함께 탐색하는 모습](/images/posts/domain-driven-design/event-storming.jpg "EventStorming을 활용해 업무의 사건과 경계를 함께 탐색하는 모습. 출처: EventStorming 공식 사이트")
 
 색상과 진행 방식보다 중요한 것은 각자 머릿속에 있던 업무를 한곳에 꺼내 놓는 일이다. 대화하면서 모델이 달라졌다면 실패한 것이 아니라, 구현 전에 오해를 발견한 것이다.
 
@@ -123,8 +119,6 @@ DDD에서는 하나의 모델과 언어가 일관되게 통하는 범위를 **�
 주문 취소도 경계에 따라 다른 책임을 가진다.
 
 ![주문·결제·배송 컨텍스트가 주문 취소를 서로 다른 책임으로 처리하는 모습](/images/posts/domain-driven-design/order-contexts.svg "주문 취소를 바라보는 세 바운디드 컨텍스트")
-
-*주문 취소 사례를 세 바운디드 컨텍스트로 나눈 예*
 
 주문 컨텍스트는 주문 상태를 바꾸고, 결제 컨텍스트는 환불 가능 여부와 금액을 판단하며, 배송 컨텍스트는 출고를 멈출 수 있는지 판단한다. 한 컨텍스트의 내부 객체를 다른 쪽에서 직접 고치는 대신 필요한 요청이나 사건을 주고받는다.
 
@@ -241,8 +235,6 @@ public void changeQuantity(OrderLineId lineId, int quantity) {
 ```
 
 ![Order가 Aggregate Root가 되어 주문 상품과 배송지 변경을 통제하는 구조](/images/posts/domain-driven-design/order-aggregate.svg "주문 Aggregate의 구조")
-
-*주문 Aggregate와 그 안에서 함께 지켜야 할 규칙*
 
 Aggregate를 크게 잡을수록 좋은 것은 아니다. 한 번에 지켜야 할 규칙이 아닌 객체까지 묶으면 매번 많은 데이터를 불러오고 수정하게 된다. 반대로 너무 작게 나누면 하나의 규칙을 여러 Aggregate에 걸쳐 즉시 지키기 어려워진다.
 
@@ -409,9 +401,14 @@ DDD는 먼저 도메인 전문가와 개발자가 **유비쿼터스 언어**로 
 
 ## 참고 자료
 
-- [Microsoft Learn – DDD 지향 마이크로 서비스 디자인](https://learn.microsoft.com/ko-kr/dotnet/architecture/microservices/microservice-ddd-cqrs-patterns/ddd-oriented-microservice)
-- [카카오페이 기술 블로그 – 여신코어 DDD로 구축하기](https://tech.kakaopay.com/post/backend-domain-driven-design/)
-- [LY Corporation Tech Blog – DDD를 Merchant 시스템 구축에 활용한 사례](https://techblog.lycorp.co.jp/ko/applying-ddd-to-merchant-system-development)
-- [Martin Fowler – Domain-Driven Design](https://martinfowler.com/bliki/DomainDrivenDesign.html)
-- [Martin Fowler – Bounded Context](https://martinfowler.com/bliki/BoundedContext.html)
-- [EventStorming 공식 사이트](https://www.eventstorming.com/)
+### 공식 자료
+
+- [Microsoft Learn - DDD 지향 마이크로 서비스 디자인](https://learn.microsoft.com/ko-kr/dotnet/architecture/microservices/microservice-ddd-cqrs-patterns/ddd-oriented-microservice)
+- [EventStorming - 공식 사이트](https://www.eventstorming.com/)
+
+### 추가 자료
+
+- [Martin Fowler - Domain-Driven Design](https://martinfowler.com/bliki/DomainDrivenDesign.html)
+- [Martin Fowler - Bounded Context](https://martinfowler.com/bliki/BoundedContext.html)
+- [카카오페이 기술 블로그 - 여신코어 DDD로 구축하기](https://tech.kakaopay.com/post/backend-domain-driven-design/)
+- [LY Corporation Tech Blog - DDD를 Merchant 시스템 구축에 활용한 사례](https://techblog.lycorp.co.jp/ko/applying-ddd-to-merchant-system-development)
