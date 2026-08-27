@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="920" viewBox="0 0 600 920" role="img" aria-labelledby="title desc">
+  <title id="title">바운디드 컨텍스트와 애그리거트의 경계</title>
+  <desc id="desc">주문 컨텍스트 안의 여러 애그리거트와 상품 컨텍스트를 세로로 구분한 그림</desc>
+  <rect width="600" height="920" fill="#f7f7f6"/>
+  <g font-family="Pretendard, Noto Sans KR, sans-serif" fill="#202124">
+    <rect x="42" y="40" width="516" height="535" rx="8" fill="none" stroke="#3568a8" stroke-width="3"/>
+    <text x="70" y="84" font-size="25" font-weight="700" fill="#3568a8">주문 컨텍스트</text>
+    <rect x="70" y="122" width="460" height="260" rx="6" fill="#ffffff" stroke="#51565c" stroke-width="2"/>
+    <text x="98" y="163" font-size="24" font-weight="700">Order Aggregate</text>
+    <rect x="98" y="202" width="150" height="70" rx="4" fill="#202124"/>
+    <text x="173" y="232" text-anchor="middle" font-size="20" font-weight="700" fill="#ffffff">Order</text>
+    <text x="173" y="257" text-anchor="middle" font-size="15" fill="#d8dadd">Root</text>
+    <line x1="248" y1="237" x2="330" y2="237" stroke="#8b9096" stroke-width="2"/>
+    <rect x="330" y="202" width="170" height="70" rx="4" fill="#ffffff" stroke="#8b9096"/>
+    <text x="415" y="233" text-anchor="middle" font-size="19" font-weight="650">OrderLine</text>
+    <text x="415" y="258" text-anchor="middle" font-size="15" fill="#62666b">Entity</text>
+    <rect x="98" y="306" width="402" height="50" rx="4" fill="#ffffff" stroke="#8b9096"/>
+    <text x="299" y="338" text-anchor="middle" font-size="18">Money · ShippingAddress</text>
+    <rect x="70" y="415" width="270" height="120" rx="6" fill="#ffffff" stroke="#51565c" stroke-width="2"/>
+    <text x="96" y="456" font-size="22" font-weight="700">Coupon Aggregate</text>
+    <text x="96" y="495" font-size="18">Coupon Root</text>
+    <text x="368" y="456" font-size="19" font-weight="650">CancelOrderService</text>
+    <text x="368" y="490" font-size="16" fill="#62666b">사용 사례 진행</text>
+    <line x1="300" y1="575" x2="300" y2="645" stroke="#8b9096" stroke-width="2"/>
+    <path d="M290 635l10 12 10-12" fill="none" stroke="#8b9096" stroke-width="2"/>
+    <text x="326" y="616" font-size="16" fill="#62666b">명시적 계약</text>
+    <rect x="42" y="647" width="516" height="230" rx="8" fill="none" stroke="#51565c" stroke-width="3"/>
+    <text x="70" y="691" font-size="25" font-weight="700">상품 컨텍스트</text>
+    <rect x="70" y="730" width="460" height="110" rx="6" fill="#ffffff" stroke="#51565c" stroke-width="2"/>
+    <text x="98" y="773" font-size="23" font-weight="700">Product Aggregate</text>
+    <text x="98" y="810" font-size="18">Product Root · ProductName · CatalogPrice</text>
+  </g>
+</svg>

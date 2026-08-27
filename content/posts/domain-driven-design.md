@@ -54,24 +54,15 @@ DDD는 이런 혼선을 줄이기 위해 업무를 배우고, 그 이해를 모�
 
 도메인을 이해하면서 중요한 개념과 상태, 행동과 규칙을 추려 표현한 것이 **도메인 모델**이다.
 
-```text
-현실의 주문 업무
+주문 업무를 살펴보면 다음과 같은 내용이 보인다.
 
-주문에는 여러 상품이 있다
-주문에는 상태가 있다
-배송이 시작되면 취소할 수 없다
+1. 주문에는 여러 상품이 담긴다.
+2. 주문은 현재 상태를 가진다.
+3. 배송이 시작된 주문은 취소할 수 없다.
 
-↓ 모델링
-
-Order · OrderLine · OrderStatus
-cancel()
-```
+여기에서 `Order`, `OrderLine`, `OrderStatus` 같은 개념을 찾고, 취소 규칙은 `cancel()`이라는 행동으로 표현할 수 있다.
 
 도메인 모델은 처음부터 Java 클래스나 DB 테이블을 의미하지 않는다. 먼저 업무를 설명하는 개념적 모델이 있고, 이를 Java와 객체지향 코드로 구현할 수 있다.
-
-다음 그림은 현실의 업무에서 중요한 개념과 규칙을 골라 코드로 옮기는 과정을 보여준다.
-
-![현실의 주문 업무가 개념 모델을 거쳐 Java 코드로 표현되는 흐름](/images/posts/domain-driven-design/domain-to-code.svg "현실 업무에서 도메인 모델과 코드로 이어지는 과정")
 
 Entity, Value Object와 Aggregate도 Java나 JPA가 만든 기능이 아니다. 도메인을 모델링할 때 사용하는 설계 개념이며, Java 클래스와 객체는 이를 구현하는 한 방법이다.
 
@@ -83,14 +74,11 @@ Entity, Value Object와 Aggregate도 Java나 JPA가 만든 기능이 아니다. 
 
 개발자는 이들과 함께 주문 취소의 흐름을 펼쳐 본다.
 
-```text
-고객이 주문 취소를 요청한다
-→ 주문이 취소 가능한 상태인지 확인한다
-→ 주문을 취소한다
-→ 결제에 환불을 요청한다
-→ 물류에 출고 중단을 요청한다
-→ 쿠폰과 재고를 복구한다
-```
+1. 고객이 주문 취소를 요청한다.
+2. 주문이 취소 가능한 상태인지 확인한다.
+3. 주문을 취소한다.
+4. 결제에는 환불을, 물류에는 출고 중단을 요청한다.
+5. 사용한 쿠폰과 재고를 복구한다.
 
 순서는 단순해 보이지만 질문은 계속 생긴다. 환불 요청이 실패하면 주문 취소도 되돌려야 할까? 이미 출고됐다면 취소가 아니라 반품으로 바뀌어야 할까? 하나씩 답하다 보면 모델에 담아야 할 상태와 규칙이 보인다.
 
@@ -132,33 +120,20 @@ shipment.stopDispatch();
 
 대화를 밖으로 꺼내 놓으면 흐름이 조금 더 구체적으로 보인다.
 
-```text
-주문이 생성되었다
-↓
-재고가 예약되었다
-↓
-결제가 완료되었다
+1. 주문이 생성되었다.
+2. 재고가 예약되었다.
+3. 결제가 완료되었다.
 
-결제가 실패하였다
-↓
-예약 재고가 해제되었다
-```
+결제에 실패했다면 세 번째 사건 대신 `예약 재고가 해제되었다`가 이어진다.
 
 이 대화에서는 사건뿐 아니라 사건을 일으키는 대상과 그 과정에서 지켜야 할 규칙도 찾을 수 있다.
 
-```text
-업무 대화
-"배송이 시작되기 전까지만 주문을 취소할 수 있다"
-↓
-사건과 규칙
-주문이 취소되었다 · 배송을 시작한 주문은 취소할 수 없다
-↓
-모델과 경계 후보
-Order · Shipment · 주문과 배송의 책임 분리
-↓
-코드
-Order.cancel() · CancelOrderService
-```
+이 과정에서 대화는 차츰 모델과 코드로 구체화된다.
+
+1. **업무 대화:** 배송이 시작되기 전까지만 주문을 취소할 수 있다.
+2. **사건과 규칙:** 주문이 취소되었다. 배송을 시작한 주문은 취소할 수 없다.
+3. **모델과 경계 후보:** `Order`와 `Shipment`의 책임을 나눈다.
+4. **코드:** `Order.cancel()`과 `CancelOrderService`로 표현한다.
 
 대화에서 얻은 재료를 바탕으로 이후 `Order`의 성격과 경계를 정한다. Entity와 Aggregate를 살펴보면서 이 내용이 실제 코드로 바뀌는 과정을 이어 가자.
 
@@ -185,11 +160,7 @@ Order.cancel() · CancelOrderService
 
 DDD에서는 하나의 모델과 언어가 같은 의미로 통하는 명시적인 범위를 **바운디드 컨텍스트**라고 한다. 같은 `상품`이라도 상품 컨텍스트의 `Product`와 주문 컨텍스트의 주문 상품은 서로 다른 모델일 수 있다.
 
-주문 취소 역시 경계마다 책임이 다르다.
-
-![주문·결제·배송 컨텍스트가 주문 취소를 서로 다른 책임으로 처리하는 모습](/images/posts/domain-driven-design/order-contexts.svg "주문 취소를 바라보는 세 바운디드 컨텍스트")
-
-주문 컨텍스트는 주문 상태를 바꾸고, 결제 컨텍스트는 환불 가능 여부와 금액을 판단하며, 배송 컨텍스트는 출고를 멈출 수 있는지 판단한다. 한 컨텍스트가 모든 규칙을 소유하지 않고 각자의 모델로 판단한 뒤 필요한 요청이나 사건을 주고받는다.
+주문 취소 역시 경계마다 책임이 다르다. 주문 컨텍스트는 주문 상태를 바꾸고, 결제 컨텍스트는 환불 가능 여부와 금액을 판단하며, 배송 컨텍스트는 출고를 멈출 수 있는지 판단한다. 한 컨텍스트가 모든 규칙을 소유하지 않고 각자의 모델로 판단한 뒤 필요한 요청이나 사건을 주고받는다.
 
 바운디드 컨텍스트의 핵심은 패키지나 배포 단위가 아니라 **모델과 언어의 의미 경계**에 있다. 구현할 때는 `order`, `payment` 같은 패키지나 Gradle 모듈로 표현하고, 필요하면 독립 서비스로 분리할 수 있다. 물리적인 구조는 이 경계를 드러내는 수단이다.
 
@@ -326,14 +297,6 @@ public void changeQuantity(OrderLineId lineId, int quantity) {
 
 Entity와 Value Object는 도메인 객체의 성격을 설명한다. Aggregate는 이런 객체를 Root 중심으로 묶는 경계다. 따라서 세 용어는 같은 층의 객체 종류가 아니다.
 
-```text
-Order Aggregate
-└─ Order                 ← Aggregate Root · Entity
-   ├─ OrderLine          ← 내부 Entity
-   ├─ Money              ← Value Object
-   └─ ShippingAddress    ← Value Object
-```
-
 모든 Aggregate Root는 Entity지만, 모든 Entity가 Aggregate Root인 것은 아니다.
 
 또한 Aggregate는 기능 이름으로 정하지 않는다. `회원가입`, `로그인`과 `주문 취소`는 보통 한 번의 요청을 완성하는 사용 사례다. `Member`, `Session`과 `Order`처럼 상태와 생명주기를 가진 대상이 Aggregate 후보가 된다.
@@ -393,15 +356,7 @@ public interface OrderRepository {
 
 Repository는 테이블보다 Aggregate를 중심으로 본다. `orders`와 `order_lines` 테이블이 따로 있다는 이유만으로 `OrderRepository`와 `OrderLineRepository`를 각각 만들어 내부 주문 상품을 독립적으로 수정하면, Root가 지키던 규칙을 우회할 수 있다.
 
-DDD의 Repository와 Spring Data의 `JpaRepository`는 역할이 다르다. `OrderRepository`는 도메인에서 필요한 저장 계약이고, JPA와 MySQL은 이 계약을 구현하는 기술이다.
-
-```text
-Domain
-OrderRepository
-    ↓ 구현
-Infrastructure
-JpaOrderRepository · EntityManager · MySQL
-```
+DDD의 Repository와 Spring Data의 `JpaRepository`는 역할이 다르다. 도메인에는 필요한 저장 기능을 `OrderRepository`라는 계약으로 두고, Infrastructure에서는 `JpaOrderRepository`, `EntityManager`와 MySQL로 그 계약을 구현한다.
 
 도메인 객체와 JPA Entity를 한 클래스로 함께 쓰는 것도 가능하다. 규모와 복잡성이 커져 저장 기술 때문에 업무 규칙을 표현하기 어려워질 때 두 모델의 분리를 검토하면 된다.
 
@@ -431,14 +386,8 @@ public class DiscountPolicy {
 
 할인을 적용하는 전체 흐름은 Application Service가 진행한다.
 
-```text
-Application Service
-Order 조회 → Member 조회 → DiscountPolicy 호출
-→ Order에 할인 반영 → 저장
-
-Domain Service
-Order와 Member의 상태를 보고 할인 금액 계산
-```
+- **Application Service:** `Order`와 `Member`를 조회하고 `DiscountPolicy`를 호출한 뒤, 할인 결과를 반영해 저장한다.
+- **Domain Service:** `Order`와 `Member`의 상태를 바탕으로 할인 금액을 계산한다.
 
 Application Service는 기능의 진행 순서를 조정하고, Domain Service는 업무 판단이나 계산을 맡는다. 어느 객체가 규칙을 가장 잘 설명하는지 살펴본 뒤 자리를 정한다.
 
@@ -462,29 +411,16 @@ public class OrderLine {
 
 상품팀이 `Product`의 가격 정책이나 필수 속성을 바꾸면 주문 코드까지 함께 흔들릴 수 있다. 주문 시점의 상품명과 가격을 보존해야 하는 주문 모델이 상품 컨텍스트의 현재 판매 모델에 끌려가기도 한다.
 
-대신 API 응답이나 명시적인 DTO, Event로 필요한 정보만 받아 주문 컨텍스트의 언어로 바꾼다.
-
-```text
-Catalog Context
-ProductInfo
-    ↓ 명시적 계약
-Order Context
-OrderedProduct
-```
+대신 API 응답이나 명시적인 DTO, Event로 필요한 정보만 받는다. 상품 컨텍스트가 제공한 `ProductInfo`는 주문 컨텍스트의 `OrderedProduct`로 바꿔 사용한다.
 
 ### Command와 Domain Event는 방향이 다르다
 
 다른 Context에 `무엇을 해달라`고 요청할 수 있고, 이미 일어난 사실을 알릴 수도 있다.
 
-```text
-CancelOrder
-→ 주문을 취소해라
-→ Command
-
-OrderCanceled
-→ 주문이 취소되었다
-→ Domain Event
-```
+| 구분 | 예 | 의미 |
+|---|---|---|
+| Command | `CancelOrder` | 주문을 취소해 달라는 요청 |
+| Domain Event | `OrderCanceled` | 주문이 이미 취소되었다는 사실 |
 
 **Domain Event**는 도메인에서 이미 일어난 의미 있는 사건이다.
 
@@ -503,15 +439,9 @@ Domain Event는 Kafka나 비동기 처리를 전제로 하지 않는다. 같은 
 
 ### 외부 모델은 내 언어로 번역한다
 
-결제 컨텍스트의 `PaymentResponse`, `paymentCode`와 `cancelAmount`를 주문 도메인까지 그대로 전달하면 주문이 결제의 언어에 종속된다.
+결제 컨텍스트의 `PaymentResponse`, `paymentCode`와 `cancelAmount`를 주문 도메인까지 그대로 전달하면 주문이 결제의 언어에 종속된다. Translator나 Adapter를 두어 이 응답을 주문 컨텍스트의 `RefundResult`로 바꿀 수 있다.
 
-```text
-PaymentResponse
-    ↓ Translator / Adapter
-RefundResult
-```
-
-외부 모델을 내 컨텍스트의 언어로 번역해 내부 모델을 보호하는 경계를 **부패 방지 계층**이라고 한다. 영어로는 Anti-Corruption Layer, 줄여서 ACL이라고 부른다.
+이처럼 외부 모델을 내 컨텍스트의 언어로 번역해 내부 모델을 보호하는 경계를 **부패 방지 계층**이라고 한다. 영어로는 Anti-Corruption Layer, 줄여서 ACL이라고 부른다.
 
 컨텍스트 사이의 관계를 한눈에 정리한 그림을 **컨텍스트 맵**이라고 한다. 모든 관계 패턴을 외우기보다 어느 컨텍스트가 정보를 제공하고 누가 사용하는지, 어떤 계약으로 연결되는지부터 정리하면 된다.
 
@@ -531,13 +461,11 @@ DDD는 모놀리식 애플리케이션과 평범한 레이어드 구조에도 �
 
 실무에서는 특정 회사의 패키지 구조를 복사하기보다 다음 과정을 반복한다.
 
-```text
-업무 담당자와 대화한다
-→ 용어와 사건을 정리한다
-→ 모델이 통하는 경계를 찾는다
-→ Aggregate 후보와 규칙을 코드로 표현한다
-→ 구현하며 발견한 업무 지식으로 모델을 다시 고친다
-```
+1. 업무 담당자와 대화한다.
+2. 용어와 사건을 정리한다.
+3. 모델이 통하는 경계를 찾는다.
+4. Aggregate 후보와 규칙을 코드로 표현한다.
+5. 구현하며 새로 발견한 업무 지식을 모델에 반영한다.
 
 국내 적용 사례를 살펴봐도 공통점은 특정 구현 패턴이 아니라 과정에 있다. 업무 담당자와 개발자가 모델과 경계를 함께 정하고 그 결과를 코드로 옮긴다.
 
@@ -563,23 +491,12 @@ DDD를 도입한다는 말은 시스템 전체에 같은 패턴을 강제한다�
 
 DDD는 이 업무를 함께 이해하면서 출발한다. 도메인 전문가와 개발자가 같은 언어를 만들고, 그 언어와 모델이 통하는 경계를 찾는다. 경계 안에서는 중요한 상태와 행동, 규칙을 도메인 모델로 표현한다.
 
-```text
-업무를 이해한다
-↓
-같은 언어를 만든다
-↓
-모델이 통하는 경계를 찾는다
-↓
-업무 규칙을 모델링한다
-↓
-Entity와 Value Object로 대상을 표현한다
-↓
-Aggregate Root가 일관성을 지킨다
-↓
-Application이 모델을 사용해 기능을 완료한다
-↓
-컨텍스트 밖과는 명시적인 계약으로 협력한다
-```
+1. 업무를 이해하고 같은 언어를 만든다.
+2. 모델이 통하는 경계를 찾는다.
+3. Entity와 Value Object로 업무의 대상과 값을 표현한다.
+4. Aggregate Root를 통해 함께 지켜야 할 규칙을 보호한다.
+5. Application Service가 모델을 사용해 기능을 완성한다.
+6. 다른 컨텍스트와는 명시적인 계약으로 협력한다.
 
 Entity는 식별성이 중요한 도메인 객체이고, Value Object는 값 자체와 의미가 중요한 도메인 객체다. Aggregate는 이들과 나란한 객체 종류가 아니라 Root가 내부 상태의 일관성을 책임지는 경계다.
 

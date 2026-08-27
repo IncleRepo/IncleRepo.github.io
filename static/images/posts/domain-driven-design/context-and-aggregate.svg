@@ -1,48 +1,36 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="700" viewBox="0 0 1200 700" role="img" aria-labelledby="title desc">
-  <title id="title">바운디드 컨텍스트와 애그리거트 경계의 차이</title>
-  <desc id="desc">주문 컨텍스트 안에 주문과 쿠폰 애그리거트가 있고 상품 컨텍스트에는 상품 애그리거트가 있어 컨텍스트와 애그리거트 경계의 크기와 책임이 다름을 보여주는 그림</desc>
-  <rect width="1200" height="700" rx="28" fill="#f7f7f6"/>
-  <g font-family="Pretendard, Noto Sans KR, sans-serif">
-    <text x="64" y="72" font-size="30" font-weight="700" fill="#202124">Context 경계 안에도 여러 Aggregate가 있다</text>
-    <text x="64" y="110" font-size="18" fill="#686b70">Context는 모델과 언어의 경계, Aggregate는 그 안에서 상태 일관성을 지키는 더 작은 경계</text>
-
-    <rect x="64" y="155" width="666" height="455" rx="24" fill="#ffffff" stroke="#386fae" stroke-width="4"/>
-    <text x="94" y="202" font-size="22" font-weight="700" fill="#315f95">ORDER BOUNDED CONTEXT</text>
-    <text x="94" y="237" font-size="17" fill="#686b70">주문이라는 말과 모델이 같은 의미로 통하는 범위</text>
-
-    <rect x="98" y="275" width="360" height="260" rx="20" fill="#edf4fb" stroke="#9ebddd" stroke-width="2"/>
-    <text x="126" y="317" font-size="21" font-weight="700" fill="#202124">Order Aggregate</text>
-    <rect x="126" y="347" width="142" height="72" rx="13" fill="#24272b"/>
-    <text x="197" y="377" text-anchor="middle" font-size="18" font-weight="700" fill="#ffffff">Order</text>
-    <text x="197" y="402" text-anchor="middle" font-size="14" fill="#cfd3d8">Root Entity</text>
-    <rect x="288" y="347" width="142" height="72" rx="13" fill="#ffffff" stroke="#b8cee5"/>
-    <text x="359" y="379" text-anchor="middle" font-size="17" font-weight="650" fill="#202124">OrderLine</text>
-    <text x="359" y="402" text-anchor="middle" font-size="14" fill="#686b70">Entity</text>
-    <rect x="126" y="439" width="304" height="60" rx="13" fill="#ffffff" stroke="#b8cee5"/>
-    <text x="278" y="476" text-anchor="middle" font-size="17" font-weight="650" fill="#202124">Money · ShippingAddress</text>
-
-    <rect x="486" y="275" width="210" height="160" rx="20" fill="#fff8eb" stroke="#e2c996" stroke-width="2"/>
-    <text x="514" y="317" font-size="20" font-weight="700" fill="#202124">Coupon Aggregate</text>
-    <text x="514" y="359" font-size="17" fill="#44484d">Coupon Root</text>
-    <text x="514" y="393" font-size="16" fill="#686b70">사용 여부와 만료 규칙</text>
-
-    <rect x="486" y="463" width="210" height="72" rx="16" fill="#f1f4ef" stroke="#c8d5c8"/>
-    <text x="591" y="493" text-anchor="middle" font-size="17" font-weight="650" fill="#202124">CancelOrderService</text>
-    <text x="591" y="518" text-anchor="middle" font-size="14" fill="#686b70">Application Service</text>
-
-    <path d="M752 384h76" stroke="#a9adb3" stroke-width="4" stroke-linecap="round"/>
-    <path d="m819 374 13 10-13 10" fill="none" stroke="#a9adb3" stroke-width="4" stroke-linejoin="round"/>
-    <text x="790" y="356" text-anchor="middle" font-size="15" fill="#686b70">명시적 계약</text>
-
-    <rect x="850" y="155" width="286" height="455" rx="24" fill="#ffffff" stroke="#8f6c39" stroke-width="4"/>
-    <text x="880" y="202" font-size="22" font-weight="700" fill="#75582e">CATALOG CONTEXT</text>
-    <text x="880" y="237" font-size="17" fill="#686b70">현재 판매 상품의 모델</text>
-    <rect x="884" y="292" width="218" height="210" rx="20" fill="#f7f0e7" stroke="#d9bc8c" stroke-width="2"/>
-    <text x="912" y="338" font-size="21" font-weight="700" fill="#202124">Product Aggregate</text>
-    <text x="912" y="383" font-size="18" fill="#44484d">Product Root</text>
-    <text x="912" y="421" font-size="17" fill="#44484d">ProductName</text>
-    <text x="912" y="457" font-size="17" fill="#44484d">CatalogPrice</text>
-
-    <text x="64" y="658" font-size="17" fill="#686b70">같은 Context 안에서도 Aggregate 경계는 지킨다. 다른 Context의 Entity는 내부 모델처럼 직접 공유하지 않는다.</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="560" viewBox="0 0 1200 560" role="img" aria-labelledby="title desc">
+  <title id="title">바운디드 컨텍스트와 애그리거트의 경계</title>
+  <desc id="desc">주문 컨텍스트 안의 주문 및 쿠폰 애그리거트와 상품 컨텍스트의 상품 애그리거트를 구분한 그림</desc>
+  <rect width="1200" height="560" fill="#f7f7f6"/>
+  <g font-family="Pretendard, Noto Sans KR, sans-serif" fill="#202124">
+    <rect x="58" y="55" width="690" height="440" rx="8" fill="none" stroke="#3568a8" stroke-width="3"/>
+    <text x="88" y="98" font-size="21" font-weight="700" fill="#3568a8">주문 컨텍스트</text>
+    <rect x="94" y="140" width="360" height="255" rx="6" fill="#ffffff" stroke="#51565c" stroke-width="2"/>
+    <text x="120" y="180" font-size="21" font-weight="700">Order Aggregate</text>
+    <rect x="120" y="215" width="128" height="62" rx="4" fill="#202124"/>
+    <text x="184" y="241" text-anchor="middle" font-size="18" font-weight="700" fill="#ffffff">Order</text>
+    <text x="184" y="264" text-anchor="middle" font-size="13" fill="#d8dadd">Root</text>
+    <line x1="248" y1="246" x2="295" y2="246" stroke="#8b9096" stroke-width="2"/>
+    <rect x="295" y="215" width="132" height="62" rx="4" fill="#ffffff" stroke="#8b9096"/>
+    <text x="361" y="242" text-anchor="middle" font-size="17" font-weight="650">OrderLine</text>
+    <text x="361" y="265" text-anchor="middle" font-size="13" fill="#62666b">Entity</text>
+    <rect x="120" y="307" width="307" height="55" rx="4" fill="#ffffff" stroke="#8b9096"/>
+    <text x="274" y="341" text-anchor="middle" font-size="16">Money · ShippingAddress</text>
+    <rect x="492" y="140" width="218" height="154" rx="6" fill="#ffffff" stroke="#51565c" stroke-width="2"/>
+    <text x="518" y="180" font-size="20" font-weight="700">Coupon Aggregate</text>
+    <text x="518" y="225" font-size="17">Coupon Root</text>
+    <text x="518" y="257" font-size="15" fill="#62666b">사용 여부 · 만료 규칙</text>
+    <text x="492" y="352" font-size="17" font-weight="650">CancelOrderService</text>
+    <text x="492" y="382" font-size="15" fill="#62666b">컨텍스트 안에서 사용 사례 진행</text>
+    <line x1="748" y1="275" x2="836" y2="275" stroke="#8b9096" stroke-width="2"/>
+    <path d="M826 265l12 10-12 10" fill="none" stroke="#8b9096" stroke-width="2"/>
+    <text x="792" y="251" text-anchor="middle" font-size="14" fill="#62666b">명시적 계약</text>
+    <rect x="838" y="55" width="304" height="440" rx="8" fill="none" stroke="#51565c" stroke-width="3"/>
+    <text x="868" y="98" font-size="21" font-weight="700">상품 컨텍스트</text>
+    <rect x="874" y="140" width="232" height="210" rx="6" fill="#ffffff" stroke="#51565c" stroke-width="2"/>
+    <text x="900" y="180" font-size="20" font-weight="700">Product Aggregate</text>
+    <text x="900" y="230" font-size="17">Product Root</text>
+    <text x="900" y="270" font-size="16" fill="#62666b">ProductName</text>
+    <text x="900" y="305" font-size="16" fill="#62666b">CatalogPrice</text>
   </g>
 </svg>

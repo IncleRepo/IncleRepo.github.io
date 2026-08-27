@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="720" viewBox="0 0 600 720" role="img" aria-labelledby="title desc">
+  <title id="title">DDD를 이해하는 흐름</title>
+  <desc id="desc">업무 이해, 언어와 모델, 경계와 규칙, 실행과 협력으로 이어지는 네 단계</desc>
+  <rect width="600" height="720" fill="#f7f7f6"/>
+  <g font-family="Pretendard, Noto Sans KR, sans-serif">
+    <line x1="80" y1="95" x2="80" y2="625" stroke="#c8ccd1" stroke-width="4"/>
+    <g>
+      <circle cx="80" cy="95" r="15" fill="#3568a8"/>
+      <text x="125" y="86" font-size="29" font-weight="700" fill="#202124">업무 이해</text>
+      <text x="125" y="120" font-size="19" fill="#62666b">Domain · Domain Expert</text>
+      <circle cx="80" cy="270" r="15" fill="#3568a8"/>
+      <text x="125" y="261" font-size="29" font-weight="700" fill="#202124">언어와 모델</text>
+      <text x="125" y="295" font-size="19" fill="#62666b">Ubiquitous Language · Domain Model</text>
+      <circle cx="80" cy="445" r="15" fill="#3568a8"/>
+      <text x="125" y="436" font-size="29" font-weight="700" fill="#202124">경계와 규칙</text>
+      <text x="125" y="470" font-size="19" fill="#62666b">Bounded Context · Aggregate</text>
+      <circle cx="80" cy="620" r="15" fill="#3568a8"/>
+      <text x="125" y="611" font-size="29" font-weight="700" fill="#202124">실행과 협력</text>
+      <text x="125" y="645" font-size="19" fill="#62666b">Application · Repository · Event</text>
+    </g>
+  </g>
+</svg>

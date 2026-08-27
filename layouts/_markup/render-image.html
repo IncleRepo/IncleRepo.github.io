@@ -9,10 +9,20 @@
   {{- end -}}
 {{- end -}}
 {{- $attributes := merge .Attributes (dict "alt" .Text "src" $src "loading" "lazy") -}}
+{{- $mobileSrc := replaceRE `(\.[^./]+)$` `-mobile$1` $src -}}
+{{- $mobilePath := printf "static%s" $mobileSrc -}}
+{{- $hasMobile := and (not $u.IsAbs) (fileExists $mobilePath) -}}
 <figure class="article-figure">
+  {{- if $hasMobile }}
+  <picture>
+    <source media="(max-width: 640px)" srcset="{{ $mobileSrc }}">
+  {{- end }}
   <img
     {{- range $key, $value := $attributes -}}
       {{- if $value }}{{ printf " %s=%q" $key $value | safeHTMLAttr }}{{ end -}}
     {{- end -}}>
+  {{- if $hasMobile }}
+  </picture>
+  {{- end }}
   {{- with .Title }}<figcaption>{{ . }}</figcaption>{{ end -}}
 </figure>

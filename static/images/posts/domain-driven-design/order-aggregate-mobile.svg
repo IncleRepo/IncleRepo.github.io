@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="790" viewBox="0 0 600 790" role="img" aria-labelledby="title desc">
+  <title id="title">Order Aggregate 구조</title>
+  <desc id="desc">Order Root를 통해 내부 객체를 변경하고 규칙을 지키는 구조</desc>
+  <rect width="600" height="790" fill="#f7f7f6"/>
+  <g font-family="Pretendard, Noto Sans KR, sans-serif">
+    <rect x="42" y="40" width="516" height="700" rx="8" fill="none" stroke="#3568a8" stroke-width="3"/>
+    <text x="70" y="84" font-size="25" font-weight="700" fill="#3568a8">Order Aggregate</text>
+    <rect x="90" y="125" width="420" height="150" rx="6" fill="#202124"/>
+    <text x="120" y="168" font-size="25" font-weight="700" fill="#ffffff">Order</text>
+    <text x="120" y="201" font-size="17" fill="#d8dadd">Aggregate Root · Entity</text>
+    <text x="120" y="239" font-size="17" fill="#ffffff">cancel() · changeQuantity()</text>
+    <line x1="300" y1="275" x2="300" y2="330" stroke="#8b9096" stroke-width="2"/>
+    <path d="M290 320l10 12 10-12" fill="none" stroke="#8b9096" stroke-width="2"/>
+    <rect x="90" y="332" width="420" height="92" rx="6" fill="#ffffff" stroke="#51565c" stroke-width="2"/>
+    <text x="120" y="371" font-size="23" font-weight="700" fill="#202124">OrderLine</text>
+    <text x="120" y="402" font-size="17" fill="#62666b">Entity · 상품 · 수량 · 주문 가격</text>
+    <rect x="90" y="446" width="420" height="82" rx="6" fill="#ffffff" stroke="#51565c" stroke-width="2"/>
+    <text x="120" y="481" font-size="22" font-weight="700" fill="#202124">ShippingAddress</text>
+    <text x="120" y="510" font-size="17" fill="#62666b">Value Object</text>
+    <line x1="90" y1="570" x2="510" y2="570" stroke="#d0d3d6"/>
+    <text x="90" y="613" font-size="21" font-weight="700" fill="#202124">Root가 지키는 규칙</text>
+    <text x="90" y="654" font-size="18" fill="#44484d">배송 후 취소 불가 · 수량은 1개 이상</text>
+    <text x="90" y="692" font-size="18" fill="#44484d">수량을 바꾸면 총금액 다시 계산</text>
+  </g>
+</svg>
