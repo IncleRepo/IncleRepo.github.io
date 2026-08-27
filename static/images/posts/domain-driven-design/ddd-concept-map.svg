@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="860" viewBox="0 0 1200 860" role="img" aria-labelledby="title desc">
+  <title id="title">DDD 개념의 흐름</title>
+  <desc id="desc">업무 이해에서 시작해 모델의 경계를 찾고, 도메인 모델로 규칙을 표현한 뒤 애플리케이션에서 사용하는 흐름</desc>
+  <rect width="1200" height="860" rx="28" fill="#f7f7f6"/>
+  <g font-family="Pretendard, Noto Sans KR, sans-serif">
+    <text x="64" y="72" font-size="32" font-weight="700" fill="#202124">DDD를 따라가는 네 단계</text>
+    <text x="64" y="112" font-size="20" fill="#686b70">패턴부터 외우지 않고, 업무를 이해한 결과가 코드로 이어지는 순서</text>
+    <rect x="64" y="160" width="500" height="270" rx="22" fill="#ffffff" stroke="#d8dadd" stroke-width="2"/>
+    <circle cx="112" cy="208" r="24" fill="#24272b"/>
+    <text x="112" y="216" text-anchor="middle" font-size="20" font-weight="700" fill="#ffffff">1</text>
+    <text x="96" y="278" font-size="29" font-weight="700" fill="#202124">업무를 이해한다</text>
+    <text x="96" y="330" font-size="22" font-weight="650" fill="#3568a8">Domain · Ubiquitous Language</text>
+    <text x="96" y="378" font-size="19" fill="#686b70">같은 일을 같은 말과 기준으로 이해</text>
+    <path d="M575 295h38" stroke="#a9adb3" stroke-width="4" stroke-linecap="round"/>
+    <path d="m604 285 13 10-13 10" fill="none" stroke="#a9adb3" stroke-width="4" stroke-linejoin="round"/>
+    <rect x="630" y="160" width="506" height="270" rx="22" fill="#ffffff" stroke="#d8dadd" stroke-width="2"/>
+    <circle cx="678" cy="208" r="24" fill="#24272b"/>
+    <text x="678" y="216" text-anchor="middle" font-size="20" font-weight="700" fill="#ffffff">2</text>
+    <text x="662" y="278" font-size="29" font-weight="700" fill="#202124">경계를 찾는다</text>
+    <text x="662" y="330" font-size="22" font-weight="650" fill="#3568a8">Subdomain · Bounded Context</text>
+    <text x="662" y="378" font-size="19" fill="#686b70">하나의 모델이 일관되게 통하는 범위</text>
+    <path d="M883 442v38" stroke="#a9adb3" stroke-width="4" stroke-linecap="round"/>
+    <path d="m873 471 10 13 10-13" fill="none" stroke="#a9adb3" stroke-width="4" stroke-linejoin="round"/>
+    <rect x="630" y="496" width="506" height="270" rx="22" fill="#ffffff" stroke="#d8dadd" stroke-width="2"/>
+    <circle cx="678" cy="544" r="24" fill="#24272b"/>
+    <text x="678" y="552" text-anchor="middle" font-size="20" font-weight="700" fill="#ffffff">3</text>
+    <text x="662" y="614" font-size="29" font-weight="700" fill="#202124">규칙을 표현한다</text>
+    <text x="662" y="666" font-size="22" font-weight="650" fill="#3568a8">Entity · Value Object · Aggregate</text>
+    <text x="662" y="714" font-size="19" fill="#686b70">업무의 개념과 규칙을 코드에 보존</text>
+    <path d="M617 631h-38" stroke="#a9adb3" stroke-width="4" stroke-linecap="round"/>
+    <path d="m588 621-13 10 13 10" fill="none" stroke="#a9adb3" stroke-width="4" stroke-linejoin="round"/>
+    <rect x="64" y="496" width="500" height="270" rx="22" fill="#ffffff" stroke="#d8dadd" stroke-width="2"/>
+    <circle cx="112" cy="544" r="24" fill="#24272b"/>
+    <text x="112" y="552" text-anchor="middle" font-size="20" font-weight="700" fill="#ffffff">4</text>
+    <text x="96" y="614" font-size="29" font-weight="700" fill="#202124">모델을 사용한다</text>
+    <text x="96" y="666" font-size="22" font-weight="650" fill="#3568a8">Application · Repository · Event</text>
+    <text x="96" y="714" font-size="19" fill="#686b70">사용 사례를 실행하고 다른 경계와 협력</text>
+  </g>
+</svg>

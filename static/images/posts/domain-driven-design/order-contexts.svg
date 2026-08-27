@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="600" viewBox="0 0 1200 600" role="img" aria-labelledby="title desc">
+  <title id="title">주문 취소를 바라보는 세 바운디드 컨텍스트</title>
+  <desc id="desc">주문, 결제, 배송 컨텍스트가 주문 취소를 서로 다른 모델과 책임으로 해석하고 명확한 계약으로 협력하는 모습</desc>
+  <rect width="1200" height="600" rx="28" fill="#f7f7f6"/>
+  <g font-family="Pretendard, Noto Sans KR, sans-serif">
+    <text x="64" y="72" font-size="30" font-weight="700" fill="#202124">같은 주문 취소도 경계마다 책임이 다르다</text>
+    <text x="64" y="110" font-size="18" fill="#686b70">하나의 거대한 모델을 공유하지 않고, 각자의 언어로 처리한 뒤 필요한 사실만 전달</text>
+
+    <rect x="64" y="168" width="310" height="300" rx="22" fill="#ffffff" stroke="#386fae" stroke-width="3"/>
+    <text x="94" y="217" font-size="24" font-weight="700" fill="#202124">주문 컨텍스트</text>
+    <text x="94" y="263" font-size="18" font-weight="650" fill="#386fae">Order.cancel()</text>
+    <text x="94" y="307" font-size="17" fill="#44484d">· 취소 가능한 상태인가?</text>
+    <text x="94" y="340" font-size="17" fill="#44484d">· 주문 상태를 어떻게 바꿀까?</text>
+    <text x="94" y="373" font-size="17" fill="#44484d">· 취소 시각을 언제 남길까?</text>
+    <rect x="94" y="402" width="235" height="40" rx="10" fill="#edf4fb"/>
+    <text x="211" y="428" text-anchor="middle" font-size="16" font-weight="650" fill="#315f95">OrderCanceled 발행</text>
+
+    <path d="M388 318h70" stroke="#a9adb3" stroke-width="3" stroke-linecap="round"/>
+    <path d="m451 309 12 9-12 9" fill="none" stroke="#a9adb3" stroke-width="3" stroke-linejoin="round"/>
+
+    <rect x="476" y="168" width="310" height="300" rx="22" fill="#ffffff" stroke="#8f6c39" stroke-width="3"/>
+    <text x="506" y="217" font-size="24" font-weight="700" fill="#202124">결제 컨텍스트</text>
+    <text x="506" y="263" font-size="18" font-weight="650" fill="#8f6c39">Refund.request()</text>
+    <text x="506" y="307" font-size="17" fill="#44484d">· 결제가 완료됐는가?</text>
+    <text x="506" y="340" font-size="17" fill="#44484d">· 환불할 금액은 얼마인가?</text>
+    <text x="506" y="373" font-size="17" fill="#44484d">· 이미 환불하지 않았는가?</text>
+    <rect x="506" y="402" width="235" height="40" rx="10" fill="#f7f0e7"/>
+    <text x="623" y="428" text-anchor="middle" font-size="16" font-weight="650" fill="#75582e">RefundCompleted 발행</text>
+
+    <path d="M800 318h70" stroke="#a9adb3" stroke-width="3" stroke-linecap="round"/>
+    <path d="m863 309 12 9-12 9" fill="none" stroke="#a9adb3" stroke-width="3" stroke-linejoin="round"/>
+
+    <rect x="888" y="168" width="248" height="300" rx="22" fill="#ffffff" stroke="#4d8068" stroke-width="3"/>
+    <text x="918" y="217" font-size="24" font-weight="700" fill="#202124">배송 컨텍스트</text>
+    <text x="918" y="263" font-size="18" font-weight="650" fill="#4d8068">Shipment.stop()</text>
+    <text x="918" y="307" font-size="17" fill="#44484d">· 출고가 시작됐는가?</text>
+    <text x="918" y="340" font-size="17" fill="#44484d">· 송장이 발급됐는가?</text>
+    <text x="918" y="373" font-size="17" fill="#44484d">· 출고 중단이 가능한가?</text>
+
+    <text x="64" y="530" font-size="17" fill="#686b70">각 컨텍스트는 자신의 모델을 지키고, 다른 컨텍스트에는 필요한 사건이나 요청만 공개한다.</text>
+  </g>
+</svg>
