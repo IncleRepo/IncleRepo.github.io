@@ -7,7 +7,7 @@
   <text x="60" y="54" font-size="19" font-weight="700" fill="#f1f3f5">외부 코드</text><text x="60" y="82" font-size="15" fill="#aab0b7">Controller · Service</text>
   <path d="M340 93V141" stroke="#858c94" stroke-width="1.5" marker-end="url(#arrow)"/><text x="361" y="122" font-size="14" fill="#aab0b7">변경 요청</text>
   <rect x="34" y="144" width="612" height="574" rx="4" fill="none" stroke="#78aeea" stroke-width="2"/>
-  <rect x="56" y="129" width="174" height="30" fill="#202226"/><text x="66" y="152" font-size="20" font-weight="700" fill="#78aeea">ORDER AGGREGATE</text>
+  <rect x="56" y="129" width="218" height="30" fill="#202226"/><text x="66" y="152" font-size="20" font-weight="700" fill="#78aeea">ORDER AGGREGATE</text>
   <rect x="88" y="196" width="504" height="218" rx="4" fill="#283a50" stroke="#78aeea" stroke-width="1.5"/>
   <text x="118" y="239" font-size="23" font-weight="700" fill="#f1f3f5">Order</text><text x="118" y="268" font-size="14" fill="#aab0b7">Aggregate Root · Entity</text>
   <line x1="118" y1="289" x2="562" y2="289" stroke="#4a4f56"/>

@@ -17,7 +17,7 @@
   <text x="405" y="228" text-anchor="middle" font-size="14" fill="#aab0b7">이미 일어난 주문 사건</text>
   <path d="M405 250V304" stroke="#858c94" stroke-width="2" marker-end="url(#arrow)"/>
   <text x="425" y="283" font-size="13" fill="#aab0b7">같은 애플리케이션 안</text>
-  <rect x="270" y="308" width="270" height="92" rx="4" fill="#30343a" stroke="#4a4f56"/>
+  <rect x="230" y="308" width="350" height="92" rx="4" fill="#30343a" stroke="#4a4f56"/>
   <text x="405" y="344" text-anchor="middle" font-size="17" font-weight="700" fill="#f1f3f5">ApplicationEventPublisher</text>
   <text x="405" y="370" text-anchor="middle" font-size="13" fill="#aab0b7">@EventListener · 기본 동기</text>
   <text x="405" y="390" text-anchor="middle" font-size="13" fill="#aab0b7">@TransactionalEventListener · 트랜잭션 단계 연결</text>

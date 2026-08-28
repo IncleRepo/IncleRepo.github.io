@@ -26,7 +26,6 @@
   <text x="697" y="355" text-anchor="middle" font-size="14" fill="#aab0b7">취소 결과 발생</text>
   <path d="M854 335H900V229H940" fill="none" stroke="#858c94" stroke-width="2" marker-end="url(#arrow)"/>
   <path d="M900 335V367H940" fill="none" stroke="#858c94" stroke-width="2" marker-end="url(#arrow)"/>
-  <text x="897" y="321" text-anchor="middle" font-size="12" fill="#aab0b7">취소 이벤트</text>
   <rect x="944" y="172" width="214" height="114" rx="4" fill="#292c31" stroke="#858c94" stroke-width="2"/>
   <rect x="944" y="310" width="214" height="114" rx="4" fill="#292c31" stroke="#858c94" stroke-width="2"/>
   <text x="1051" y="216" text-anchor="middle" font-size="21" font-weight="700" fill="#f1f3f5">결제 컨텍스트</text>
