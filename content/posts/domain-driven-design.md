@@ -16,7 +16,7 @@ tags = ['DDD', '도메인 모델', '바운디드 컨텍스트', '애그리거트
 
 ## 같은 주문 취소를 다르게 이해할 때
 
-정의부터 외우기 전에 DDD가 필요한 상황부터 살펴보자. 주문팀, 결제팀, 물류팀과 고객센터가 따로 있는 쇼핑몰 회사를 가정해 보겠다.
+정의부터 외우기 전에 DDD가 필요한 상황부터 살펴보자. 주문팀, 결제팀, 물류팀과 고객센터가 따로 있는 쇼핑몰 회사를 가정해 보자.
 
 어느 날 주문 취소 기능을 개선해 달라는 요청이 들어온다.
 
@@ -42,7 +42,7 @@ tags = ['DDD', '도메인 모델', '바운디드 컨텍스트', '애그리거트
 
 코드보다 먼저 어긋난 것은 업무에 대한 이해였다. 같은 `주문 취소`를 주문팀은 상태 변경으로, 결제팀은 환불로, 물류팀은 출고 중단으로 받아들였다. 관련 규칙도 기획서와 코드, 오래된 대화와 담당자의 기억 속에 흩어져 있었다.
 
-DDD, 즉 도메인 주도 설계는 이런 혼선을 줄이기 위해 업무를 이해하고 그 결과를 모델과 코드에 담아 가는 접근이다. 사람의 설명과 코드가 같은 업무를 가리키게 만드는 것이 출발점이다.
+DDD, 즉 도메인 주도 설계는 복잡한 업무를 도메인 전문가와 개발자가 함께 이해하고, 그 이해를 모델과 코드로 이어 가는 접근이다. 사람의 설명과 코드가 같은 업무를 가리키게 만드는 것이 출발점이다.
 
 이 글은 업무에서 발견한 문제가 도메인 모델과 경계, 코드와 컨텍스트 사이의 협력으로 이어지는 흐름을 따라간다.
 
@@ -50,7 +50,7 @@ DDD, 즉 도메인 주도 설계는 이런 혼선을 줄이기 위해 업무를 
 
 ## 업무를 이해해 모델을 만든다
 
-**도메인**은 소프트웨어로 해결하려는 현실의 업무 영역이다. 쇼핑몰이라면 주문, 결제, 배송과 재고가 도메인에 해당한다.
+**도메인**은 소프트웨어로 해결하려는 현실의 업무 영역이다. 이 글에서는 온라인 쇼핑몰 운영을 하나의 도메인으로 보고, 그 안의 주문, 결제와 배송 업무를 차례로 살펴본다.
 
 주문 취소 기능을 만든다면 화면이나 테이블보다 먼저 실제 업무를 이해해야 한다. 주문은 어떤 정보를 가지고 있는지, 상태는 언제 바뀌는지, 어느 시점부터 취소할 수 없는지부터 확인한다.
 
@@ -70,9 +70,7 @@ DDD, 즉 도메인 주도 설계는 이런 혼선을 줄이기 위해 업무를 
 
 ### 도메인 전문가는 업무의 예외를 알고 있다
 
-개발자가 코드만 보고 모든 업무 규칙을 알아내기는 어렵다. 실제 규칙과 예외를 잘 아는 사람에게 확인해야 한다. 이런 사람을 **도메인 전문가**라고 부른다.
-
-**도메인 전문가**는 특정 업무를 깊이 이해하는 사람을 가리킨다. 주문 상태를 관리하는 운영자, 환불 규정을 정하는 기획자와 반복되는 문의를 처리하는 고객센터 직원 모두 자신이 맡은 업무의 전문가가 될 수 있다.
+개발자가 코드만 보고 모든 업무 규칙을 알아내기는 어렵다. 실제 규칙과 예외를 깊이 이해하는 **도메인 전문가**와 함께 살펴봐야 한다. 주문 상태를 관리하는 운영자, 환불 규정을 정하는 기획자와 반복되는 문의를 처리하는 고객센터 직원 모두 자신이 맡은 업무의 전문가가 될 수 있다.
 
 개발자는 이들과 함께 주문 취소의 흐름을 펼쳐 본다.
 
@@ -139,7 +137,7 @@ shipment.stopDispatch();
 
 `Order.cancel()`은 주문이 스스로 판단해야 할 규칙을 표현한다. 주문을 조회하고 이 행동을 실행한 뒤 저장하는 전체 흐름은 별도의 응용 서비스가 조정할 수 있다.
 
-이벤트 스토밍에서는 여러 사람이 알고 있던 사건과 규칙을 시간 순서대로 펼쳐 놓고 함께 이야기한다. 그 과정에서 팀마다 다르게 이해하던 상태 변화와 예외가 드러난다. 개발자는 합의한 내용을 바탕으로 중요한 대상과 규칙을 모델 후보로 정리한다.
+이벤트 스토밍은 이런 대화를 더 넓은 업무 흐름으로 펼치는 방법이다. 팀마다 다르게 이해하던 상태 변화와 빠진 예외를 함께 확인하고, 합의한 대상과 규칙을 모델 후보로 정리한다.
 
 ![EventStorming을 활용해 업무의 사건과 경계를 함께 탐색하는 모습](/images/posts/domain-driven-design/event-storming.jpg "EventStorming을 활용해 업무의 사건과 경계를 함께 탐색하는 모습. 출처: EventStorming 공식 사이트")
 
@@ -153,10 +151,10 @@ shipment.stopDispatch();
 
 업무를 서브도메인으로 나누었다면, 이제 소프트웨어 안에서 각 모델이 어디까지 같은 의미로 통할지 정해야 한다. 이 경계를 **바운디드 컨텍스트**라고 한다.
 
-| 구분 | 던지는 질문 | 다루는 범위 |
+| 구분 | 질문 | 범위 |
 |---|---|---|
-| 서브도메인 | 현실의 업무를 어떻게 나눌 것인가? | 업무 영역 |
-| 바운디드 컨텍스트 | 그 업무를 표현하는 모델의 경계를 어디까지 둘 것인가? | 모델과 언어의 적용 범위 |
+| 서브도메인 | 현실의 업무를 어떻게 나눌까? | 업무 |
+| 바운디드 컨텍스트 | 모델과 언어는 어디까지 같은 뜻으로 통할까? | 모델·언어 |
 
 하나의 주문 컨텍스트가 주문 서브도메인 전체를 맡을 수도 있다. 업무가 커지면 주문 접수와 주문 이력을 서로 다른 컨텍스트로 나눌 수도 있다.
 
@@ -172,9 +170,7 @@ shipment.stopDispatch();
 
 각 컨텍스트는 자신이 맡은 규칙을 판단하고, 다른 컨텍스트에는 필요한 요청이나 사건만 전달한다.
 
-이 경계는 코드에서 `order`, `payment` 같은 패키지나 Gradle 모듈로 드러낼 수 있고, 필요하다면 독립 서비스로 분리할 수도 있다.
-
-패키지와 모듈, 서비스는 바운디드 컨텍스트를 코드에 구현하는 수단이다. 하나의 모놀리식 애플리케이션 안에도 여러 바운디드 컨텍스트를 둘 수 있으며, 경계 하나를 여러 모듈로 구성할 수도 있다. 모델의 의미가 달라지는 지점을 기준으로 구현 단위를 정한다.
+이 경계는 `order`, `payment` 같은 패키지나 Gradle 모듈로 드러낼 수 있고, 필요하다면 독립 서비스로 분리할 수도 있다. 하나의 모놀리식 애플리케이션 안에도 여러 바운디드 컨텍스트를 둘 수 있으며, 컨텍스트 하나를 여러 모듈로 구성할 수도 있다. 구현 단위보다 모델의 의미가 달라지는 지점이 먼저다.
 
 바운디드 컨텍스트 하나에도 서로 다른 규칙을 맡는 객체 묶음이 여러 개 들어갈 수 있다. 뒤에서 살펴볼 **Aggregate**는 컨텍스트 안에서 상태 변경의 일관성을 관리하는 더 작은 경계다. 지금은 바운디드 컨텍스트가 Aggregate보다 큰 모델의 범위라는 점만 확인하자.
 
@@ -204,7 +200,7 @@ order.setStatus(OrderStatus.CANCELED);
 
 취소 규칙을 `Order` 안에 담으려면 주문 모델을 이루는 요소부터 구분해야 한다. 주문처럼 시간이 지나도 같은 대상으로 추적해야 하는 것이 있고, 금액과 주소처럼 값 자체로 의미를 표현하는 것도 있다. 각각 Entity와 Value Object에 해당한다.
 
-### Entity는 식별자로 이어진다
+### Entity는 식별자로 같은 대상을 추적한다
 
 속성이 바뀌어도 같은 대상으로 계속 추적해야 하는 객체를 **Entity**라고 한다.
 
@@ -267,6 +263,7 @@ public record Money(BigDecimal amount) {
 
     public Money {
         Objects.requireNonNull(amount);
+        amount = amount.stripTrailingZeros();
 
         if (amount.signum() < 0) {
             throw new IllegalArgumentException(
@@ -330,24 +327,15 @@ public void changeQuantity(OrderLineId lineId, int quantity) {
 
 ![Order가 Aggregate Root가 되어 주문 상품과 배송지 변경을 통제하는 구조](/images/posts/domain-driven-design/order-aggregate.svg "주문 Aggregate의 구조")
 
-```text
-Order Aggregate
-└─ Order               ← Aggregate Root / Entity
-   ├─ OrderLine        ← 내부 Entity
-   └─ ShippingAddress  ← Value Object
-```
-
 > **Aggregate의 경계는 한 트랜잭션에서 함께 지켜야 할 규칙을 기준으로 찾는다.**
 >
 > 주문 상품의 수량을 바꿀 때 총금액도 함께 맞춰야 한다면 두 상태는 같은 경계 안에서 관리한다.
 
-Aggregate가 지키는 일관성은 한 작업이 끝났을 때 경계 안의 상태가 업무 규칙을 만족한다는 의미다. 주문 상품의 수량을 바꾼 뒤에는 총금액도 그 수량과 맞아야 한다.
+한 작업이 끝났을 때 경계 안의 상태가 업무 규칙을 만족해야 한다. Aggregate가 지키는 **일관성**이란 이런 상태를 말한다.
 
 Entity와 Value Object는 객체의 성격을 설명한다. Aggregate는 여러 객체의 변경을 어디까지 함께 관리할지 정한다. 서로 답하는 질문이 다르다.
 
 Aggregate Root는 Entity이며, Aggregate 안에는 Root를 통해 관리되는 다른 Entity가 함께 들어갈 수 있다.
-
-Aggregate는 상태와 생명주기를 가진 대상을 중심으로 찾는다. `회원가입`과 `주문 취소`는 한 번의 요청을 처리하는 사용 사례이고, 그 과정에서 상태가 바뀌는 `Member`와 `Order`가 Aggregate 후보가 된다.
 
 Aggregate가 너무 크면 작은 변경에도 많은 데이터를 불러오거나 잠가야 할 수 있다. 반대로 너무 작게 나누면 한 번에 지켜야 할 규칙이 여러 Aggregate에 흩어진다.
 
@@ -404,7 +392,7 @@ public interface OrderRepository {
 }
 ```
 
-Repository는 Aggregate를 저장하고 복원한다. 예를 들어 `orders`와 `order_lines`가 서로 다른 테이블에 저장되더라도, 주문 상품은 `Order` Aggregate의 일부로 복원하고 Root를 통해 변경한다.
+예를 들어 `orders`와 `order_lines`가 서로 다른 테이블에 저장되더라도, 주문 상품은 `Order` Aggregate의 일부로 복원하고 Root를 통해 변경한다.
 
 `OrderLineRepository`를 따로 만들어 주문 상품만 수정하면 수량 변경 뒤 총금액을 다시 계산하는 규칙을 우회할 수 있다.
 
@@ -427,7 +415,7 @@ Aggregate는 특히 **변경할 때 일관성을 지키는 경계**다. 주문 �
 | 변경 | `Command → Application Service → Aggregate → Repository` |
 | 조회 | `Query → DAO / Projection → Response` |
 
-이처럼 변경과 조회의 책임을 나누는 구조를 **CQRS 방식**이라고 부른다. CQRS는 Command Query Responsibility Segregation, 즉 명령과 조회 책임 분리를 뜻한다. 간단한 프로젝트에서는 하나의 애플리케이션과 데이터베이스를 그대로 사용하면서 코드의 처리 경로만 나눌 수 있다.
+이처럼 변경과 조회의 책임을 나누는 구조를 **CQRS 방식**이라고 부른다. CQRS는 Command Query Responsibility Segregation, 즉 명령과 조회 책임 분리를 뜻한다. DDD의 필수 요소는 아니며, 가장 단순하게는 하나의 애플리케이션과 데이터베이스 안에서 두 코드 경로만 나눌 수 있다.
 
 ### Domain Service는 한 객체가 맡기 어려운 규칙을 다룬다
 
@@ -451,36 +439,14 @@ public class DiscountPolicy {
 }
 ```
 
-두 Service가 맡는 일은 다음처럼 나뉜다.
+`DiscountPolicy`는 두 Aggregate의 정보를 받아 할인액을 계산하는 독립된 도메인 개념이다. 전체 작업은 Application Service가 진행하고, 한 객체에 귀속하기 어려운 계산 규칙은 Domain Service가 맡는다.
 
-| 구분 | 맡는 일 | 할인 적용 예시 |
-|---|---|---|
-| Application Service | 하나의 사용 사례와 트랜잭션을 진행 | `Order`와 `Member`를 조회하고 `DiscountPolicy`를 호출한 뒤 결과를 저장 |
-| Domain Service | 한 객체에 귀속하기 어려운 업무 규칙을 처리 | 회원 등급과 주문 금액을 바탕으로 할인액을 계산 |
+| 구분 | 할인 적용에서 맡는 일 |
+|---|---|
+| Application Service | `Order`와 `Member` 조회 → 할인 계산 요청 → 결과 저장 |
+| Domain Service | 회원 등급과 주문 금액을 바탕으로 할인액을 계산 |
 
-`DiscountPolicy`는 두 Aggregate의 정보를 받아 할인 규칙을 계산하는 독립된 도메인 개념이다.
-
-```text
-Domain Model
-├─ Order Aggregate
-│  ├─ Order Root
-│  └─ OrderLine
-├─ Member Aggregate
-│  └─ Member Root
-└─ DiscountPolicy      ← Domain Service
-```
-
-Domain Service는 특정 Aggregate에 속하지 않으면서 도메인 모델의 일부로 동작한다. 객체 하나에 귀속하기 어려운 업무 규칙을 도메인의 언어로 표현하고, 구현 방식에 따라 Spring Bean으로 등록할 수 있다.
-
-> **여기까지는 하나의 컨텍스트 안을 살펴봤다.**
->
-> - Entity / Value Object: 모델을 이루는 객체의 성격
-> - Aggregate: 상태 변경의 일관성 경계
-> - Repository: Aggregate 저장과 복원
-> - Domain Service: 한 객체에 귀속하기 어려운 업무 규칙
-> - Application Service: 이 모델들을 이용한 Use Case 진행
-
-주문 컨텍스트 안에서는 `Order`가 취소 규칙을 판단하고, Application Service가 작업을 진행한다. 이제 환불과 출고 중단을 처리하기 위해 결제와 배송 컨텍스트에 결과를 전달해야 한다.
+여기까지 주문 컨텍스트 안의 객체와 작업 흐름을 살펴봤다. 이제 환불과 출고 중단을 처리하기 위해 결제와 배송 컨텍스트에 결과를 전달해야 한다.
 
 ## 다른 컨텍스트와 명시적으로 협력한다
 
@@ -510,6 +476,7 @@ public class OrderLine {
 |---|---|---|
 | Command | `CancelOrder` | 주문을 취소해 달라는 요청 |
 | Domain Event | `OrderCanceled` | 주문이 이미 취소되었다는 사실 |
+| Integration Event | `OrderCanceledIntegrationEvent` | 다른 컨텍스트에 공개한 주문 취소 사실 |
 
 주문이 취소되었다는 사실을 코드로 표현하면 다음과 같다.
 
@@ -521,7 +488,9 @@ public record OrderCanceled(
 }
 ```
 
-`Order.cancel()`이 주문 상태를 바꾸면 `OrderCanceled`라는 사건이 생긴다. 같은 애플리케이션 안에서는 Spring의 `ApplicationEventPublisher`로 이 이벤트를 전달하고, `@EventListener`나 `@TransactionalEventListener`가 후속 처리를 맡을 수 있다.
+`Order.cancel()`이 주문 상태를 바꾸면 `OrderCanceled`라는 사건이 생긴다. 같은 애플리케이션 안에서는 Spring의 `ApplicationEventPublisher`로 이 이벤트를 전달할 수 있다. 일반 `@EventListener`는 기본 설정에서 동기로 실행된다.
+
+트랜잭션 결과에 맞춰 후속 작업을 실행해야 한다면 `@TransactionalEventListener`를 사용할 수 있다. 기본 실행 시점은 커밋 이후인 `AFTER_COMMIT`이다.
 
 ![Spring Application Event로 같은 애플리케이션 안에서 Domain Event를 전달하고, Integration Event는 Kafka를 거쳐 다른 컨텍스트로 전달하는 흐름](/images/posts/domain-driven-design/domain-event-flow.svg "Spring Application Event와 Integration Event의 전달 범위")
 
@@ -555,11 +524,11 @@ Context Map을 보면 어느 컨텍스트가 정보를 제공하고, 경계에�
 4. Aggregate 후보와 규칙을 코드로 표현한다.
 5. 구현하며 새로 발견한 예외와 규칙을 모델에 다시 반영한다.
 
-업무 담당자와 개발자는 모델을 함께 만들고, 구현에서 발견한 예외와 규칙을 다시 모델에 반영한다. 이 과정을 반복하면서 업무에 대한 이해와 모델이 함께 발전한다.
+이 과정은 한 번에 끝나지 않는다. 구현에서 발견한 예외와 규칙을 다시 대화로 가져오면서 업무에 대한 이해와 모델을 함께 다듬는다.
 
 ## DDD는 언제 도움이 될까?
 
-그렇다면 모든 프로젝트에서 지금까지 살펴본 모델과 경계를 만들어야 할까? 다음과 같이 업무 자체를 이해하고 유지하기 어려워졌다면 DDD의 접근이 도움이 될 수 있다.
+DDD는 다음처럼 업무 자체를 이해하고 유지하기 어려운 영역에서 특히 도움이 된다.
 
 - 같은 용어를 팀마다 다른 의미로 사용한다.
 - 상태와 예외가 많아 기능을 바꿀 때마다 조건을 빠뜨린다.
@@ -567,7 +536,7 @@ Context Map을 보면 어느 컨텍스트가 정보를 제공하고, 경계에�
 - 테이블 구조보다 업무 규칙의 변화가 코드를 더 자주 흔든다.
 - 개발자만으로 규칙을 정하기 어려워 업무 담당자와 계속 대화해야 한다.
 
-관리자용 CRUD나 외부 데이터를 그대로 전달하는 기능은 업무 규칙이 비교적 단순하다. 이런 영역은 단순한 Service와 Repository만으로도 충분하며, 풍부한 도메인 모델을 적용하면 코드와 학습 비용만 늘어날 수 있다.
+업무 규칙이 거의 없는 단순한 CRUD나 외부 데이터를 그대로 전달하는 기능은 Service와 Repository만으로도 충분할 수 있다. 모델링에 들이는 비용도 해결하려는 문제의 복잡도에 맞춰야 한다.
 
 한 시스템 안에서도 적용 수준은 달라질 수 있다. 어디에 깊게 모델링할 시간과 비용을 쓸지 판단하기 위해 서브도메인을 회사의 경쟁력과 역할에 따라 핵심, 지원과 일반으로 구분하기도 한다.
 
@@ -594,13 +563,14 @@ DDD는 도메인 전문가와 개발자가 업무를 함께 이해하는 데서 
 | 개념 | 답하려는 질문 |
 |---|---|
 | Domain | 어떤 현실의 업무 문제를 해결하는가? |
+| Subdomain | 큰 업무를 어떤 작은 문제 영역으로 나눌까? |
 | Domain Model | 그 업무에서 어떤 대상·상태·행동·규칙이 중요한가? |
 | Ubiquitous Language | 같은 말을 같은 뜻으로 사용하고 있는가? |
 | Bounded Context | 이 모델과 언어는 어디까지 같은 의미인가? |
 | Entity | 식별자로 계속 추적해야 하는 대상인가? |
 | Value Object | 값 자체로 의미가 결정되는가? |
 | Aggregate | 어떤 상태와 규칙을 Root가 일관되게 책임질까? |
-| Application Service | 한 Use Case를 어떤 순서로 진행할까? |
+| Application Service | 하나의 사용 사례를 어떤 순서로 진행할까? |
 | Repository | Aggregate를 어떻게 저장하고 복원할까? |
 | CQRS | 변경과 조회에 같은 모델이 필요한가? |
 | Domain Service | 한 객체에 귀속시키기 어려운 업무 규칙인가? |
@@ -615,11 +585,15 @@ DDD는 복잡한 업무를 정확하게 이해하고, 그 이해가 코드에서
 
 ### 공식 자료
 
-- [Eric Evans - Domain-Driven Design Reference](https://www.domainlanguage.com/ddd/reference/)
+- [Eric Evans - Domain-Driven Design Reference](https://www.domainlanguage.com/wp-content/uploads/2016/05/DDD_Reference_2015-03.pdf)
 - [Microsoft Learn - DDD 지향 마이크로 서비스 디자인](https://learn.microsoft.com/ko-kr/dotnet/architecture/microservices/microservice-ddd-cqrs-patterns/ddd-oriented-microservice)
 - [Microsoft Learn - Designing a microservice domain model](https://learn.microsoft.com/en-us/dotnet/architecture/microservices/microservice-ddd-cqrs-patterns/microservice-domain-model)
 - [Microsoft Learn - Designing the infrastructure persistence layer](https://learn.microsoft.com/en-us/dotnet/architecture/microservices/microservice-ddd-cqrs-patterns/infrastructure-persistence-layer-design)
 - [Microsoft Learn - Domain events: Design and implementation](https://learn.microsoft.com/en-us/dotnet/architecture/microservices/microservice-ddd-cqrs-patterns/domain-events-design-implementation)
+- [Microsoft Learn - CQRS pattern](https://learn.microsoft.com/en-us/azure/architecture/patterns/cqrs)
+- [Spring Framework - Application Events](https://docs.spring.io/spring-framework/reference/core/beans/context-introduction.html#context-functionality-events)
+- [Spring Framework - Transaction-bound Events](https://docs.spring.io/spring-framework/reference/data-access/transaction/event.html)
+- [Hibernate ORM User Guide](https://docs.jboss.org/hibernate/orm/current/userguide/html_single/Hibernate_User_Guide.html)
 - [EventStorming - 공식 사이트](https://www.eventstorming.com/)
 
 ### 추가 자료
