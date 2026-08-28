@@ -60,9 +60,7 @@ DDD, 즉 도메인 주도 설계는 복잡한 업무를 도메인 전문가와 �
 2. 주문은 현재 상태를 가진다.
 3. 배송이 시작된 주문은 취소할 수 없다.
 
-세 문장을 코드로 바로 옮기기 전에 무엇을 표현해야 하는지 나누어 보자. 주문과 주문 상품은 계속 상태가 바뀌는 **대상**이고, 주문 상태는 그 대상이 가진 **값**이다. 취소는 주문에 일어나는 **행동**이며, 배송 시작 이후에는 허용하지 않는다는 **규칙**이 붙는다.
-
-이 내용은 이후 `Order`, `OrderLine`, `OrderStatus`와 `Order.cancel()` 같은 코드로 표현할 수 있다. 발견한 대상과 상태, 규칙을 어떤 모델로 표현할지는 구현하면서 계속 다듬는다.
+주문과 주문 상품은 상태가 바뀌는 **대상**, 주문 상태는 **값**, 취소는 **행동**이다. 여기에 배송 시작 이후에는 허용하지 않는다는 **규칙**이 붙는다. 이 내용은 이후 `Order`, `OrderLine`, `OrderStatus`와 `Order.cancel()` 같은 코드로 표현하고 구현하면서 다듬는다.
 
 ### 도메인 전문가는 업무의 예외를 알고 있다
 
@@ -92,7 +90,7 @@ refund.request();
 shipment.stopDispatch();
 ```
 
-먼저 업무 담당자와 개발자가 `취소가 정확히 무엇인지` 합의해야 한다. `cancel()`은 그 합의가 코드에 드러난 결과다. 반대로 코드에 `changeStatus(4)`만 남겨 두면 개발자는 숫자 `4`의 의미를 다시 찾아야 한다. 함께 정한 언어가 문서에만 머물지 않고 코드까지 이어져야 하는 이유다.
+`cancel()`은 `취소가 정확히 무엇인지` 합의한 결과가 코드에 드러난 이름이다. `changeStatus(4)`만 남겨 두면 숫자 `4`의 의미를 다시 찾아야 한다. 함께 정한 언어는 문서와 대화뿐 아니라 코드에서도 이어져야 한다.
 
 이처럼 용어를 맞추려면 각자가 알고 있는 업무 흐름을 한곳에 펼쳐 놓고 이야기할 자리가 필요하다.
 
@@ -126,17 +124,13 @@ shipment.stopDispatch();
 
 **Command**는 어떤 행동을 해 달라는 요청이고, **Event**는 이미 일어난 사실이다. 이벤트 스토밍에서는 Event와 이를 일으킨 Command, 사람과 뒤따르는 정책을 한 흐름에 놓을 수 있다.
 
-이미 상품을 집기 시작했다면 `주문이 취소되었다`라는 Event에 도달하지 못한다. 같은 `배송 전`이라는 말도 팀마다 가리키는 시점이 달랐고, 그 차이가 취소 가능 여부를 바꾸고 있었다.
+이미 상품을 집기 시작했다면 `주문이 취소되었다`라는 Event에 도달하지 못한다. 흐름을 거꾸로 따라가면 상태를 가진 대상은 **주문**, 주문이 제공할 행동은 **취소**이고, 여기에 `상품을 집기 시작한 주문은 취소할 수 없다`는 규칙이 붙는다. 업무에서 말하던 취소가 `Order.cancel()`로 이어지는 과정이다.
 
-`주문이 취소되었다` 앞에는 주문 상태를 확인해 취소 여부를 판단하는 과정이 있다. 이 과정을 거꾸로 따라가면 상태를 가진 대상은 **주문**, 주문이 제공해야 할 행동은 **취소**라는 사실이 보인다.
-
-여기에 `상품을 집기 시작한 주문은 취소할 수 없다`는 규칙을 붙이면 업무에서 말하던 취소가 `Order.cancel()`이라는 모델의 행동으로 이어진다. 이벤트 스토밍은 이처럼 여러 사람이 알고 있던 사건과 규칙을 하나의 흐름으로 펼쳐 모델의 재료를 찾는 방법이다.
+이벤트 스토밍은 여러 사람이 알고 있던 사건과 규칙을 하나의 흐름으로 펼쳐 모델의 재료를 찾는 방법이다.
 
 ![사건과 흐름을 연결해 표현한 EventStorming 이미지](/images/posts/domain-driven-design/event-storming.jpg "출처: EventStorming 공식 사이트")
 
-대화 중에 새로운 사건이나 예외가 나오면 모델에 반영하고, 구현하면서 새로 알게 된 내용도 다시 대화로 가져온다. 이 과정을 거치면 주문팀 안에서는 같은 말로 같은 모델을 가리킬 수 있다.
-
-하지만 회사 전체가 모든 단어를 같은 뜻으로 사용하기는 어렵다. 상품팀과 주문팀이 말하는 `상품`부터 필요한 정보가 다르다. 이제 하나의 모델이 어디까지 같은 의미로 통하는지 경계를 정해야 한다.
+대화와 구현에서 발견한 사건과 예외를 모델에 반영하면 주문팀 안에서는 같은 말로 같은 모델을 가리킬 수 있다. 하지만 상품팀과 주문팀이 말하는 `상품`처럼 업무가 달라지면 필요한 정보도 달라진다. 이제 하나의 모델이 어디까지 같은 의미로 통하는지 경계를 정해야 한다.
 
 ## 하나의 모델이 통하는 경계를 찾는다
 
@@ -157,11 +151,9 @@ shipment.stopDispatch();
 
 주문 취소도 마찬가지다. 이 글에서는 설명을 위해 주문, 결제와 배송을 서로 다른 컨텍스트로 나눈다. 주문 컨텍스트는 주문 상태를 바꾸고, 결제 컨텍스트는 환불 가능 여부와 금액을 계산하며, 배송 컨텍스트는 출고를 멈출 수 있는지 판단한다. 실제 경계는 조직 이름이나 업무 명사보다 모델의 의미와 변경 패턴을 살펴 정한다.
 
-바운디드 컨텍스트의 본질은 모델과 언어의 의미가 유효한 범위다. `order`, `payment` 같은 패키지나 Gradle 모듈로 경계를 드러낼 수도 있고, 독립 서비스로 분리할 수도 있다. 하나의 모놀리식 애플리케이션 안에도 여러 바운디드 컨텍스트가 존재할 수 있으므로 패키지, 모듈과 Microservice는 경계를 구현하는 선택지로 구분해 본다.
+바운디드 컨텍스트는 패키지나 Gradle 모듈로 드러낼 수도 있고, 독립 서비스로 분리할 수도 있다. 하나의 모놀리식 애플리케이션 안에도 여러 바운디드 컨텍스트가 존재할 수 있다.
 
 바운디드 컨텍스트 하나에도 서로 다른 규칙을 맡는 객체 묶음이 여러 개 들어갈 수 있다. 뒤에서 살펴볼 **Aggregate**는 컨텍스트 안에서 상태 변경의 일관성을 관리하는 더 작은 경계다.
-
-이 그림에서는 바운디드 컨텍스트가 Aggregate보다 큰 모델의 경계라는 점을 먼저 보면 된다.
 
 ![주문 컨텍스트 안의 여러 애그리거트와 상품 컨텍스트의 관계](/images/posts/domain-driven-design/context-and-aggregate.svg "바운디드 컨텍스트와 애그리거트 경계의 차이")
 
@@ -239,7 +231,7 @@ Spring에서 자주 접하는 JPA `@Entity`와 DDD의 Entity는 구분할 필요
 | DDD Entity | 식별성을 중심으로 같은 대상을 추적하는 도메인 모델 개념 |
 | JPA `@Entity` | 객체를 관계형 데이터베이스에 매핑하는 ORM 기술 |
 
-하나의 `Order` 클래스가 두 역할을 함께 맡을 수 있다. JPA `@Entity`는 이 객체를 데이터베이스에 저장하는 방법을 나타낸다. DDD Entity는 업무에서 같은 주문을 어떻게 식별하고 추적할지 설명한다.
+하나의 `Order` 클래스가 두 역할을 함께 맡을 수 있다.
 
 주문은 주문 번호로 계속 추적한다. 금액과 배송지는 식별자보다 어떤 값을 담고 있는지가 중요하다.
 
@@ -313,19 +305,13 @@ public void changeQuantity(OrderLineId lineId, int quantity) {
 
 ![Order가 Aggregate Root가 되어 주문 상품과 배송지 변경을 통제하는 구조](/images/posts/domain-driven-design/order-aggregate.svg "주문 Aggregate의 구조")
 
-> **Aggregate의 경계는 한 트랜잭션에서 함께 지켜야 할 규칙을 기준으로 찾는다.**
->
-> 주문 상품의 수량을 바꿀 때 총금액도 함께 맞춰야 한다면 두 상태는 같은 경계 안에서 관리한다.
-
-한 작업이 끝났을 때 경계 안의 상태가 업무 규칙을 만족해야 한다. Aggregate가 지키는 **일관성**이란 이런 상태를 말한다. Entity와 Value Object가 객체의 성격을 설명한다면, Aggregate는 여러 객체의 변경을 어디까지 함께 관리할지 정한다.
+Aggregate의 경계는 한 트랜잭션에서 함께 지켜야 할 규칙을 기준으로 찾는다. 주문 상품의 수량과 총금액처럼 함께 맞아야 하는 상태를 같은 경계에서 관리한다. 한 작업이 끝났을 때 이 경계 안의 상태가 업무 규칙을 만족하는 것이 **일관성**이다.
 
 주문 Aggregate에서는 `Order`가 Root이자 Entity이고, `OrderLine`은 Root를 통해 관리되는 Entity, `ShippingAddress`는 Value Object다. 모든 Aggregate Root는 Entity지만 모든 Entity가 Root인 것은 아니다.
 
 Aggregate가 너무 크면 작은 변경에도 많은 데이터를 불러오거나 잠가야 할 수 있다. 반대로 너무 작게 나누면 강한 일관성이 필요한 규칙이 여러 Aggregate에 흩어진다. Aggregate는 트랜잭션 경계를 결정하는 중요한 기준이며, 한 Aggregate의 변경을 한 트랜잭션에서 완료하는 것을 기본으로 삼을 수 있다. 여러 Aggregate가 협력한다면 하나의 트랜잭션으로 묶을지, 별도 트랜잭션과 Event로 이어갈지는 필요한 일관성과 실패 처리 방식에 따라 정한다.
 
 Aggregate의 이름은 기능 이름과도 구분한다. 회원가입과 주문 취소는 실행해야 할 **Use Case**이고, `Member`와 `Order`는 상태와 생명주기를 가진 Aggregate 후보다.
-
-Entity, Value Object와 Aggregate를 이용하면 주문 모델의 상태와 변경 경계를 표현할 수 있다. 그런데 업무 규칙이라고 해서 언제나 한 객체에 자연스럽게 들어가지는 않는다.
 
 ## 한 객체에 담기 어려운 업무 규칙을 다룬다
 
@@ -392,14 +378,6 @@ public class CancelOrderService {
 
 `CancelOrderService`는 주문 취소라는 사용 사례를 처음부터 끝까지 진행한다. 반면 배송을 시작한 주문을 취소할 수 있는지는 `Order.cancel()`이 판단한다. HTTP API뿐 아니라 관리자 기능과 배치에서도 똑같이 지켜야 하는 주문의 규칙이기 때문이다.
 
-| 코드의 역할 | 담당 영역 |
-|---|---|
-| `Order` 조회 | Application |
-| `order.cancel()` 호출과 저장 | Application |
-| 취소 가능한 상태인지 판단하고 상태 변경 | Domain |
-
-**Application Service는 하나의 Use Case를 완료할 실행 순서를 조정하고, 도메인 모델은 업무적으로 무엇이 가능한지 판단한다.**
-
 Spring 애플리케이션의 각 영역에 방금 살펴본 역할을 놓으면 다음과 같다.
 
 | 영역 | 맡는 일 |
@@ -409,12 +387,7 @@ Spring 애플리케이션의 각 영역에 방금 살펴본 역할을 놓으면 
 | Domain Model | 업무적으로 무엇이 가능한지 판단 |
 | Infrastructure | DB, 메시지와 외부 API를 구체적인 기술로 연결 |
 
-할인 적용 기능에서도 같은 구분을 사용할 수 있다.
-
-| 구분 | 할인 적용에서 맡는 일 |
-|---|---|
-| Application Service | `Order`와 `MemberGrade` 조회 → 할인 계산 요청 → 결과 저장 |
-| Domain Service | 회원 등급과 주문 금액을 바탕으로 할인액 계산 |
+할인 적용 기능이라면 Application Service가 주문과 회원 등급을 준비하고, 앞에서 만든 `DiscountPolicy`가 할인액을 계산한다.
 
 ### Repository는 Aggregate를 저장하고 복원한다
 
@@ -429,21 +402,7 @@ public interface OrderRepository {
 }
 ```
 
-수량 변경처럼 주문 전체의 규칙을 확인해야 하는 작업에서는 `orders`와 `order_lines`가 서로 다른 테이블에 있더라도 `Order` Aggregate를 복원한다. 변경도 Root를 거쳐야 수량과 총금액을 함께 관리할 수 있다.
-
-```java
-// 내부 객체만 바꾸면 주문 규칙을 우회할 수 있다.
-OrderLine line = orderLineRepository.findById(lineId)
-    .orElseThrow();
-line.changeQuantity(quantity);
-
-// Root를 통해 바꾸면 수량과 총금액을 함께 관리한다.
-Order order = orderRepository.findById(orderId)
-    .orElseThrow(OrderNotFoundException::new);
-
-order.changeQuantity(lineId, quantity);
-orderRepository.save(order);
-```
+`orders`와 `order_lines`가 서로 다른 테이블에 있더라도 수량 변경에는 `Order` Aggregate를 복원한다. Root를 통해 변경해야 수량과 총금액을 함께 관리할 수 있기 때문이다.
 
 #### 저장 기술로 구현할 때
 
@@ -570,22 +529,6 @@ public class OrderCanceledListener {
 
 다른 컨텍스트에도 알려야 한다면 내부의 `OrderCanceled`를 외부 계약인 `OrderCanceledIntegrationEvent`로 바꿔 Kafka 같은 메시지 브로커로 전달할 수 있다.
 
-```java
-public record OrderCanceledIntegrationEvent(
-    long orderId,
-    Instant occurredAt
-) {
-    public static OrderCanceledIntegrationEvent from(
-        OrderCanceled event
-    ) {
-        return new OrderCanceledIntegrationEvent(
-            event.orderId().value(),
-            event.occurredAt()
-        );
-    }
-}
-```
-
 아래 그림에서 `OrderCanceled`는 주문 컨텍스트 안에서 전달되고, 외부로 나갈 때는 별도의 Integration Event로 변환된다.
 
 ![Spring Application Event로 같은 애플리케이션 안에서 Domain Event를 전달하고, Integration Event는 Kafka를 거쳐 다른 컨텍스트로 전달하는 흐름](/images/posts/domain-driven-design/domain-event-flow.svg "Spring Application Event와 Integration Event의 전달 범위")
@@ -626,15 +569,11 @@ public class PaymentAdapter {
 
 결제 응답 형식이 바뀌면 `PaymentAdapter`의 변환 코드가 영향을 받는다. 주문 모델은 `RefundResult`라는 자신의 언어를 유지한다. 이처럼 외부 모델을 내 컨텍스트의 언어로 번역하는 경계를 **부패 방지 계층**이라고 한다. 영어로는 Anti-Corruption Layer, 줄여서 ACL이라고 부른다.
 
-ACL은 다른 컨텍스트의 언어를 내 모델 안까지 그대로 끌고 오지 않고 경계에서 번역한다.
-
 컨텍스트가 많아지면 개별 계약뿐 아니라 전체 관계도 함께 볼 필요가 있다.
 
 ### Context Map은 컨텍스트 사이의 관계를 보여준다
 
 여러 컨텍스트가 어떤 관계로 연결되고 어떤 계약을 주고받는지 정리한 그림을 **Context Map**이라고 한다. 상품 컨텍스트가 주문에 상품 정보를 제공하고, 주문 컨텍스트가 결제와 쿠폰에 취소 결과를 전달하는 관계를 다음처럼 표현할 수 있다.
-
-그림에서는 상품 정보를 API 계약으로 받아 주문의 언어로 바꾸고, 주문 취소 결과는 Integration Event로 결제와 쿠폰에 전달한다.
 
 ![상품, 주문, 결제와 쿠폰 컨텍스트가 API 계약, ACL과 Integration Event로 협력하는 Context Map](/images/posts/domain-driven-design/context-map-example.svg "주문 기능을 중심으로 정리한 Context Map의 예")
 
@@ -678,8 +617,6 @@ DDD는 다음처럼 업무 자체를 이해하고 유지하기 어려운 영역�
 
 핵심 서브도메인에는 업무 담당자와 함께 깊이 모델링할 시간과 인력을 투자할 수 있다. 일반 서브도메인은 검증된 제품을 사용하거나 단순하게 구현하는 편이 나을 수 있다. DDD를 적용할 깊이는 업무의 복잡성과 중요도에 맞춰 정한다.
 
-복잡한 주문 정책에는 도메인 모델과 Aggregate를 사용하고, 단순한 목록 조회에는 Projection을 사용할 수 있다. 컨텍스트 사이의 결합을 줄여야 할 때는 Event를 검토한다.
-
 어디에 DDD가 필요한지 골랐다면 처음부터 완성된 모델을 만들려고 하기보다, 작은 업무 흐름 하나에서 시작하는 편이 좋다.
 
 ## 실제 프로젝트에서는 작게 시작한다
@@ -693,15 +630,7 @@ DDD는 다음처럼 업무 자체를 이해하고 유지하기 어려운 영역�
 5. 컨텍스트 사이에 필요한 요청과 이벤트의 계약을 정한다.
 6. 구현하며 발견한 예외와 규칙을 다시 모델에 반영한다.
 
-이 과정은 한 번에 끝나지 않는다. 구현에서 발견한 내용을 다시 대화로 가져오면서 업무에 대한 이해와 모델을 함께 다듬는다. 처음에는 복잡한 업무 하나를 골라 이 순서를 반복해 보는 것만으로도 충분하다.
-
-```text
-업무 이해 → 모델링 → 구현
-    ↑          ↓
-    └── 새로 발견한 규칙과 예외
-```
-
-주문 취소처럼 경계가 분명한 Use Case 하나를 구현하고, 그 과정에서 발견한 예외를 대화와 모델에 다시 반영하며 범위를 넓혀 간다.
+이 과정은 한 번에 끝나지 않는다. 주문 취소처럼 경계가 분명한 Use Case 하나를 구현하고, 발견한 예외를 대화와 모델에 다시 반영하며 범위를 넓혀 간다.
 
 ## 정리
 
