@@ -521,17 +521,13 @@ public record OrderCanceled(
 }
 ```
 
-`Order.cancel()`이 주문 상태를 바꾸면 `OrderCanceled`라는 사건이 생긴다. 주문 컨텍스트 안에서는 이 Domain Event를 받아 같은 업무에 속한 후속 처리를 이어 갈 수 있다.
+`Order.cancel()`이 주문 상태를 바꾸면 `OrderCanceled`라는 사건이 생긴다. 같은 애플리케이션 안에서는 Spring의 `ApplicationEventPublisher`로 이 이벤트를 전달하고, `@EventListener`나 `@TransactionalEventListener`가 후속 처리를 맡을 수 있다.
 
-![주문 컨텍스트 내부의 Domain Event가 외부 계약인 Integration Event로 변환되어 다른 컨텍스트에 전달되는 흐름](/images/posts/domain-driven-design/domain-event-flow.svg "Domain Event와 Integration Event의 역할")
+![Spring Application Event로 같은 애플리케이션 안에서 Domain Event를 전달하고, Integration Event는 Kafka를 거쳐 다른 컨텍스트로 전달하는 흐름](/images/posts/domain-driven-design/domain-event-flow.svg "Spring Application Event와 Integration Event의 전달 범위")
 
-결제나 쿠폰처럼 다른 컨텍스트에도 이 사실을 알려야 한다면 외부에 공개할 계약을 따로 정한다. 이때 사용하는 메시지가 **Integration Event**다. 내부의 `OrderCanceled`를 외부 계약인 `OrderCanceledIntegrationEvent`로 바꾸어 발행하는 식이다.
+다른 컨텍스트에도 알려야 한다면 `OrderCanceled`를 외부 계약인 `OrderCanceledIntegrationEvent`로 바꾸고 Kafka 같은 메시지 브로커로 전달할 수 있다. 결제와 쿠폰 컨텍스트는 이 메시지를 받은 뒤 각자의 규칙에 따라 환불과 쿠폰 복구를 처리한다.
 
-결제 컨텍스트는 Integration Event를 받아 자신의 정책에 따라 환불 가능 여부와 금액을 판단한다. 쿠폰 컨텍스트도 같은 사실을 받아 사용한 쿠폰을 복구할 수 있다. 주문 컨텍스트는 취소가 일어났다는 사실만 공개하고, 구체적인 후속 처리는 각 컨텍스트가 맡는다.
-
-Spring의 애플리케이션 이벤트는 같은 애플리케이션 안에서 Domain Event를 전달할 때 사용할 수 있다. Kafka 같은 메시지 브로커는 서로 다른 서비스나 컨텍스트에 Integration Event를 전달하는 수단이 될 수 있다. Domain Event와 외부 메시지 계약은 각 경계에서 필요한 정보에 맞춰 별도의 클래스로 구성할 수 있다.
-
-Integration Event는 보통 주문 트랜잭션이 성공한 뒤 외부로 전달한다. 비동기 메시징에는 발행 실패와 재시도, 중복 처리, DB 트랜잭션과 메시지 사이의 정합성을 다루는 설계가 함께 필요하다.
+외부 메시지는 주문 트랜잭션이 성공한 뒤 전달되어야 한다. 실제 구현에서는 발행 실패와 재시도, 중복 처리, DB 트랜잭션과 메시지 사이의 정합성을 함께 설계한다.
 
 ### 외부 모델을 내 언어로 번역한다
 

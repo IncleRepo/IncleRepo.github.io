@@ -1,32 +1,38 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="680" height="900" viewBox="0 0 680 900" role="img" aria-labelledby="title desc">
-  <title id="title">Domain Event와 Integration Event의 역할</title>
-  <desc id="desc">주문 컨텍스트 내부에서 발생한 Domain Event가 내부 처리에 사용되고, 외부 계약인 Integration Event로 변환되어 결제와 쿠폰 컨텍스트에 전달된다</desc>
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="1080" viewBox="0 0 680 1080" role="img" aria-labelledby="title desc">
+  <title id="title">Spring Application Event와 Integration Event의 전달 범위</title>
+  <desc id="desc">주문 도메인 이벤트는 Spring ApplicationEventPublisher를 통해 같은 애플리케이션 안에 전달할 수 있고, 외부 계약인 Integration Event로 변환한 뒤 Kafka를 거쳐 결제와 쿠폰 컨텍스트에 전달할 수 있다</desc>
   <style>text { font-family:Pretendard,"Noto Sans KR",sans-serif; }</style>
   <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 10 5 0 10z" fill="#858c94"/></marker></defs>
-  <rect width="680" height="900" fill="#202226"/>
-  <rect x="34" y="36" width="612" height="520" rx="4" fill="none" stroke="#78aeea" stroke-width="2"/>
-  <rect x="56" y="21" width="166" height="30" fill="#202226"/>
-  <text x="66" y="45" font-size="20" font-weight="700" fill="#78aeea">주문 컨텍스트</text>
-  <rect x="208" y="94" width="264" height="82" rx="4" fill="#30343a" stroke="#4a4f56"/>
-  <text x="340" y="130" text-anchor="middle" font-size="20" font-weight="700" fill="#f1f3f5">Order.cancel()</text>
-  <text x="340" y="156" text-anchor="middle" font-size="14" fill="#aab0b7">상태 변경</text>
-  <path d="M340 176V224" stroke="#858c94" stroke-width="2" marker-end="url(#arrow)"/>
-  <rect x="168" y="228" width="344" height="116" rx="4" fill="#283a50" stroke="#78aeea" stroke-width="2"/>
-  <text x="340" y="270" text-anchor="middle" font-size="22" font-weight="700" fill="#f1f3f5">OrderCanceled</text>
-  <text x="340" y="302" text-anchor="middle" font-size="17" fill="#78aeea">Domain Event</text>
-  <text x="340" y="327" text-anchor="middle" font-size="14" fill="#aab0b7">이미 일어난 도메인 사건</text>
-  <path d="M340 344V394" stroke="#858c94" stroke-width="2" marker-end="url(#arrow)"/>
-  <rect x="168" y="398" width="344" height="72" rx="4" fill="#30343a" stroke="#4a4f56"/>
-  <text x="340" y="442" text-anchor="middle" font-size="17" font-weight="700" fill="#f1f3f5">컨텍스트 내부 후속 처리</text>
-  <path d="M340 556V624" stroke="#858c94" stroke-width="2" marker-end="url(#arrow)"/>
-  <text x="362" y="594" font-size="15" fill="#aab0b7">외부 계약으로 변환</text>
-  <rect x="126" y="628" width="428" height="128" rx="4" fill="#292c31" stroke="#78aeea" stroke-width="2"/>
-  <text x="340" y="674" text-anchor="middle" font-size="20" font-weight="700" fill="#f1f3f5">OrderCanceledIntegrationEvent</text>
-  <text x="340" y="710" text-anchor="middle" font-size="18" fill="#78aeea">Integration Event</text>
-  <text x="340" y="738" text-anchor="middle" font-size="14" fill="#aab0b7">컨텍스트 밖에 공개하는 메시지 계약</text>
-  <path d="M340 756V806" stroke="#858c94" stroke-width="2" marker-end="url(#arrow)"/>
-  <rect x="126" y="810" width="194" height="58" rx="4" fill="#30343a" stroke="#4a4f56"/>
-  <rect x="360" y="810" width="194" height="58" rx="4" fill="#30343a" stroke="#4a4f56"/>
-  <text x="223" y="846" text-anchor="middle" font-size="18" font-weight="700" fill="#f1f3f5">결제 컨텍스트</text>
-  <text x="457" y="846" text-anchor="middle" font-size="18" font-weight="700" fill="#f1f3f5">쿠폰 컨텍스트</text>
+  <rect width="680" height="1080" fill="#202226"/>
+  <rect x="34" y="36" width="612" height="544" rx="4" fill="none" stroke="#78aeea" stroke-width="2"/>
+  <rect x="56" y="21" width="192" height="30" fill="#202226"/>
+  <text x="66" y="45" font-size="20" font-weight="700" fill="#78aeea">주문 애플리케이션</text>
+  <rect x="208" y="92" width="264" height="82" rx="4" fill="#30343a" stroke="#4a4f56"/>
+  <text x="340" y="128" text-anchor="middle" font-size="20" font-weight="700" fill="#f1f3f5">Order.cancel()</text>
+  <text x="340" y="154" text-anchor="middle" font-size="14" fill="#aab0b7">주문 상태 변경</text>
+  <path d="M340 174V218" stroke="#858c94" stroke-width="2" marker-end="url(#arrow)"/>
+  <rect x="168" y="222" width="344" height="116" rx="4" fill="#283a50" stroke="#78aeea" stroke-width="2"/>
+  <text x="340" y="264" text-anchor="middle" font-size="22" font-weight="700" fill="#f1f3f5">OrderCanceled</text>
+  <text x="340" y="296" text-anchor="middle" font-size="17" fill="#78aeea">Domain Event</text>
+  <text x="340" y="321" text-anchor="middle" font-size="14" fill="#aab0b7">이미 일어난 주문 사건</text>
+  <path d="M340 338V390" stroke="#858c94" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="362" y="372" font-size="14" fill="#aab0b7">같은 애플리케이션 안</text>
+  <rect x="106" y="394" width="468" height="108" rx="4" fill="#30343a" stroke="#4a4f56"/>
+  <text x="340" y="436" text-anchor="middle" font-size="19" font-weight="700" fill="#f1f3f5">ApplicationEventPublisher</text>
+  <text x="340" y="470" text-anchor="middle" font-size="14" fill="#aab0b7">@EventListener · @TransactionalEventListener</text>
+  <path d="M512 280H610V614H340V648" fill="none" stroke="#858c94" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="465" y="602" text-anchor="middle" font-size="14" fill="#aab0b7">외부 메시지 계약으로 변환</text>
+  <rect x="126" y="652" width="428" height="128" rx="4" fill="#292c31" stroke="#78aeea" stroke-width="2"/>
+  <text x="340" y="698" text-anchor="middle" font-size="20" font-weight="700" fill="#f1f3f5">OrderCanceledIntegrationEvent</text>
+  <text x="340" y="734" text-anchor="middle" font-size="18" fill="#78aeea">Integration Event</text>
+  <text x="340" y="762" text-anchor="middle" font-size="14" fill="#aab0b7">컨텍스트 밖에 공개하는 메시지 계약</text>
+  <path d="M340 780V824" stroke="#858c94" stroke-width="2" marker-end="url(#arrow)"/>
+  <rect x="240" y="828" width="200" height="76" rx="4" fill="#30343a" stroke="#4a4f56"/>
+  <text x="340" y="859" text-anchor="middle" font-size="19" font-weight="700" fill="#f1f3f5">Kafka</text>
+  <text x="340" y="884" text-anchor="middle" font-size="14" fill="#aab0b7">메시지 브로커</text>
+  <path d="M340 904V948" stroke="#858c94" stroke-width="2" marker-end="url(#arrow)"/>
+  <rect x="90" y="952" width="236" height="82" rx="4" fill="#30343a" stroke="#4a4f56"/>
+  <rect x="354" y="952" width="236" height="82" rx="4" fill="#30343a" stroke="#4a4f56"/>
+  <text x="208" y="1001" text-anchor="middle" font-size="18" font-weight="700" fill="#f1f3f5">결제 컨텍스트</text>
+  <text x="472" y="1001" text-anchor="middle" font-size="18" font-weight="700" fill="#f1f3f5">쿠폰 컨텍스트</text>
 </svg>
