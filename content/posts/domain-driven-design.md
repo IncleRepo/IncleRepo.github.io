@@ -419,17 +419,25 @@ public interface OrderRepository {
 }
 ```
 
-예를 들어 `orders`와 `order_lines`가 서로 다른 테이블에 저장되더라도, 주문 상품은 `Order` Aggregate의 일부로 복원하고 Root를 통해 변경한다.
+`orders`와 `order_lines`가 서로 다른 테이블에 있더라도 주문 상품은 `Order`의 일부로 불러온다. 변경도 Root를 거쳐야 총금액 계산 같은 주문 규칙을 빠뜨리지 않는다.
 
-`OrderLineRepository`를 따로 만들어 주문 상품만 수정하면 수량 변경 뒤 총금액을 다시 계산하는 규칙을 우회할 수 있다.
+```java
+// 내부 객체만 바꾸면 주문 규칙을 우회할 수 있다.
+OrderLine line = orderLineRepository.findById(lineId)
+    .orElseThrow();
+line.changeQuantity(quantity);
 
-도메인에는 필요한 저장 기능을 `OrderRepository`라는 인터페이스로 정의한다.
+// Root를 통해 바꾸면 수량과 총금액을 함께 관리한다.
+Order order = orderRepository.findById(orderId)
+    .orElseThrow(OrderNotFoundException::new);
 
-Infrastructure 영역은 이 인터페이스를 실제 저장 기술로 구현한다. Spring Data `JpaRepository`나 `EntityManager`로 MySQL에 접근하는 코드가 여기에 들어갈 수 있다.
+order.changeQuantity(lineId, quantity);
+orderRepository.save(order);
+```
 
-JPA에서는 영속 상태인 Entity의 변경을 Dirty Checking이 반영하므로 `save()` 호출을 생략할 수 있다. 앞의 예제는 `Aggregate를 불러오고 변경한 뒤 저장한다`는 흐름을 드러내기 위해 `save()`를 명시했다.
+Application Service는 도메인에 정의한 `OrderRepository` 인터페이스에 의존한다. Infrastructure 영역은 Spring Data JPA나 `EntityManager`로 이 계약을 구현한다.
 
-Aggregate는 특히 **변경할 때 일관성을 지키는 경계**다. 주문 취소에는 Order Aggregate를 사용하고, 주문 목록은 JOIN이나 Projection으로 화면에 필요한 값만 조회할 수 있다.
+JPA Entity가 영속 상태라면 변경 사항은 Dirty Checking으로 반영될 수 있다. 예제의 `save()`는 `Aggregate를 불러오고 변경한 뒤 저장한다`는 흐름을 보여주기 위해 남겼다.
 
 ### 변경과 조회는 서로 다른 모델을 사용할 수 있다
 
@@ -487,7 +495,7 @@ public class DiscountPolicy {
 
 주문, 결제와 배송은 경계를 나눈 뒤에도 계속 협력한다. 각 컨텍스트는 내부 모델을 독립적으로 유지하고, 서로 주고받을 정보와 형식을 계약으로 정한다.
 
-다음 코드는 주문 컨텍스트의 `OrderLine`이 상품 컨텍스트의 `Product`를 직접 참조한다.
+다음처럼 주문 컨텍스트가 상품 컨텍스트의 내부 모델을 직접 참조하면 두 코드가 함께 묶인다.
 
 ```java
 import catalog.domain.Product;
@@ -497,15 +505,34 @@ public class OrderLine {
 }
 ```
 
-이 구조에서는 상품팀이 `Product`의 필수 속성을 바꿀 때 주문 코드도 영향을 받는다.
+상품 컨텍스트는 내부 `Product` 대신 외부에 공개할 계약을 제공한다. 주문 컨텍스트는 이 값을 주문 당시의 상품 정보로 바꿔 보관한다.
 
-현재 판매 정보를 다루는 `Product`가 바뀌면서, 주문 당시의 상품명과 가격을 보존해야 하는 주문 모델까지 함께 흔들릴 수 있다.
+```java
+// 상품 컨텍스트가 공개한 계약
+public record ProductInfo(
+    long productId,
+    String name,
+    BigDecimal price
+) {
+}
 
-컨텍스트가 독립적으로 발전하려면 외부에 공개할 계약과 내부 도메인 모델을 구분해야 한다. 상대의 내부 모델을 내 모델처럼 사용하면 어느 한쪽의 변경이 다른 쪽까지 그대로 번진다.
+// 주문 컨텍스트의 모델
+public record OrderedProduct(
+    long productId,
+    String name,
+    Money orderPrice
+) {
+    public static OrderedProduct from(ProductInfo source) {
+        return new OrderedProduct(
+            source.productId(),
+            source.name(),
+            new Money(source.price())
+        );
+    }
+}
+```
 
-상품 컨텍스트는 API 응답이나 DTO, 이벤트처럼 외부에 공개하기로 합의한 형식으로 필요한 정보만 제공한다.
-
-주문 컨텍스트는 전달받은 `ProductInfo`를 자신의 모델인 `OrderedProduct`로 바꿔 사용한다.
+상품의 현재 가격과 구조가 바뀌어도 이미 생성된 주문은 `OrderedProduct`에 저장한 이름과 주문 가격을 유지한다.
 
 ### Command, Domain Event와 Integration Event를 구분한다
 
@@ -529,11 +556,22 @@ public record OrderCanceled(
 }
 ```
 
-`Order.cancel()`이 주문 상태를 바꾸면 `OrderCanceled`라는 사건이 생긴다.
+`Order.cancel()`이 주문 상태를 바꾸면 `OrderCanceled`라는 사건이 생긴다. 같은 애플리케이션 안에서는 Spring의 `ApplicationEventPublisher`로 전달할 수 있다.
 
-같은 애플리케이션 안에서는 Spring의 `ApplicationEventPublisher`로 이 이벤트를 전달할 수 있다. 일반 `@EventListener`는 기본 설정에서 동기로 실행된다.
+```java
+eventPublisher.publishEvent(
+    new OrderCanceled(order.id(), Instant.now())
+);
 
-트랜잭션 결과에 맞춰 후속 작업을 실행해야 한다면 `@TransactionalEventListener`를 사용할 수 있다. 기본 실행 시점은 커밋 이후인 `AFTER_COMMIT`이다.
+@TransactionalEventListener(
+    phase = TransactionPhase.AFTER_COMMIT
+)
+public void handle(OrderCanceled event) {
+    notificationService.sendCancelNotice(event.orderId());
+}
+```
+
+일반 `@EventListener`는 기본 설정에서 동기로 실행된다. 트랜잭션이 커밋된 뒤 후속 작업을 시작하려면 위와 같이 `@TransactionalEventListener`의 실행 시점을 `AFTER_COMMIT`으로 정할 수 있다.
 
 ![Spring Application Event로 같은 애플리케이션 안에서 Domain Event를 전달하고, Integration Event는 Kafka를 거쳐 다른 컨텍스트로 전달하는 흐름](/images/posts/domain-driven-design/domain-event-flow.svg "Spring Application Event와 Integration Event의 전달 범위")
 
@@ -545,11 +583,35 @@ public record OrderCanceled(
 
 ### 외부 모델을 내 언어로 번역한다
 
-컨텍스트 사이의 공개 계약은 정보를 주고받을 형식을 정한다. 각 컨텍스트는 전달받은 정보를 자신의 모델과 용어로 바꾸어 사용한다.
+결제 컨텍스트가 반환한 `PaymentResponse`를 주문 코드까지 그대로 전달하면 주문도 결제의 이름과 응답 구조를 알아야 한다.
 
-결제 컨텍스트가 `PaymentResponse`에 `paymentCode`와 `cancelAmount`를 담아 반환한다고 해보자. 이 객체를 주문 도메인까지 그대로 전달하면 주문 코드도 결제 컨텍스트의 이름과 구조를 알아야 한다.
+경계에 Adapter를 두면 외부 응답을 주문 컨텍스트의 `RefundResult`로 바꿀 수 있다.
 
-경계에 Translator나 Adapter를 두면 `PaymentResponse`를 주문 컨텍스트의 `RefundResult`로 바꿀 수 있다. 결제 응답 형식이 달라져도 변환 코드만 수정하면 주문 모델은 자신의 언어를 유지한다.
+```java
+@Component
+@RequiredArgsConstructor
+public class PaymentAdapter {
+
+    private final PaymentApi paymentApi;
+
+    public RefundResult refund(
+        OrderId orderId,
+        Money amount
+    ) {
+        PaymentResponse response = paymentApi.refund(
+            orderId.value(),
+            amount.amount()
+        );
+
+        return new RefundResult(
+            response.paymentCode(),
+            new Money(response.cancelAmount())
+        );
+    }
+}
+```
+
+결제 응답 형식이 바뀌면 `PaymentAdapter`의 변환 코드가 영향을 받는다. 주문 모델은 `RefundResult`라는 자신의 언어를 유지한다.
 
 이처럼 외부 모델을 내 컨텍스트의 언어로 번역하는 경계를 **부패 방지 계층**이라고 한다. 영어로는 Anti-Corruption Layer, 줄여서 ACL이라고 부른다.
 
