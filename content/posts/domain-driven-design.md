@@ -224,15 +224,6 @@ public class Order {
 
 외부에서는 `cancel()`을 호출해 주문 취소를 요청한다. 메서드 안에는 주문 취소라는 업무 의도와 규칙, 상태 변경이 한 행동으로 드러난다.
 
-Spring에서 자주 접하는 JPA `@Entity`와 DDD의 Entity는 구분할 필요가 있다.
-
-| 구분 | 의미 |
-|---|---|
-| DDD Entity | 식별성을 중심으로 같은 대상을 추적하는 도메인 모델 개념 |
-| JPA `@Entity` | 객체를 관계형 데이터베이스에 매핑하는 ORM 기술 |
-
-하나의 `Order` 클래스가 두 역할을 함께 맡을 수 있다.
-
 주문은 주문 번호로 계속 추적한다. 금액과 배송지는 식별자보다 어떤 값을 담고 있는지가 중요하다.
 
 ### Value Object는 값으로 의미를 표현한다
@@ -338,7 +329,7 @@ public class DiscountPolicy {
 }
 ```
 
-`DiscountPolicy`는 회원 등급과 주문 금액을 바탕으로 할인액을 계산한다. 어느 등급과 주문을 불러오고 계산 결과를 어디에 저장할지는 결정하지 않는다. Domain Service는 도메인 모델 안의 업무 규칙이고, Spring의 `@Service`는 객체를 Bean으로 등록하는 기술적 Annotation이므로 같은 기준의 개념도 아니다.
+`DiscountPolicy`는 회원 등급과 주문 금액을 바탕으로 할인액을 계산한다. 어느 등급과 주문을 불러오고 계산 결과를 어디에 저장할지는 결정하지 않는다.
 
 여기까지 컨텍스트 안의 모델을 구성하는 네 가지 개념을 살펴봤다.
 
@@ -378,15 +369,6 @@ public class CancelOrderService {
 
 `CancelOrderService`는 주문 취소라는 사용 사례를 처음부터 끝까지 진행한다. 반면 배송을 시작한 주문을 취소할 수 있는지는 `Order.cancel()`이 판단한다. HTTP API뿐 아니라 관리자 기능과 배치에서도 똑같이 지켜야 하는 주문의 규칙이기 때문이다.
 
-Spring 애플리케이션의 각 영역에 방금 살펴본 역할을 놓으면 다음과 같다.
-
-| 영역 | 맡는 일 |
-|---|---|
-| Presentation | 외부 요청과 응답을 애플리케이션에 연결 |
-| Application Service | 도메인 모델을 준비하고 호출해 하나의 사용 사례와 트랜잭션을 완성 |
-| Domain Model | 업무적으로 무엇이 가능한지 판단 |
-| Infrastructure | DB, 메시지와 외부 API를 구체적인 기술로 연결 |
-
 할인 적용 기능이라면 Application Service가 주문과 회원 등급을 준비하고, 앞에서 만든 `DiscountPolicy`가 할인액을 계산한다.
 
 ### Repository는 Aggregate를 저장하고 복원한다
@@ -403,14 +385,6 @@ public interface OrderRepository {
 ```
 
 `orders`와 `order_lines`가 서로 다른 테이블에 있더라도 수량 변경에는 `Order` Aggregate를 복원한다. Root를 통해 변경해야 수량과 총금액을 함께 관리할 수 있기 때문이다.
-
-#### 저장 기술로 구현할 때
-
-이 예제에서는 Application과 Domain이 필요로 하는 저장 계약을 `OrderRepository` 인터페이스로 표현하고, Infrastructure가 Spring Data JPA나 `EntityManager`로 구현한다. 인터페이스의 위치는 프로젝트가 정한 의존성 방향에 맞춘다.
-
-DDD의 Repository와 Spring Data의 `JpaRepository`도 같은 개념은 아니다. 전자는 도메인 모델에서 Aggregate에 접근하는 방식을 설명하고, 후자는 JPA 기반 저장 코드를 제공하는 프레임워크 인터페이스다. 프로젝트가 단순하다면 하나의 인터페이스가 두 역할을 함께 맡을 수도 있다.
-
-JPA Entity가 영속 상태라면 변경 사항은 Dirty Checking으로 반영될 수 있다. 예제의 `save()`는 `Aggregate를 불러오고 변경한 뒤 저장한다`는 흐름을 보여주기 위해 명시했다.
 
 Aggregate를 저장하는 경로를 정했다면, 값을 읽기만 하는 기능도 같은 경로를 따라야 하는지 살펴볼 수 있다.
 
@@ -683,12 +657,10 @@ DDD는 복잡한 업무를 함께 이해하고, 그 이해가 모델과 코드�
 - [Microsoft Learn - Use Tactical DDD to Design Microservices](https://learn.microsoft.com/en-us/azure/architecture/microservices/model/tactical-ddd)
 - [Microsoft Learn - DDD 지향 마이크로 서비스 디자인](https://learn.microsoft.com/ko-kr/dotnet/architecture/microservices/microservice-ddd-cqrs-patterns/ddd-oriented-microservice)
 - [Microsoft Learn - Designing a microservice domain model](https://learn.microsoft.com/en-us/dotnet/architecture/microservices/microservice-ddd-cqrs-patterns/microservice-domain-model)
-- [Microsoft Learn - Designing the infrastructure persistence layer](https://learn.microsoft.com/en-us/dotnet/architecture/microservices/microservice-ddd-cqrs-patterns/infrastructure-persistence-layer-design)
 - [Microsoft Learn - Domain events: Design and implementation](https://learn.microsoft.com/en-us/dotnet/architecture/microservices/microservice-ddd-cqrs-patterns/domain-events-design-implementation)
 - [Microsoft Learn - CQRS pattern](https://learn.microsoft.com/en-us/azure/architecture/patterns/cqrs)
 - [Spring Framework - Application Events](https://docs.spring.io/spring-framework/reference/core/beans/context-introduction.html#context-functionality-events)
 - [Spring Framework - Transaction-bound Events](https://docs.spring.io/spring-framework/reference/data-access/transaction/event.html)
-- [Hibernate ORM User Guide](https://docs.jboss.org/hibernate/orm/current/userguide/html_single/Hibernate_User_Guide.html)
 - [EventStorming - 공식 사이트](https://www.eventstorming.com/)
 
 ### 추가 자료
