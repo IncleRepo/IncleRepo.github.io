@@ -10,9 +10,9 @@
   <rect x="64" y="143" width="154" height="58" rx="4" fill="#30343a" stroke="#4a4f56"/>
   <rect x="236" y="143" width="186" height="58" rx="4" fill="#30343a" stroke="#4a4f56"/>
   <rect x="440" y="143" width="176" height="58" rx="4" fill="#30343a" stroke="#4a4f56"/>
-  <text x="141" y="179" text-anchor="middle" font-size="17" font-weight="700" fill="#f1f3f5">Subdomain</text>
-  <text x="329" y="179" text-anchor="middle" font-size="17" font-weight="700" fill="#f1f3f5">Bounded Context</text>
-  <text x="528" y="179" text-anchor="middle" font-size="17" font-weight="700" fill="#f1f3f5">Context Map</text>
+  <text x="141" y="179" text-anchor="middle" font-size="16" font-weight="700" fill="#f1f3f5">Subdomain</text>
+  <text x="329" y="179" text-anchor="middle" font-size="16" font-weight="700" fill="#f1f3f5">Bounded Context</text>
+  <text x="528" y="179" text-anchor="middle" font-size="16" font-weight="700" fill="#f1f3f5">Context Map</text>
   <text x="64" y="251" font-size="17" fill="#f1f3f5">어디까지 같은 모델을 사용할까?</text>
   <path d="M340 296V340" stroke="#858c94" stroke-width="2" marker-end="url(#arrow)"/>
   <text x="360" y="324" font-size="15" fill="#aab0b7">경계 안으로</text>

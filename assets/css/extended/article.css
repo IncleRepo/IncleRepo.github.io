@@ -484,12 +484,23 @@ body:has(.post-single--hybrid) {
   margin: 32px 0;
 }
 
+.article-figure picture {
+  display: block;
+  width: 100%;
+}
+
 .article-figure img {
+  display: block;
   width: auto;
   max-width: 100%;
+  height: auto;
   margin: 0 auto;
   border: 1px solid var(--article-border-strong);
   border-radius: 10px;
+}
+
+.article-figure picture img {
+  width: 100%;
 }
 
 .article-content .article-figure > figcaption {

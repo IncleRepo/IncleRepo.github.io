@@ -7,12 +7,12 @@
   <rect x="46" y="48" width="470" height="330" rx="4" fill="#292c31" stroke="#78aeea" stroke-width="2"/>
   <text x="76" y="91" font-size="24" font-weight="700" fill="#78aeea">전략적 설계</text>
   <text x="76" y="125" font-size="16" fill="#aab0b7">업무와 모델의 큰 경계를 정한다</text>
-  <rect x="76" y="161" width="122" height="58" rx="4" fill="#30343a" stroke="#4a4f56"/>
-  <rect x="216" y="161" width="166" height="58" rx="4" fill="#30343a" stroke="#4a4f56"/>
-  <rect x="400" y="161" width="86" height="58" rx="4" fill="#30343a" stroke="#4a4f56"/>
-  <text x="137" y="197" text-anchor="middle" font-size="16" font-weight="700" fill="#f1f3f5">Subdomain</text>
-  <text x="299" y="197" text-anchor="middle" font-size="16" font-weight="700" fill="#f1f3f5">Bounded Context</text>
-  <text x="443" y="197" text-anchor="middle" font-size="16" font-weight="700" fill="#f1f3f5">Context Map</text>
+  <rect x="76" y="161" width="118" height="58" rx="4" fill="#30343a" stroke="#4a4f56"/>
+  <rect x="204" y="161" width="166" height="58" rx="4" fill="#30343a" stroke="#4a4f56"/>
+  <rect x="380" y="161" width="106" height="58" rx="4" fill="#30343a" stroke="#4a4f56"/>
+  <text x="135" y="197" text-anchor="middle" font-size="15" font-weight="700" fill="#f1f3f5">Subdomain</text>
+  <text x="287" y="197" text-anchor="middle" font-size="15" font-weight="700" fill="#f1f3f5">Bounded Context</text>
+  <text x="433" y="197" text-anchor="middle" font-size="15" font-weight="700" fill="#f1f3f5">Context Map</text>
   <text x="76" y="302" font-size="17" fill="#f1f3f5">어디까지 같은 모델을 사용할까?</text>
   <path d="M530 214H666" stroke="#858c94" stroke-width="2" marker-end="url(#arrow)"/>
   <text x="598" y="195" text-anchor="middle" font-size="15" fill="#aab0b7">경계 안으로</text>
