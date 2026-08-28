@@ -112,15 +112,7 @@ shipment.stopDispatch();
 
 대화에서 확인한 흐름을 가장 단순하게 놓으면 다음과 같다.
 
-```text
-고객
-↓ 행동 요청
-주문을 취소해라              Command
-↓ 주문 상태와 취소 규칙 판단
-주문이 취소되었다            Event
-↓ 후속 처리 요청
-환불해라 · 출고를 중단해라   Command
-```
+![고객의 주문 취소 요청이 규칙 판단과 주문 취소 사건을 거쳐 환불과 출고 중단 요청으로 이어지는 흐름](/images/posts/domain-driven-design/order-cancel-conversation-flow.svg "주문 취소 대화에서 발견한 Command와 Event")
 
 **Command**는 어떤 행동을 해 달라는 요청이고, **Event**는 이미 일어난 사실이다. 이벤트 스토밍에서는 Event와 이를 일으킨 Command, 사람과 뒤따르는 정책을 한 흐름에 놓을 수 있다.
 

@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="300" viewBox="0 0 1200 300" role="img" aria-labelledby="title desc">
+  <title id="title">주문 취소 대화에서 발견한 Command와 Event 흐름</title>
+  <desc id="desc">고객의 주문 취소 요청을 받아 주문 상태와 취소 규칙을 판단하고, 주문이 취소되었다는 사건이 발생하면 환불과 출고 중단을 요청하는 흐름</desc>
+  <style>text { font-family:Pretendard,"Noto Sans KR",sans-serif; }</style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 10 5 0 10z" fill="#858c94"/>
+    </marker>
+  </defs>
+  <rect width="1200" height="300" rx="12" fill="#202226"/>
+
+  <rect x="30" y="82" width="230" height="136" rx="8" fill="#283a50" stroke="#78aeea" stroke-width="2"/>
+  <text x="145" y="119" text-anchor="middle" font-size="14" font-weight="700" fill="#78aeea">COMMAND · 행동 요청</text>
+  <text x="145" y="159" text-anchor="middle" font-size="22" font-weight="700" fill="#f1f3f5">주문을 취소해라</text>
+  <text x="145" y="190" text-anchor="middle" font-size="15" fill="#aab0b7">고객이 요청</text>
+
+  <path d="M260 150H320" stroke="#858c94" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <rect x="330" y="82" width="230" height="136" rx="8" fill="#30343a" stroke="#5b626b" stroke-width="2"/>
+  <text x="445" y="119" text-anchor="middle" font-size="14" font-weight="700" fill="#aab0b7">규칙 판단</text>
+  <text x="445" y="156" text-anchor="middle" font-size="21" font-weight="700" fill="#f1f3f5">취소할 수 있는가?</text>
+  <text x="445" y="190" text-anchor="middle" font-size="15" fill="#aab0b7">주문 상태와 취소 조건 확인</text>
+
+  <path d="M560 150H620" stroke="#858c94" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <rect x="630" y="82" width="230" height="136" rx="8" fill="#4b3826" stroke="#e4a255" stroke-width="2"/>
+  <text x="745" y="119" text-anchor="middle" font-size="14" font-weight="700" fill="#e4a255">EVENT · 일어난 사실</text>
+  <text x="745" y="159" text-anchor="middle" font-size="21" font-weight="700" fill="#f1f3f5">주문이 취소되었다</text>
+  <text x="745" y="190" text-anchor="middle" font-size="15" fill="#c8b6a2">취소 완료</text>
+
+  <path d="M860 150H920" stroke="#858c94" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <rect x="930" y="82" width="240" height="136" rx="8" fill="#283a50" stroke="#78aeea" stroke-width="2"/>
+  <text x="1050" y="119" text-anchor="middle" font-size="14" font-weight="700" fill="#78aeea">COMMAND · 후속 요청</text>
+  <text x="1050" y="157" text-anchor="middle" font-size="20" font-weight="700" fill="#f1f3f5">환불 · 출고 중단</text>
+  <text x="1050" y="190" text-anchor="middle" font-size="15" fill="#aab0b7">결제와 물류에 요청</text>
+</svg>
