@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="480" viewBox="0 0 1200 480" role="img" aria-labelledby="title desc">
+  <title id="title">이 글에서 다루는 DDD의 전략적 설계와 전술적 설계</title>
+  <desc id="desc">전략적 설계는 업무와 모델의 경계를 정하고, 전술적 설계는 경계 안의 모델을 구체화한다. 유비쿼터스 언어는 두 설계를 관통한다.</desc>
+  <style>text { font-family:Pretendard,"Noto Sans KR",sans-serif; }</style>
+  <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 10 5 0 10z" fill="#858c94"/></marker></defs>
+  <rect width="1200" height="480" fill="#202226"/>
+  <rect x="46" y="48" width="470" height="330" rx="4" fill="#292c31" stroke="#78aeea" stroke-width="2"/>
+  <text x="76" y="91" font-size="24" font-weight="700" fill="#78aeea">전략적 설계</text>
+  <text x="76" y="125" font-size="16" fill="#aab0b7">업무와 모델의 큰 경계를 정한다</text>
+  <rect x="76" y="161" width="122" height="58" rx="4" fill="#30343a" stroke="#4a4f56"/>
+  <rect x="216" y="161" width="166" height="58" rx="4" fill="#30343a" stroke="#4a4f56"/>
+  <rect x="400" y="161" width="86" height="58" rx="4" fill="#30343a" stroke="#4a4f56"/>
+  <text x="137" y="197" text-anchor="middle" font-size="16" font-weight="700" fill="#f1f3f5">Subdomain</text>
+  <text x="299" y="197" text-anchor="middle" font-size="16" font-weight="700" fill="#f1f3f5">Bounded Context</text>
+  <text x="443" y="197" text-anchor="middle" font-size="16" font-weight="700" fill="#f1f3f5">Context Map</text>
+  <text x="76" y="302" font-size="17" fill="#f1f3f5">어디까지 같은 모델을 사용할까?</text>
+  <path d="M530 214H666" stroke="#858c94" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="598" y="195" text-anchor="middle" font-size="15" fill="#aab0b7">경계 안으로</text>
+  <rect x="684" y="48" width="470" height="330" rx="4" fill="#292c31" stroke="#858c94" stroke-width="2"/>
+  <text x="714" y="91" font-size="24" font-weight="700" fill="#f1f3f5">전술적 설계</text>
+  <text x="714" y="125" font-size="16" fill="#aab0b7">경계 안의 모델을 구체화한다</text>
+  <rect x="714" y="151" width="410" height="104" rx="4" fill="none" stroke="#78aeea" stroke-width="1.5"/>
+  <text x="734" y="178" font-size="15" font-weight="700" fill="#78aeea">Aggregate</text>
+  <rect x="734" y="190" width="160" height="45" rx="4" fill="#30343a" stroke="#4a4f56"/>
+  <rect x="914" y="190" width="190" height="45" rx="4" fill="#30343a" stroke="#4a4f56"/>
+  <text x="814" y="219" text-anchor="middle" font-size="16" font-weight="700" fill="#f1f3f5">Entity</text>
+  <text x="1009" y="219" text-anchor="middle" font-size="16" font-weight="700" fill="#f1f3f5">Value Object</text>
+  <rect x="714" y="273" width="138" height="48" rx="4" fill="#30343a" stroke="#4a4f56"/>
+  <rect x="868" y="273" width="120" height="48" rx="4" fill="#30343a" stroke="#4a4f56"/>
+  <rect x="1004" y="273" width="120" height="48" rx="4" fill="#30343a" stroke="#4a4f56"/>
+  <text x="783" y="303" text-anchor="middle" font-size="15" font-weight="700" fill="#f1f3f5">Domain Service</text>
+  <text x="928" y="303" text-anchor="middle" font-size="15" font-weight="700" fill="#f1f3f5">Repository</text>
+  <text x="1064" y="303" text-anchor="middle" font-size="15" font-weight="700" fill="#f1f3f5">Domain Event</text>
+  <rect x="46" y="400" width="1108" height="48" rx="4" fill="#292c31" stroke="#4a4f56"/>
+  <text x="600" y="430" text-anchor="middle" font-size="16" fill="#d5d9de"><tspan font-weight="700" fill="#78aeea">Ubiquitous Language</tspan><tspan> · 대화와 모델, 코드에서 같은 용어를 사용한다</tspan></text>
+</svg>

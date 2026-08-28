@@ -159,17 +159,19 @@ shipment.stopDispatch();
 
 그림의 주문 컨텍스트에는 Order Aggregate와 Coupon Aggregate가 있고, 각자 맡은 규칙을 지킨다. 주문 컨텍스트는 상품 컨텍스트의 `Product` 대신, 두 컨텍스트가 합의한 형식으로 주문에 필요한 정보만 받는다.
 
-지금까지처럼 큰 업무와 모델의 경계를 살펴보는 관점을 DDD의 **전략적 설계**라고 부른다. 이제 카메라를 컨텍스트 안쪽으로 옮겨 Entity, Value Object와 Aggregate로 대상과 값, 변경 규칙을 표현해 보자. 이 관점이 **전술적 설계**다.
+지금까지 큰 업무를 나누고, 같은 모델이 통하는 경계를 찾았다. DDD에서는 이런 결정을 **전략적 설계**라고 한다. 서브도메인과 바운디드 컨텍스트를 나누고, 컨텍스트 사이의 관계를 Context Map으로 정리하는 일이다.
 
-전략적 설계와 전술적 설계의 관계를 정리하면 다음과 같다.
+경계가 정해지면 그 안의 모델을 구체화한다. Entity, Value Object와 Aggregate로 상태와 일관성의 경계를 만들고, Domain Service와 Repository, Domain Event로 규칙과 저장, 중요한 변화를 표현한다. 이때 사용하는 설계 개념과 패턴을 **전술적 설계**라고 한다.
 
-![전략적 설계는 업무와 모델의 큰 경계를 정하고, 전술적 설계는 경계 안의 객체와 규칙을 코드로 표현한다](/images/posts/domain-driven-design/strategic-tactical-design.svg "DDD의 전략적 설계와 전술적 설계")
+유비쿼터스 언어는 두 설계를 관통한다. 업무 대화에서 합의한 용어가 모델과 코드에서도 같은 뜻으로 쓰여야 한다. 아래 그림에는 이 글에서 다룰 주요 개념과 관계만 추려 담았다.
 
-## 경계 안의 모델을 코드로 표현한다
+![전략적 설계는 업무와 모델의 큰 경계를 정하고, 전술적 설계는 경계 안의 모델을 구체화한다](/images/posts/domain-driven-design/strategic-tactical-overview.svg "DDD의 전략적 설계와 전술적 설계")
 
-앞에서 주문 업무를 살펴보며 주문과 주문 상품이라는 대상, 주문 상태라는 값, 배송 이후에는 취소할 수 없다는 규칙을 찾았다. 이제 이 내용을 주문 컨텍스트의 객체로 옮겨 보자.
+## Entity, Value Object와 Aggregate로 주문 모델을 만든다
 
-처음에는 다음처럼 상태를 직접 바꾸는 코드를 작성할 수 있다.
+주문 컨텍스트 안에는 주문처럼 계속 추적해야 할 대상과 금액·주소 같은 값이 있다. 주문과 주문 상품이 함께 지켜야 할 규칙도 있다. Entity, Value Object와 Aggregate는 이 차이를 코드에 표현하는 전술적 설계의 핵심 개념이다.
+
+앞에서 발견한 `배송 이후에는 주문을 취소할 수 없다`는 규칙부터 코드에 옮겨 보자. 처음에는 다음처럼 주문 상태를 직접 바꿀 수 있다.
 
 ```java
 order.setStatus(OrderStatus.CANCELED);
@@ -308,7 +310,7 @@ public void changeQuantity(OrderLineId lineId, int quantity) {
 
 Aggregate가 너무 크면 작은 변경에도 많은 데이터를 불러오거나 잠가야 할 수 있다. 반대로 너무 작게 나누면 한 번에 지켜야 할 규칙이 여러 Aggregate에 흩어진다. 한 Aggregate의 변경은 하나의 트랜잭션에서 완료하는 것을 기본으로 두고, 여러 Aggregate의 변경이 필요하다면 각각의 트랜잭션과 이벤트를 통한 후속 처리로 나눌 수 있는지 검토한다.
 
-Aggregate를 만들면 한 객체 묶음 안에서 지켜야 할 규칙을 표현할 수 있다. 하지만 기능 하나를 완성하려면 한 객체에 담기 어려운 규칙도 계산하고, 필요한 모델을 불러와 실행한 뒤 저장해야 한다.
+Entity, Value Object와 Aggregate를 이용하면 주문 모델의 상태와 변경 경계를 표현할 수 있다. 기능 하나를 완성하려면 한 객체에 담기 어려운 규칙을 계산하고, 필요한 Aggregate를 불러와 실행한 뒤 저장하는 코드도 필요하다.
 
 ## 도메인 모델로 기능을 완성한다
 
@@ -653,6 +655,7 @@ DDD는 복잡한 업무를 함께 이해하고, 그 이해가 모델과 코드�
 ### 공식 자료
 
 - [Eric Evans - Domain-Driven Design Reference](https://www.domainlanguage.com/wp-content/uploads/2016/05/DDD_Reference_2015-03.pdf)
+- [Microsoft Learn - Use Tactical DDD to Design Microservices](https://learn.microsoft.com/en-us/azure/architecture/microservices/model/tactical-ddd)
 - [Microsoft Learn - DDD 지향 마이크로 서비스 디자인](https://learn.microsoft.com/ko-kr/dotnet/architecture/microservices/microservice-ddd-cqrs-patterns/ddd-oriented-microservice)
 - [Microsoft Learn - Designing a microservice domain model](https://learn.microsoft.com/en-us/dotnet/architecture/microservices/microservice-ddd-cqrs-patterns/microservice-domain-model)
 - [Microsoft Learn - Designing the infrastructure persistence layer](https://learn.microsoft.com/en-us/dotnet/architecture/microservices/microservice-ddd-cqrs-patterns/infrastructure-persistence-layer-design)
