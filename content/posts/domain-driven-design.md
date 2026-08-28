@@ -134,9 +134,7 @@ shipment.stopDispatch();
 
 여기에 `상품을 집기 시작한 주문은 취소할 수 없다`는 규칙을 붙이면 업무에서 말하던 취소가 `Order.cancel()`이라는 모델의 행동으로 이어진다. 이벤트 스토밍은 이처럼 여러 사람이 알고 있던 사건과 규칙을 하나의 흐름으로 펼쳐, 모델에 담을 후보를 찾는 방법이다. Entity나 Aggregate의 경계를 자동으로 결정해 주지는 않는다. 대화에서 얻은 재료를 어떤 모델로 표현할지는 이후에도 계속 판단해야 한다.
 
-지금은 사진 속 포스트잇의 색보다 여러 사람이 사건과 규칙을 한곳에 펼쳐 놓고 같은 업무를 이야기한다는 점을 보면 된다.
-
-![EventStorming을 활용해 업무의 사건과 경계를 함께 탐색하는 모습](/images/posts/domain-driven-design/event-storming.jpg "EventStorming을 활용해 업무의 사건과 경계를 함께 탐색하는 모습. 출처: EventStorming 공식 사이트")
+![사건과 흐름을 연결해 표현한 EventStorming 이미지](/images/posts/domain-driven-design/event-storming.jpg "출처: EventStorming 공식 사이트")
 
 대화 중에 새로운 사건이나 예외가 나오면 모델에 반영하고, 구현하면서 새로 알게 된 내용도 다시 대화로 가져온다. 이 과정을 거치면 주문팀 안에서는 같은 말로 같은 모델을 가리킬 수 있다.
 
