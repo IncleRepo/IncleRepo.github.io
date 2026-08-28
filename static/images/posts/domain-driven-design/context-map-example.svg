@@ -10,8 +10,8 @@
   <text x="164" y="233" text-anchor="middle" font-size="19" font-weight="700" fill="#f1f3f5">Product</text>
   <text x="164" y="258" text-anchor="middle" font-size="14" fill="#aab0b7">현재 상품 정보</text>
   <path d="M286 225H364" stroke="#858c94" stroke-width="2" marker-end="url(#arrow)"/>
-  <text x="325" y="198" text-anchor="middle" font-size="14" fill="#aab0b7">ProductInfo</text>
-  <text x="325" y="217" text-anchor="middle" font-size="13" fill="#aab0b7">API 계약</text>
+  <text x="325" y="200" text-anchor="middle" font-size="12" fill="#aab0b7">ProductInfo</text>
+  <text x="325" y="217" text-anchor="middle" font-size="11" fill="#aab0b7">API 계약</text>
   <rect x="368" y="184" width="112" height="82" rx="4" fill="#283a50" stroke="#78aeea" stroke-width="2"/>
   <text x="424" y="218" text-anchor="middle" font-size="18" font-weight="700" fill="#f1f3f5">ACL</text>
   <text x="424" y="244" text-anchor="middle" font-size="14" fill="#78aeea">모델 번역</text>
@@ -24,9 +24,9 @@
   <rect x="586" y="292" width="222" height="86" rx="4" fill="#30343a" stroke="#4a4f56"/>
   <text x="697" y="328" text-anchor="middle" font-size="20" font-weight="700" fill="#f1f3f5">Order</text>
   <text x="697" y="355" text-anchor="middle" font-size="14" fill="#aab0b7">취소 결과 발생</text>
-  <path d="M854 335H940" stroke="#858c94" stroke-width="2" marker-end="url(#arrow)"/>
-  <text x="897" y="296" text-anchor="middle" font-size="14" fill="#aab0b7">OrderCanceled</text>
-  <text x="897" y="315" text-anchor="middle" font-size="13" fill="#aab0b7">Integration Event</text>
+  <path d="M854 335H900V229H940" fill="none" stroke="#858c94" stroke-width="2" marker-end="url(#arrow)"/>
+  <path d="M900 335V367H940" fill="none" stroke="#858c94" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="897" y="321" text-anchor="middle" font-size="12" fill="#aab0b7">취소 이벤트</text>
   <rect x="944" y="172" width="214" height="114" rx="4" fill="#292c31" stroke="#858c94" stroke-width="2"/>
   <rect x="944" y="310" width="214" height="114" rx="4" fill="#292c31" stroke="#858c94" stroke-width="2"/>
   <text x="1051" y="216" text-anchor="middle" font-size="21" font-weight="700" fill="#f1f3f5">결제 컨텍스트</text>
