@@ -411,14 +411,19 @@ Aggregate를 저장하는 경로를 정했다면, 값을 읽기만 하는 기능
 
 DDD의 Context Map에는 컨텍스트 사이의 관계를 표현하는 여러 패턴이 있다. 기능과 정보를 제공하는 쪽을 **업스트림**, 이를 사용하는 쪽을 **다운스트림**이라고 한다. 모든 관계에 같은 방식을 적용하기보다 두 모델을 얼마나 독립적으로 유지할지에 따라 선택한다.
 
-- **Shared Kernel — 일부를 함께 관리한다.** 모델과 코드의 작은 일부를 공유하며, 이를 바꿀 때는 두 팀이 함께 합의한다.
-- **Conformist — 상대 모델을 따른다.** 다운스트림이 업스트림의 모델과 언어를 받아들인다. 번역은 줄지만 업스트림의 변경 영향도 함께 받는다.
-- **Anti-Corruption Layer — 내 모델로 번역한다.** 외부 계약을 자신의 언어와 모델로 바꾼다. 독립성은 높아지고 변환 코드를 관리할 비용이 생긴다.
-- **Separate Ways — 연결하지 않는다.** 통합의 이익이 작다면 각자 필요한 기능을 구현한다. 일부 중복을 감수하는 대신 서로 독립적으로 바꿀 수 있다.
+- **공유 커널(Shared Kernel) — 같이 쓰되, 작게 쓴다.** 정말 같은 의미를 가진 모델과 코드만 공유하고, 바꿀 때는 두 팀이 함께 합의한다.
+- **순응자(Conformist) — 번역 없이 상대의 말에 맞춘다.** 다운스트림이 업스트림의 모델과 언어를 그대로 받아들인다. 빠르게 연결할 수 있지만 상대가 바꾸면 함께 따라가야 한다.
+- **부패 방지 계층(Anti-Corruption Layer) — 경계에 통역사를 둔다.** 외부 계약을 자신의 언어와 모델로 번역한다. 변환 코드는 늘지만 내부 모델은 상대의 사정에 끌려가지 않는다.
+- **각자의 길(Separate Ways) — 안 엮이는 것도 설계다.** 통합 비용이 얻는 이익보다 크다면 서로 연결하지 않고 각자 구현한다. 방치한 상태가 아니라, 일부 중복을 감수하고 독립성을 택한 결정이다.
 
-여러 컨텍스트가 같은 기능을 이용한다면 제공하는 쪽에서 안정적인 API와 데이터 형식을 공개할 수 있다. DDD에서는 이렇게 공개한 서비스를 **Open Host Service**, 함께 쓰는 교환 언어와 형식을 **Published Language**라고 부른다. 사용하는 쪽은 이 계약을 그대로 따르거나, 자신의 모델에 맞게 번역한다.
+여러 컨텍스트가 같은 기능을 이용한다면 제공하는 쪽에서 안정적인 서비스와 데이터 형식을 공개할 수 있다. 이때 함께 쓰이는 패턴이 다음 두 가지다.
 
-모델의 의미가 다른 두 컨텍스트는 공개 계약을 사이에 두고 경계에서 번역하면 관계가 분명해진다. 모델 일부를 직접 공유하거나 상대 모델을 그대로 따를 수도 있지만, Shared Kernel이나 Conformist처럼 변경의 영향을 받아들이기로 정한 관계여야 한다.
+- **공개 호스트 서비스(Open Host Service) — 필요한 기능을 정식 출입구로 공개한다.** 사용하는 컨텍스트마다 별도의 연결 방법을 만들지 않도록 공통 서비스를 제공한다.
+- **공표된 언어(Published Language) — 출입구에서 주고받을 말을 정한다.** 여러 컨텍스트가 함께 이해할 수 있는 데이터 형식과 의미를 공개된 계약으로 만든다.
+
+사용하는 쪽은 이 계약을 그대로 따르거나, 자신의 모델에 맞게 번역한다.
+
+모델의 의미가 다른 두 컨텍스트는 공개 계약을 사이에 두고 경계에서 번역하면 관계가 분명해진다. 모델 일부를 직접 공유하거나 상대 모델을 그대로 따를 수도 있지만, 공유 커널이나 순응자처럼 변경의 영향을 받아들이기로 정한 관계여야 한다.
 
 ### 공개 계약을 내 모델로 번역한다
 
@@ -574,5 +579,7 @@ DDD는 복잡한 업무를 함께 이해하고, 그 이해가 모델과 코드�
 - [Martin Fowler - Ubiquitous Language](https://martinfowler.com/bliki/UbiquitousLanguage.html)
 - [Martin Fowler - Bounded Context](https://martinfowler.com/bliki/BoundedContext.html)
 - [Martin Fowler - DDD Aggregate](https://martinfowler.com/bliki/DDD_Aggregate.html)
+- [ioob.dev - DDD 3편: Context Mapping](https://ioob.dev/posts/ddd-3-context-mapping/)
+- [ASSU BLOG - DDD 바운디드 컨텍스트 연동](https://assu10.github.io/dev/2024/08/24/ddd-bounded-context-linkage/)
 - [카카오페이 기술 블로그 - 여신코어 DDD로 구축하기](https://tech.kakaopay.com/post/backend-domain-driven-design/)
 - [LY Corporation Tech Blog - DDD를 Merchant 시스템 구축에 활용한 사례](https://techblog.lycorp.co.jp/ko/applying-ddd-to-merchant-system-development)
