@@ -397,7 +397,20 @@ Aggregate를 저장하는 경로를 정했다면, 값을 읽기만 하는 기능
 | 변경 | `Command → Application Service → Aggregate → Repository` |
 | 조회 | `Query → DAO / Projection → Response` |
 
-조회 전용 DAO와 Projection은 화면에 필요한 값을 효율적으로 읽는 방법이다. **CQRS**는 여기서 더 나아가 Command와 Query에 별도의 모델과 처리 경로를 둔다. 가장 단순한 형태에서는 하나의 애플리케이션과 데이터베이스를 유지하면서 읽기와 쓰기 모델만 구분할 수도 있다.
+호출하는 코드도 다음처럼 갈라진다.
+
+```java
+// 변경: Order Aggregate를 불러와 취소 규칙을 실행한다.
+cancelOrderService.cancel(orderId);
+
+// 조회: 화면에 필요한 결과를 바로 가져온다.
+OrderSummary summary =
+    orderQueryDao.findSummary(orderId);
+```
+
+`cancelOrderService`는 `Order`를 불러와 업무 규칙을 실행한다. 반면 `orderQueryDao`는 조회 결과를 화면용 모델인 `OrderSummary`로 바로 반환한다. 변경 모델은 규칙과 일관성에, 조회 모델은 필요한 데이터를 읽는 데 맞춰진다.
+
+이처럼 Command와 Query에 서로 다른 모델과 처리 경로를 두는 방식을 **CQRS**라고 한다. 가장 단순한 형태에서는 하나의 애플리케이션과 데이터베이스를 그대로 사용하면서 코드의 읽기와 쓰기 경로만 나눌 수 있다.
 
 이제 주문 컨텍스트 안에서는 규칙을 판단하고, 기능을 실행하고, 상태를 저장할 수 있다. 주문 취소 뒤에 필요한 환불과 출고 중단은 결제와 배송 컨텍스트의 몫이다.
 
