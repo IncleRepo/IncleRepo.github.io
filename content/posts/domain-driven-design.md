@@ -401,155 +401,77 @@ Aggregate를 저장하는 경로를 정했다면, 값을 읽기만 하는 기능
 
 이제 주문 컨텍스트 안에서는 규칙을 판단하고, 기능을 실행하고, 상태를 저장할 수 있다. 주문 취소 뒤에 필요한 환불과 출고 중단은 결제와 배송 컨텍스트의 몫이다.
 
-## 컨텍스트는 계약으로 협력한다
+## 컨텍스트는 관계와 계약을 정해 협력한다
 
-주문, 결제와 배송은 경계를 나눈 뒤에도 계속 협력한다. 각 컨텍스트는 내부 모델을 독립적으로 유지하고, 서로 주고받을 정보와 형식을 계약으로 정한다. 다음처럼 주문 컨텍스트가 상품 컨텍스트의 내부 모델을 직접 사용하면 상품 모델이 바뀔 때 주문 모델도 영향을 받는다.
+주문, 결제와 배송은 경계를 나눈 뒤에도 계속 협력한다. 이때 먼저 정할 것은 HTTP와 Kafka 중 무엇을 사용할지가 아니다. **어느 컨텍스트가 모델을 소유하고, 상대의 모델을 받아들일지 번역할지**를 정해야 한다.
+
+각 컨텍스트는 자신의 언어와 모델을 가진다. 상품 컨텍스트의 `Product`와 주문 컨텍스트의 `OrderedProduct`가 같은 상품을 가리켜도 필요한 정보와 규칙은 다르다. 한쪽의 내부 모델을 다른 쪽에서 그대로 사용하면 그 모델의 변경도 함께 따라오게 된다.
+
+### 컨텍스트 사이의 관계부터 고른다
+
+DDD의 Context Map에는 컨텍스트 사이의 관계를 표현하는 여러 패턴이 있다. 기능과 정보를 제공하는 쪽을 **업스트림**, 이를 사용하는 쪽을 **다운스트림**이라고 한다. 모든 관계에 같은 방식을 적용하기보다 두 모델을 얼마나 독립적으로 유지할지에 따라 선택한다.
+
+- **Shared Kernel — 일부를 함께 관리한다.** 모델과 코드의 작은 일부를 공유하며, 이를 바꿀 때는 두 팀이 함께 합의한다.
+- **Conformist — 상대 모델을 따른다.** 다운스트림이 업스트림의 모델과 언어를 받아들인다. 번역은 줄지만 업스트림의 변경 영향도 함께 받는다.
+- **Anti-Corruption Layer — 내 모델로 번역한다.** 외부 계약을 자신의 언어와 모델로 바꾼다. 독립성은 높아지고 변환 코드를 관리할 비용이 생긴다.
+- **Separate Ways — 연결하지 않는다.** 통합의 이익이 작다면 각자 필요한 기능을 구현한다. 일부 중복을 감수하는 대신 서로 독립적으로 바꿀 수 있다.
+
+여러 컨텍스트가 같은 기능을 이용한다면 제공하는 쪽에서 안정적인 API와 데이터 형식을 공개할 수 있다. DDD에서는 이렇게 공개한 서비스를 **Open Host Service**, 함께 쓰는 교환 언어와 형식을 **Published Language**라고 부른다. 사용하는 쪽은 이 계약을 그대로 따르거나, 자신의 모델에 맞게 번역한다.
+
+모델의 의미가 다른 두 컨텍스트는 공개 계약을 사이에 두고 경계에서 번역하면 관계가 분명해진다. 모델 일부를 직접 공유하거나 상대 모델을 그대로 따를 수도 있지만, Shared Kernel이나 Conformist처럼 변경의 영향을 받아들이기로 정한 관계여야 한다.
+
+### 공개 계약을 내 모델로 번역한다
+
+상품 컨텍스트가 현재 상품 정보를 `ProductInfo`라는 계약으로 제공한다고 해보자. 주문 컨텍스트는 이 값을 주문 당시의 상품 정보인 `OrderedProduct`로 바꿔 저장한다.
 
 ```java
-import catalog.domain.Product;
-
-public class OrderLine {
-    private Product product;
-}
-```
-
-문제는 다른 패키지를 import했다는 문법보다 상대 컨텍스트의 내부 모델에 의존한다는 데 있다. 상품 컨텍스트가 외부에 공개할 계약을 제공하면 주문 컨텍스트는 이 값을 주문 당시의 상품 정보로 바꿔 보관할 수 있다.
-
-```java
-// 상품 컨텍스트가 공개한 계약
 public record ProductInfo(
     long productId,
     String name,
-    BigDecimal price
+    BigDecimal currentPrice
 ) {
 }
 
-// 주문 컨텍스트의 모델
 public record OrderedProduct(
     long productId,
     String name,
     Money orderPrice
 ) {
-    public static OrderedProduct from(ProductInfo source) {
+}
+
+public class ProductTranslator {
+
+    public OrderedProduct translate(ProductInfo source) {
         return new OrderedProduct(
             source.productId(),
             source.name(),
-            new Money(source.price())
+            new Money(source.currentPrice())
         );
     }
 }
 ```
 
-상품의 현재 가격과 구조가 바뀌어도 이미 생성된 주문은 `OrderedProduct`에 저장한 이름과 주문 가격을 유지한다.
+`ProductTranslator`가 외부 계약을 주문 컨텍스트의 언어로 바꾸는 경계다. 이런 번역 계층을 **부패 방지 계층(Anti-Corruption Layer, ACL)**이라고 한다. 상품의 현재 가격이나 응답 구조가 바뀌면 번역 코드가 먼저 영향을 받고, 주문 모델은 `OrderedProduct`라는 자신의 의미를 유지한다.
 
-### Command, Domain Event와 Integration Event를 구분한다
+### 요청과 사건도 컨텍스트의 계약이 된다
 
-상품 정보를 조회하듯 데이터를 주고받을 수도 있지만, 주문 취소처럼 상태를 바꾼 뒤 후속 처리를 이어 가야 할 때는 메시지가 유용하다. 앞서 Event Storming에서 나눈 `해 달라는 요청`과 `이미 일어난 사실`은 코드에서도 구분한다.
+컨텍스트는 필요한 정보를 요청하거나, 이미 일어난 사건을 알리는 방식으로 협력할 수 있다.
 
-- **Command — `CancelOrder`**: 주문을 취소해 달라는 요청
+- **Command — `CancelOrder`**: 특정 대상에게 주문을 취소해 달라고 요청한다.
+- **Domain Event — `OrderCanceled`**: 주문 컨텍스트 안에서 주문이 취소되었다는 사실을 표현한다.
+- **Integration Event — `OrderCanceledIntegrationEvent`**: 그 사실을 다른 컨텍스트에 공개하는 계약이다.
 
-- **Domain Event — `OrderCanceled`**: 주문이 이미 취소되었다는 사실
+주문 컨텍스트가 `OrderCanceledIntegrationEvent`를 공개하면 결제와 쿠폰 컨텍스트는 각자의 규칙에 따라 환불과 쿠폰 복구를 처리한다. 주문은 상대 컨텍스트의 내부 모델이나 처리 순서를 알 필요가 없다.
 
-- **Integration Event — `OrderCanceledIntegrationEvent`**: 주문 취소 사실을 다른 컨텍스트에 공개하는 메시지
+이 계약을 전달하는 기술은 실행 환경에 따라 달라진다. 같은 애플리케이션에서는 인터페이스 호출이나 Spring Application Event를, 프로세스 사이에서는 HTTP·gRPC나 Kafka 같은 메시지 브로커를 사용할 수 있다. **전달 기술은 계약을 운반하는 수단이고, 컨텍스트의 관계와 모델 경계를 대신 정해 주지는 않는다.**
 
-주문이 취소되었다는 사실을 코드로 표현하면 다음과 같다.
+### Context Map은 선택한 관계를 보여준다
 
-```java
-public record OrderCanceled(
-    OrderId orderId,
-    Instant occurredAt
-) {
-}
-```
-
-#### 같은 애플리케이션 안에서 전달한다면
-
-Application Service는 도메인 모델이 취소를 승인한 뒤 `OrderCanceled`를 발행할 수 있다. 같은 애플리케이션 안에서 전달한다면 Spring의 `ApplicationEventPublisher`를 사용할 수 있다.
-
-```java
-order.cancel();
-orderRepository.save(order);
-
-eventPublisher.publishEvent(
-    new OrderCanceled(order.id(), Instant.now())
-);
-```
-
-여기서는 흐름을 단순하게 보여주기 위해 Application Service가 이벤트를 만든다. 설계에 따라 Aggregate가 이벤트를 등록하거나 반환할 수도 있다.
-
-커밋이 끝난 뒤 알림을 보내고 싶다면 리스너를 다음처럼 분리할 수 있다.
-
-```java
-@Component
-@RequiredArgsConstructor
-public class OrderCanceledListener {
-
-    private final NotificationService notificationService;
-
-    @TransactionalEventListener(
-        phase = TransactionPhase.AFTER_COMMIT
-    )
-    public void handle(OrderCanceled event) {
-        notificationService.sendCancelNotice(event.orderId());
-    }
-}
-```
-
-일반 `@EventListener`는 기본 설정에서 발행 스레드가 리스너까지 실행한다. `@TransactionalEventListener(AFTER_COMMIT)`은 실행 시점을 커밋 이후로 정할 뿐, 작업을 자동으로 비동기로 만들거나 이벤트를 안전하게 보관하지는 않는다. 비동기 실행에는 별도 설정이 필요하고, 프로세스가 중단되어도 다시 처리해야 한다면 저장과 재시도 방식까지 설계해야 한다.
-
-#### 다른 컨텍스트에 전달한다면
-
-다른 컨텍스트에도 알려야 한다면 내부의 `OrderCanceled`를 외부 계약인 `OrderCanceledIntegrationEvent`로 바꿔 Kafka 같은 메시지 브로커로 전달할 수 있다.
-
-아래 그림에서 `OrderCanceled`는 주문 컨텍스트 안에서 전달되고, 외부로 나갈 때는 별도의 Integration Event로 변환된다.
-
-![Spring Application Event로 같은 애플리케이션 안에서 Domain Event를 전달하고, Integration Event는 Kafka를 거쳐 다른 컨텍스트로 전달하는 흐름](/images/posts/domain-driven-design/domain-event-flow.svg "Spring Application Event와 Integration Event의 전달 범위")
-
-결제와 쿠폰 컨텍스트는 이 메시지를 받은 뒤 각자의 규칙에 따라 환불과 쿠폰 복구를 처리한다. 이렇게 하면 주문이 상대 컨텍스트의 처리 순서와 내부 모델까지 알 필요가 없다.
-
-다만 이벤트가 DB와 메시지 브로커의 저장을 하나의 트랜잭션으로 묶어 주는 것은 아니다. 주문 저장은 성공했지만 메시지 발행은 실패할 수 있다. 이런 간격을 줄이는 대표적인 방법이 이벤트를 DB에 함께 기록한 뒤 별도 작업이 브로커로 전달하는 **Transactional Outbox**다. 재전송 과정에서는 같은 메시지가 여러 번 도착할 수 있으므로 소비자는 중복 처리에도 안전해야 한다.
-
-컨텍스트는 메시지뿐 아니라 API로도 협력한다. 응답을 직접 주고받을 때는 외부 모델이 내부로 그대로 퍼지지 않도록 경계에서 변환할 수 있다.
-
-### 조금 더 나아가면: 외부 모델을 내 언어로 번역한다
-
-결제 컨텍스트가 반환한 `PaymentResponse`를 주문 코드까지 그대로 전달하면 주문도 결제의 이름과 응답 구조를 알아야 한다. 경계에 Adapter를 두면 외부 응답을 주문 컨텍스트의 `RefundResult`로 바꿀 수 있다.
-
-```java
-@Component
-@RequiredArgsConstructor
-public class PaymentAdapter {
-
-    private final PaymentApi paymentApi;
-
-    public RefundResult refund(
-        OrderId orderId,
-        Money amount
-    ) {
-        PaymentResponse response = paymentApi.refund(
-            orderId.value(),
-            amount.amount()
-        );
-
-        return new RefundResult(
-            response.paymentCode(),
-            new Money(response.cancelAmount())
-        );
-    }
-}
-```
-
-결제 응답 형식이 바뀌면 `PaymentAdapter`의 변환 코드가 영향을 받는다. 주문 모델은 `RefundResult`라는 자신의 언어를 유지한다. 이처럼 외부 모델을 내 컨텍스트의 언어로 번역하는 경계를 **부패 방지 계층**이라고 한다. 영어로는 Anti-Corruption Layer, 줄여서 ACL이라고 부른다.
-
-컨텍스트가 많아지면 개별 계약뿐 아니라 전체 관계도 함께 볼 필요가 있다.
-
-### Context Map은 컨텍스트 사이의 관계를 보여준다
-
-여러 컨텍스트가 어떤 관계로 연결되고 어떤 계약을 주고받는지 정리한 그림을 **Context Map**이라고 한다. 상품 컨텍스트가 주문에 상품 정보를 제공하고, 주문 컨텍스트가 결제와 쿠폰에 취소 결과를 전달하는 관계를 다음처럼 표현할 수 있다.
+어느 컨텍스트가 정보를 제공하는지, 상대 모델을 따르는지 번역하는지, 어떤 계약을 주고받는지를 함께 정리한 그림이 **Context Map**이다. 상품 컨텍스트가 주문에 상품 정보를 제공하고, 주문 컨텍스트가 결제와 쿠폰에 취소 결과를 전달하는 관계를 다음처럼 표현할 수 있다.
 
 ![상품, 주문, 결제와 쿠폰 컨텍스트가 API 계약, ACL과 Integration Event로 협력하는 Context Map](/images/posts/domain-driven-design/context-map-example.svg "주문 기능을 중심으로 정리한 Context Map의 예")
 
-Context Map을 보면 어느 컨텍스트가 정보를 제공하고, 경계에서 어떤 변환이 필요하며, 변경의 영향이 어디까지 이어지는지 확인할 수 있다.
+이 예에서 주문 컨텍스트는 상품의 `ProductInfo`를 ACL에서 번역하고, 주문 취소 결과는 Integration Event로 공개한다. Context Map은 시스템을 단순히 상자로 나누는 그림이 아니라, **각 경계에서 선택한 관계와 계약을 기록한 지도**다.
 
 ## DDD는 언제 도움이 될까?
 
@@ -638,13 +560,12 @@ DDD는 복잡한 업무를 함께 이해하고, 그 이해가 모델과 코드�
 
 - [Eric Evans - Domain-Driven Design Reference](https://www.domainlanguage.com/wp-content/uploads/2016/05/DDD_Reference_2015-03.pdf)
 - [Microsoft Learn - Use domain analysis to model microservices](https://learn.microsoft.com/en-us/azure/architecture/microservices/model/domain-analysis)
+- [Microsoft Learn - Anti-Corruption Layer pattern](https://learn.microsoft.com/en-us/azure/architecture/patterns/anti-corruption-layer)
 - [Microsoft Learn - Use Tactical DDD to Design Microservices](https://learn.microsoft.com/en-us/azure/architecture/microservices/model/tactical-ddd)
 - [Microsoft Learn - DDD 지향 마이크로 서비스 디자인](https://learn.microsoft.com/ko-kr/dotnet/architecture/microservices/microservice-ddd-cqrs-patterns/ddd-oriented-microservice)
 - [Microsoft Learn - Designing a microservice domain model](https://learn.microsoft.com/en-us/dotnet/architecture/microservices/microservice-ddd-cqrs-patterns/microservice-domain-model)
 - [Microsoft Learn - Domain events: Design and implementation](https://learn.microsoft.com/en-us/dotnet/architecture/microservices/microservice-ddd-cqrs-patterns/domain-events-design-implementation)
 - [Microsoft Learn - CQRS pattern](https://learn.microsoft.com/en-us/azure/architecture/patterns/cqrs)
-- [Spring Framework - Application Events](https://docs.spring.io/spring-framework/reference/core/beans/context-introduction.html#context-functionality-events)
-- [Spring Framework - Transaction-bound Events](https://docs.spring.io/spring-framework/reference/data-access/transaction/event.html)
 - [EventStorming - 공식 사이트](https://www.eventstorming.com/)
 
 ### 추가 자료
@@ -653,6 +574,5 @@ DDD는 복잡한 업무를 함께 이해하고, 그 이해가 모델과 코드�
 - [Martin Fowler - Ubiquitous Language](https://martinfowler.com/bliki/UbiquitousLanguage.html)
 - [Martin Fowler - Bounded Context](https://martinfowler.com/bliki/BoundedContext.html)
 - [Martin Fowler - DDD Aggregate](https://martinfowler.com/bliki/DDD_Aggregate.html)
-- [microservices.io - Transactional Outbox](https://microservices.io/patterns/data/transactional-outbox.html)
 - [카카오페이 기술 블로그 - 여신코어 DDD로 구축하기](https://tech.kakaopay.com/post/backend-domain-driven-design/)
 - [LY Corporation Tech Blog - DDD를 Merchant 시스템 구축에 활용한 사례](https://techblog.lycorp.co.jp/ko/applying-ddd-to-merchant-system-development)
