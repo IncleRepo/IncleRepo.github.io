@@ -94,6 +94,8 @@ shipment.stopDispatch();
 
 먼저 업무 담당자와 개발자가 `취소가 정확히 무엇인지` 합의해야 한다. `cancel()`은 그 합의가 코드에 드러난 결과다. 반대로 코드에 `changeStatus(4)`만 남겨 두면 개발자는 숫자 `4`의 의미를 다시 찾아야 한다. 함께 정한 언어가 문서에만 머물지 않고 코드까지 이어져야 하는 이유다.
 
+이처럼 용어를 맞추려면 각자가 알고 있는 업무 흐름을 한곳에 펼쳐 놓고 이야기할 자리가 필요하다.
+
 ### 대화 속 사건을 시간 순서로 펼쳐 본다
 
 업무 흐름과 용어를 찾는 방법 중 하나가 **이벤트 스토밍**이다. 업무에서 일어난 사건을 시간 순서대로 펼쳐 놓고 대화하면서 빠진 과정과 서로 다른 해석을 찾는다. 짧은 회의 장면을 생각해 보자.
@@ -306,20 +308,39 @@ public void changeQuantity(OrderLineId lineId, int quantity) {
 
 Aggregate가 너무 크면 작은 변경에도 많은 데이터를 불러오거나 잠가야 할 수 있다. 반대로 너무 작게 나누면 한 번에 지켜야 할 규칙이 여러 Aggregate에 흩어진다. 한 Aggregate의 변경은 하나의 트랜잭션에서 완료하는 것을 기본으로 두고, 여러 Aggregate의 변경이 필요하다면 각각의 트랜잭션과 이벤트를 통한 후속 처리로 나눌 수 있는지 검토한다.
 
-이제 `Order`는 취소 가능 여부를 스스로 판단할 수 있다. 남은 일은 HTTP 요청에 맞는 주문을 불러오고, `cancel()`을 호출한 뒤 결과를 저장하는 것이다.
+Aggregate를 만들면 한 객체 묶음 안에서 지켜야 할 규칙을 표현할 수 있다. 하지만 기능 하나를 완성하려면 한 객체에 담기 어려운 규칙도 계산하고, 필요한 모델을 불러와 실행한 뒤 저장해야 한다.
 
-## Application Service는 도메인 모델로 기능을 완성한다
+## 도메인 모델로 기능을 완성한다
 
-Spring 애플리케이션에서는 흔히 Controller가 요청을 받고, Service가 업무를 처리하며, Repository가 데이터에 접근한다. DDD에서는 이 가운데 Service와 도메인 객체가 맡을 일을 구분한다.
+기능을 완성하는 과정에서는 Domain Service, Application Service와 Repository가 서로 다른 일을 맡는다. 이름은 비슷해도 Domain Service는 업무 규칙을 표현하고, Application Service는 그 규칙을 사용해 하나의 작업을 진행한다.
 
-| 영역 | 맡는 일 |
-|---|---|
-| Presentation | 외부 요청과 응답을 애플리케이션에 연결 |
-| Application Service | 도메인 객체를 준비하고 호출해 하나의 사용 사례와 트랜잭션을 완성 |
-| Domain Model | 업무적으로 무엇이 가능한지 판단 |
-| Infrastructure | DB, 메시지와 외부 API를 구체적인 기술로 연결 |
+### Domain Service는 한 객체가 맡기 어려운 규칙을 다룬다
 
-주문 취소 요청은 다음 순서로 진행할 수 있다.
+주문 취소 조건은 `Order` 안에 자연스럽게 들어간다. 금액 계산도 `Money`가 맡을 수 있다. 먼저 규칙을 책임질 Entity나 Value Object가 있는지 살펴보는 이유다.
+
+할인처럼 여러 모델의 정보를 함께 판단해야 하는 규칙은 한 객체에 넣기 어려울 수 있다. 이 규칙 자체가 독립적인 업무 개념이라면 **Domain Service**로 표현할 수 있다.
+
+회원 등급과 주문을 같은 판매 정책 컨텍스트에서 다룬다고 가정해 보자. 두 정보를 함께 살펴 할인액을 계산하는 정책은 다음과 같다.
+
+```java
+public class DiscountPolicy {
+
+    public Money calculate(Member member, Order order) {
+        if (member.isVip()) {
+            return order.totalPrice()
+                .multiply(new BigDecimal("0.10"));
+        }
+
+        return Money.ZERO;
+    }
+}
+```
+
+`DiscountPolicy`는 회원 등급과 주문 금액을 바탕으로 할인액을 계산한다. 다만 어느 회원과 주문을 불러오고, 계산 결과를 어디에 저장할지까지 결정하지는 않는다. 그 전체 흐름은 Application Service가 맡는다.
+
+### Application Service는 작업의 흐름을 조정한다
+
+주문 취소 사례로 돌아가 보자. `Order`는 취소 가능 여부를 판단할 수 있지만, 기능을 실행하려면 요청받은 주문을 불러오고 `cancel()`을 호출한 뒤 변경 결과를 저장해야 한다.
 
 ```java
 @Service
@@ -340,11 +361,27 @@ public class CancelOrderService {
 }
 ```
 
-`CancelOrderService`는 주문을 불러오고 `cancel()`을 호출한 뒤 저장한다. 주문 취소라는 사용 사례를 처음부터 끝까지 진행하는 역할이다. 배송을 시작한 주문을 취소할 수 있는지는 `Order.cancel()`이 판단한다. 이 조건은 HTTP API뿐 아니라 관리자 기능과 배치에서도 똑같이 지켜야 하는 주문의 규칙이기 때문이다.
+`CancelOrderService`는 주문 취소라는 사용 사례를 처음부터 끝까지 진행한다. 반면 배송을 시작한 주문을 취소할 수 있는지는 `Order.cancel()`이 판단한다. HTTP API뿐 아니라 관리자 기능과 배치에서도 똑같이 지켜야 하는 주문의 규칙이기 때문이다.
+
+Spring 애플리케이션의 각 영역에 방금 살펴본 역할을 놓으면 다음과 같다.
+
+| 영역 | 맡는 일 |
+|---|---|
+| Presentation | 외부 요청과 응답을 애플리케이션에 연결 |
+| Application Service | 도메인 모델을 준비하고 호출해 하나의 사용 사례와 트랜잭션을 완성 |
+| Domain Model | 업무적으로 무엇이 가능한지 판단 |
+| Infrastructure | DB, 메시지와 외부 API를 구체적인 기술로 연결 |
+
+할인 적용 기능에서도 같은 구분을 사용할 수 있다.
+
+| 구분 | 할인 적용에서 맡는 일 |
+|---|---|
+| Application Service | `Order`와 `Member` 조회 → 할인 계산 요청 → 결과 저장 |
+| Domain Service | 회원 등급과 주문 금액을 바탕으로 할인액 계산 |
 
 ### Repository는 Aggregate를 저장하고 복원한다
 
-Application Service가 이 순서를 진행하려면 `Order`를 불러오고 변경 결과를 다시 저장할 통로가 필요하다. 이처럼 Aggregate를 저장하고 복원하는 역할을 **Repository**가 맡는다.
+Application Service가 작업을 진행하려면 Aggregate를 불러오고 변경 결과를 저장할 통로가 필요하다. 이 역할을 **Repository**가 맡는다.
 
 ```java
 public interface OrderRepository {
@@ -355,7 +392,7 @@ public interface OrderRepository {
 }
 ```
 
-`orders`와 `order_lines`가 서로 다른 테이블에 있더라도 주문 상품은 `Order`의 일부로 불러온다. 변경도 Root를 거쳐야 총금액 계산 같은 주문 규칙을 빠뜨리지 않는다.
+`orders`와 `order_lines`가 서로 다른 테이블에 있더라도 주문 상품은 `Order` Aggregate의 일부로 불러온다. 변경도 Root를 거쳐야 수량과 총금액을 함께 관리할 수 있다.
 
 ```java
 // 내부 객체만 바꾸면 주문 규칙을 우회할 수 있다.
@@ -373,11 +410,17 @@ orderRepository.save(order);
 
 #### 저장 기술로 구현할 때
 
-Application Service는 도메인에 정의한 `OrderRepository` 인터페이스에 의존한다. Infrastructure 영역은 Spring Data JPA나 `EntityManager`로 이 계약을 구현한다. JPA Entity가 영속 상태라면 변경 사항은 Dirty Checking으로 반영될 수 있다. 예제의 `save()`는 `Aggregate를 불러오고 변경한 뒤 저장한다`는 흐름을 보여주기 위해 남겼다.
+Application Service는 도메인에 정의한 `OrderRepository` 인터페이스에 의존한다. Infrastructure 영역은 Spring Data JPA나 `EntityManager`로 이 계약을 구현한다.
 
-#### 조회 경로는 따로 둘 수 있다
+JPA Entity가 영속 상태라면 변경 사항은 Dirty Checking으로 반영될 수 있다. 예제의 `save()`는 `Aggregate를 불러오고 변경한 뒤 저장한다`는 흐름을 보여주기 위해 명시했다.
 
-주문 취소와 주문 목록은 같은 주문 데이터를 다루지만 필요한 모델은 다르다. 주문을 취소할 때는 업무 규칙을 지켜야 하므로 Application Service가 `Order` Aggregate를 불러와 상태를 변경한다. 주문 목록은 Aggregate 전체를 복원하지 않고 조회 전용 DAO나 Projection으로 화면에 필요한 값만 가져올 수 있다.
+Aggregate를 저장하는 경로를 정했다면, 값을 읽기만 하는 기능도 같은 경로를 따라야 하는지 살펴볼 수 있다.
+
+### 조회는 필요한 형태로 가져온다
+
+지금까지 살펴본 주문 취소는 상태를 바꾸는 기능이다. 업무 규칙을 지켜야 하므로 Application Service가 `Order` Aggregate를 불러와 변경한다.
+
+주문 목록처럼 값을 읽기만 하는 기능은 목적이 다르다. Aggregate 전체를 복원하지 않고 조회 전용 DAO나 Projection으로 화면에 필요한 값만 가져올 수 있다.
 
 | 작업 | 처리 흐름 |
 |---|---|
@@ -386,38 +429,9 @@ Application Service는 도메인에 정의한 `OrderRepository` 인터페이스�
 
 이처럼 변경과 조회의 책임을 나누는 구조를 **CQRS**라고 한다. Command Query Responsibility Segregation, 즉 명령과 조회 책임 분리를 뜻한다.
 
-가장 단순한 형태는 하나의 애플리케이션과 데이터베이스를 유지한 채 두 코드 경로만 나누는 방식이다. CQRS는 필요에 따라 함께 사용할 수 있는 선택지이며 DDD의 필수 요소는 아니다.
+가장 단순한 형태는 하나의 애플리케이션과 데이터베이스를 유지한 채 코드의 경로만 나누는 방식이다. CQRS는 필요에 따라 함께 사용할 수 있는 선택지이며 DDD의 필수 요소는 아니다.
 
-### Domain Service는 한 객체가 맡기 어려운 규칙을 다룬다
-
-주문 취소 조건은 `Order` 안에 자연스럽게 들어갔다. 할인처럼 여러 모델의 정보를 함께 판단하는 규칙은 주인을 정하기가 더 어렵다. 먼저 한 Aggregate가 그 규칙을 자연스럽게 책임질 수 있는지 살펴본다. 주문 취소 조건은 `Order`가 맡고, 금액 계산은 `Money`가 맡을 수 있다.
-
-규칙을 어느 Entity나 Value Object에도 자연스럽게 둘 수 없고, 규칙 자체가 독립적인 업무 개념이라면 **Domain Service** 후보가 된다.
-
-회원 등급과 주문을 같은 판매 정책 컨텍스트에서 다룬다고 가정해 보자. 두 정보를 함께 살펴 할인액을 계산하는 정책은 다음처럼 표현할 수 있다.
-
-```java
-public class DiscountPolicy {
-
-    public Money calculate(Member member, Order order) {
-        if (member.isVip()) {
-            return order.totalPrice()
-                .multiply(new BigDecimal("0.10"));
-        }
-
-        return Money.ZERO;
-    }
-}
-```
-
-`DiscountPolicy`는 두 Aggregate의 정보를 받아 할인액을 계산한다. 전체 작업은 Application Service가 진행하고, 한 객체에 귀속하기 어려운 계산 규칙은 Domain Service가 맡는다.
-
-| 구분 | 할인 적용에서 맡는 일 |
-|---|---|
-| Application Service | `Order`와 `Member` 조회 → 할인 계산 요청 → 결과 저장 |
-| Domain Service | 회원 등급과 주문 금액을 바탕으로 할인액을 계산 |
-
-여기까지 주문 컨텍스트 안의 객체와 작업 흐름을 살펴봤다. 이제 환불과 출고 중단을 처리하기 위해 결제와 배송 컨텍스트에 결과를 전달해야 한다.
+이제 주문 컨텍스트 안에서는 규칙을 판단하고, 기능을 실행하고, 상태를 저장할 수 있다. 주문 취소 뒤에 필요한 환불과 출고 중단은 결제와 배송 컨텍스트의 몫이다.
 
 ## 다른 컨텍스트와 명시적으로 협력한다
 
@@ -507,6 +521,8 @@ public void handle(OrderCanceled event) {
 
 결제와 쿠폰 컨텍스트는 이 메시지를 받은 뒤 각자의 규칙에 따라 환불과 쿠폰 복구를 처리한다. 외부 메시지는 주문 트랜잭션이 성공한 뒤 전달되어야 하며, 실제 구현에서는 발행 실패와 재시도, 중복 처리, DB 트랜잭션과 메시지 사이의 정합성을 함께 설계한다.
 
+컨텍스트가 항상 메시지로만 협력하는 것은 아니다. API로 응답을 직접 주고받을 때도 외부 모델이 내부로 그대로 퍼지지 않도록 경계에서 변환할 수 있다.
+
 ### 외부 모델을 내 언어로 번역한다
 
 결제 컨텍스트가 반환한 `PaymentResponse`를 주문 코드까지 그대로 전달하면 주문도 결제의 이름과 응답 구조를 알아야 한다. 경계에 Adapter를 두면 외부 응답을 주문 컨텍스트의 `RefundResult`로 바꿀 수 있다.
@@ -537,6 +553,8 @@ public class PaymentAdapter {
 
 결제 응답 형식이 바뀌면 `PaymentAdapter`의 변환 코드가 영향을 받는다. 주문 모델은 `RefundResult`라는 자신의 언어를 유지한다. 이처럼 외부 모델을 내 컨텍스트의 언어로 번역하는 경계를 **부패 방지 계층**이라고 한다. 영어로는 Anti-Corruption Layer, 줄여서 ACL이라고 부른다.
 
+컨텍스트가 많아지면 개별 계약뿐 아니라 전체 관계도 함께 볼 필요가 있다.
+
 ### Context Map은 컨텍스트 사이의 관계를 보여준다
 
 여러 컨텍스트가 어떤 관계로 연결되고 어떤 계약을 주고받는지 정리한 그림을 **Context Map**이라고 한다. 상품 컨텍스트가 주문에 상품 정보를 제공하고, 주문 컨텍스트가 결제와 쿠폰에 취소 결과를 전달하는 관계를 다음처럼 표현할 수 있다.
@@ -556,6 +574,8 @@ Context Map을 보면 어느 컨텍스트가 정보를 제공하고, 경계에�
 5. 구현하며 새로 발견한 예외와 규칙을 모델에 다시 반영한다.
 
 이 과정은 한 번에 끝나지 않는다. 구현에서 발견한 예외와 규칙을 다시 대화로 가져오면서 업무에 대한 이해와 모델을 함께 다듬는다.
+
+다만 모든 기능에 이 과정을 같은 깊이로 적용할 필요는 없다. DDD에 들일 시간은 업무의 복잡도와 중요도에 맞춰야 한다.
 
 ## DDD는 언제 도움이 될까?
 
