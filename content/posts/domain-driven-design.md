@@ -62,7 +62,9 @@ DDD, 즉 도메인 주도 설계는 복잡한 업무를 도메인 전문가와 �
 
 세 문장을 코드로 바로 옮기기 전에 무엇을 표현해야 하는지 나누어 보자. 주문과 주문 상품은 계속 상태가 바뀌는 **대상**이고, 주문 상태는 그 대상이 가진 **값**이다. 취소는 주문에 일어나는 **행동**이며, 배송 시작 이후에는 허용하지 않는다는 **규칙**이 붙는다.
 
-이 내용은 이후 `Order`, `OrderLine`, `OrderStatus`와 `Order.cancel()` 같은 코드로 표현할 수 있다. 어떤 대상을 중요하게 보고 어떤 규칙을 담을지는 실제 업무를 아는 사람과 개발자가 함께 정한다.
+이 내용은 이후 `Order`, `OrderLine`, `OrderStatus`와 `Order.cancel()` 같은 코드로 표현할 수 있다. 다만 업무에서 명사를 찾았다고 곧바로 Entity가 되고, 사건을 찾았다고 그대로 메서드가 되는 것은 아니다. 발견한 대상과 상태, 규칙을 어떤 모델로 표현할지 판단하고 구현을 통해 계속 수정한다.
+
+도메인은 현실의 업무이고, 도메인 모델은 그중 현재 문제를 푸는 데 필요한 부분을 추린 표현이다. 패키지 이름을 `domain`으로 정하거나 JPA Entity를 모으는 일만으로 이 모델이 만들어지지는 않는다.
 
 ### 도메인 전문가는 업무의 예외를 알고 있다
 
@@ -112,19 +114,27 @@ shipment.stopDispatch();
 >
 > **결제팀:** 주문이 취소된 뒤에는 저희가 환불을 처리합니다.
 
-대화에서 확인한 사건을 시간 순서로 놓으면 다음과 같다.
+대화에서 확인한 흐름을 가장 단순하게 놓으면 다음과 같다.
 
-1. 주문 취소가 요청되었다.
-2. 주문이 취소되었다.
-3. 환불이 요청되었다.
-4. 출고 중단이 요청되었다.
-5. 쿠폰과 재고가 복구되었다.
+```text
+고객
+↓ 행동 요청
+주문을 취소해라              Command
+↓ 주문 상태와 취소 규칙 판단
+주문이 취소되었다            Event
+↓ 후속 처리 요청
+환불해라 · 출고를 중단해라   Command
+```
 
-이미 상품을 집기 시작했다면 두 번째 사건으로 넘어가지 못한다. 같은 `배송 전`이라는 말도 팀마다 가리키는 시점이 달랐고, 그 차이가 취소 가능 여부를 바꾸고 있었다.
+**Command**는 어떤 행동을 해 달라는 요청이고, **Event**는 이미 일어난 사실이다. 이벤트 스토밍에서는 Event만 나열하는 것이 아니라 이를 일으킨 Command와 사람, 뒤따르는 정책도 함께 놓을 수 있다. 이 글에서는 색상과 세부 절차보다 요청과 판단, 결과가 한 흐름에서 드러난다는 점만 보면 된다.
 
-사건은 이미 일어난 결과를 나타낸다. `주문이 취소되었다` 앞에는 주문 상태를 확인해 취소 여부를 판단하는 과정이 있다. 이 과정을 거꾸로 따라가면 상태를 가진 대상은 **주문**, 주문이 제공해야 할 행동은 **취소**라는 사실이 보인다.
+이미 상품을 집기 시작했다면 `주문이 취소되었다`라는 Event에 도달하지 못한다. 같은 `배송 전`이라는 말도 팀마다 가리키는 시점이 달랐고, 그 차이가 취소 가능 여부를 바꾸고 있었다.
 
-여기에 `상품을 집기 시작한 주문은 취소할 수 없다`는 규칙을 붙이면 업무에서 말하던 취소가 `Order.cancel()`이라는 모델의 행동으로 이어진다. 이벤트 스토밍은 이처럼 여러 사람이 알고 있던 사건과 규칙을 하나의 흐름으로 펼쳐, 모델에 담을 후보를 찾는 방법이다.
+`주문이 취소되었다` 앞에는 주문 상태를 확인해 취소 여부를 판단하는 과정이 있다. 이 과정을 거꾸로 따라가면 상태를 가진 대상은 **주문**, 주문이 제공해야 할 행동은 **취소**라는 사실이 보인다.
+
+여기에 `상품을 집기 시작한 주문은 취소할 수 없다`는 규칙을 붙이면 업무에서 말하던 취소가 `Order.cancel()`이라는 모델의 행동으로 이어진다. 이벤트 스토밍은 이처럼 여러 사람이 알고 있던 사건과 규칙을 하나의 흐름으로 펼쳐, 모델에 담을 후보를 찾는 방법이다. Entity나 Aggregate의 경계를 자동으로 결정해 주지는 않는다. 대화에서 얻은 재료를 어떤 모델로 표현할지는 이후에도 계속 판단해야 한다.
+
+지금은 사진 속 포스트잇의 색보다 여러 사람이 사건과 규칙을 한곳에 펼쳐 놓고 같은 업무를 이야기한다는 점을 보면 된다.
 
 ![EventStorming을 활용해 업무의 사건과 경계를 함께 탐색하는 모습](/images/posts/domain-driven-design/event-storming.jpg "EventStorming을 활용해 업무의 사건과 경계를 함께 탐색하는 모습. 출처: EventStorming 공식 사이트")
 
@@ -147,29 +157,44 @@ shipment.stopDispatch();
 
 상품팀과 주문팀이 사용하는 `상품`을 예로 들어 보자. 상품팀에는 현재 판매 가격, 상품 설명과 선택 가능한 옵션이 중요하다. 주문팀에는 고객이 주문한 당시의 이름, 가격과 수량이 필요하다. 상품팀이 오늘 가격을 바꾸더라도 어제 결제한 주문 금액은 그대로 남아야 한다.
 
-따라서 상품 컨텍스트의 `Product`와 주문 컨텍스트의 주문 상품은 이름이 비슷해도 서로 다른 모델로 둘 수 있다. 같은 현실의 상품을 다루더라도 풀려는 문제가 다르면 필요한 정보와 규칙도 달라지기 때문이다.
+따라서 상품 컨텍스트의 `Product`와 주문 컨텍스트의 주문 상품은 이름이 비슷해도 서로 다른 모델로 둘 수 있다. **같은 현실 대상을 다룬다고 반드시 같은 도메인 모델을 사용해야 하는 것은 아니다.** 풀려는 문제가 다르면 필요한 정보와 규칙도 달라진다.
 
-주문 취소도 마찬가지다. 주문 컨텍스트는 주문 상태를 바꾸고, 결제 컨텍스트는 환불 가능 여부와 금액을 계산하며, 배송 컨텍스트는 출고를 멈출 수 있는지 판단한다. 각 컨텍스트는 자신이 맡은 규칙을 판단하고 다른 컨텍스트에는 필요한 요청이나 사건만 전달한다.
+주문 취소도 마찬가지다. 이 글에서는 설명을 위해 주문, 결제와 배송을 서로 다른 컨텍스트로 나눈다. 주문 컨텍스트는 주문 상태를 바꾸고, 결제 컨텍스트는 환불 가능 여부와 금액을 계산하며, 배송 컨텍스트는 출고를 멈출 수 있는지 판단한다. 실제 경계는 조직 이름이나 업무 명사보다 모델의 의미와 변경 패턴을 살펴 정한다.
 
-이 경계는 `order`, `payment` 같은 패키지나 Gradle 모듈로 드러낼 수 있고, 필요하다면 독립 서비스로 분리할 수도 있다. 하나의 모놀리식 애플리케이션 안에도 여러 바운디드 컨텍스트를 둘 수 있다. 패키지, 모듈과 서비스는 경계를 코드로 표현하는 방법이며, 경계를 찾을 때는 구현 단위보다 모델의 의미가 달라지는 지점을 먼저 살핀다.
+바운디드 컨텍스트의 본질은 모델과 언어의 의미가 유효한 범위다. `order`, `payment` 같은 패키지나 Gradle 모듈로 경계를 드러낼 수도 있고, 독립 서비스로 분리할 수도 있다. 하나의 모놀리식 애플리케이션 안에도 여러 바운디드 컨텍스트가 존재할 수 있으므로 패키지, 모듈과 Microservice는 경계를 구현하는 선택지로 구분해 본다.
 
 바운디드 컨텍스트 하나에도 서로 다른 규칙을 맡는 객체 묶음이 여러 개 들어갈 수 있다. 뒤에서 살펴볼 **Aggregate**는 컨텍스트 안에서 상태 변경의 일관성을 관리하는 더 작은 경계다.
+
+이 그림에서는 바운디드 컨텍스트가 Aggregate보다 큰 모델의 경계라는 점을 먼저 보면 된다.
 
 ![주문 컨텍스트 안의 여러 애그리거트와 상품 컨텍스트의 관계](/images/posts/domain-driven-design/context-and-aggregate.svg "바운디드 컨텍스트와 애그리거트 경계의 차이")
 
 그림의 주문 컨텍스트에는 Order Aggregate와 Coupon Aggregate가 있고, 각자 맡은 규칙을 지킨다. 주문 컨텍스트는 상품 컨텍스트의 `Product` 대신, 두 컨텍스트가 합의한 형식으로 주문에 필요한 정보만 받는다.
 
-지금까지 큰 업무를 나누고, 같은 모델이 통하는 경계를 찾았다. DDD에서는 이런 결정을 **전략적 설계**라고 한다. 서브도메인과 바운디드 컨텍스트를 나누고, 컨텍스트 사이의 관계를 Context Map으로 정리하는 일이다.
+지금까지는 멀리서 업무와 모델의 큰 경계를 봤다. 서브도메인과 바운디드 컨텍스트를 나누고 컨텍스트 사이의 관계를 정하는 관점을 **전략적 설계**라고 한다.
 
-경계가 정해지면 그 안의 모델을 구체화한다. Entity, Value Object와 Aggregate로 상태와 일관성의 경계를 만들고, Domain Service와 Repository, Domain Event로 규칙과 저장, 중요한 변화를 표현한다. 이때 사용하는 설계 개념과 패턴을 **전술적 설계**라고 한다.
+이제 카메라를 컨텍스트 안쪽으로 옮긴다. Entity, Value Object와 Aggregate로 모델을 만들고 Domain Service, Repository와 Domain Event 같은 패턴으로 규칙과 저장, 중요한 변화를 표현하는 관점이 **전술적 설계**다.
 
-유비쿼터스 언어는 두 설계를 관통한다. 업무 대화에서 합의한 용어가 모델과 코드에서도 같은 뜻으로 쓰여야 한다. 아래 그림에는 이 글에서 다룰 주요 개념과 관계만 추려 담았다.
+유비쿼터스 언어는 두 설계를 관통한다. 업무 대화에서 합의한 용어가 모델과 코드에서도 같은 뜻으로 쓰여야 한다. 아래 그림에서는 DDD가 서로 다른 크기의 설계 문제를 다룬다는 점만 보면 된다.
 
 ![전략적 설계는 업무와 모델의 큰 경계를 정하고, 전술적 설계는 경계 안의 모델을 구체화한다](/images/posts/domain-driven-design/strategic-tactical-overview.svg "DDD의 전략적 설계와 전술적 설계")
+
+여기까지는 코드보다 큰 경계를 찾았다.
+
+| 질문 | 지금까지 찾은 개념 |
+|---|---|
+| 어떤 업무를 해결하는가? | Domain |
+| 어떤 말을 같은 의미로 사용하는가? | Ubiquitous Language |
+| 현실의 업무를 어떻게 나누는가? | Subdomain |
+| 모델의 의미가 어디까지 같은가? | Bounded Context |
+
+이제 주문 컨텍스트 안으로 들어가 대상과 값, 변경의 일관성을 코드로 표현해 보자.
 
 ## Entity, Value Object와 Aggregate로 주문 모델을 만든다
 
 주문 컨텍스트 안에는 주문처럼 계속 추적해야 할 대상과 금액·주소 같은 값이 있다. 주문과 주문 상품이 함께 지켜야 할 규칙도 있다. Entity, Value Object와 Aggregate는 이 차이를 코드에 표현하는 전술적 설계의 핵심 개념이다.
+
+아래 모델과 경계는 개념을 설명하기 위한 하나의 예다. 실제 쇼핑몰의 경계는 업무 규칙과 함께 바뀌는 상태, 변경 패턴에 따라 달라질 수 있다.
 
 앞에서 발견한 `배송 이후에는 주문을 취소할 수 없다`는 규칙부터 코드에 옮겨 보자. 처음에는 다음처럼 주문 상태를 직접 바꿀 수 있다.
 
@@ -213,13 +238,17 @@ public class Order {
         shippingAddress = newAddress;
     }
 
+    public OrderId id() {
+        return id;
+    }
+
     public Money totalPrice() {
         return totalPrice;
     }
 }
 ```
 
-외부에서는 `cancel()`을 호출해 주문 취소를 요청한다. 메서드 안에는 취소 조건과 상태 변경이 함께 있어, 코드만 읽어도 주문이 어떤 규칙에 따라 취소되는지 알 수 있다.
+외부에서는 `cancel()`을 호출해 주문 취소를 요청한다. 메서드 안에는 취소 조건과 상태 변경이 함께 있어, 코드만 읽어도 주문이 어떤 규칙에 따라 취소되는지 알 수 있다. `cancel()`이 더 나은 이유는 Setter가 없어서가 아니라 주문 취소라는 업무 의도와 규칙, 상태 변경이 한 행동에 함께 드러나기 때문이다.
 
 Spring에서 자주 접하는 JPA `@Entity`와 DDD의 Entity는 구분할 필요가 있다.
 
@@ -298,7 +327,7 @@ public void changeQuantity(OrderLineId lineId, int quantity) {
 }
 ```
 
-다음 그림에서는 `OrderLine`과 `ShippingAddress`를 바꾸는 요청이 모두 Root인 `Order`를 거친다. 변경 경로를 한곳에 모아 수량 검증과 총금액 계산 같은 주문 규칙을 지킨다.
+다음 그림에서는 `OrderLine`과 `ShippingAddress`를 바꾸는 요청이 모두 Root인 `Order`를 거친다. `Order`가 내부 변경을 통제한다는 점을 중심으로 보면 된다.
 
 ![Order가 Aggregate Root가 되어 주문 상품과 배송지 변경을 통제하는 구조](/images/posts/domain-driven-design/order-aggregate.svg "주문 Aggregate의 구조")
 
@@ -306,29 +335,32 @@ public void changeQuantity(OrderLineId lineId, int quantity) {
 >
 > 주문 상품의 수량을 바꿀 때 총금액도 함께 맞춰야 한다면 두 상태는 같은 경계 안에서 관리한다.
 
-한 작업이 끝났을 때 경계 안의 상태가 업무 규칙을 만족해야 한다. Aggregate가 지키는 **일관성**이란 이런 상태를 말한다. Entity와 Value Object가 객체의 성격을 설명한다면, Aggregate는 여러 객체의 변경을 어디까지 함께 관리할지 정한다. Aggregate Root는 Entity이며, 경계 안에는 Root를 통해 관리되는 다른 Entity가 함께 들어갈 수 있다.
+한 작업이 끝났을 때 경계 안의 상태가 업무 규칙을 만족해야 한다. Aggregate가 지키는 **일관성**이란 이런 상태를 말한다. Entity와 Value Object가 객체의 성격을 설명한다면, Aggregate는 여러 객체의 변경을 어디까지 함께 관리할지 정한다.
 
-Aggregate가 너무 크면 작은 변경에도 많은 데이터를 불러오거나 잠가야 할 수 있다. 반대로 너무 작게 나누면 한 번에 지켜야 할 규칙이 여러 Aggregate에 흩어진다. 한 Aggregate의 변경은 하나의 트랜잭션에서 완료하는 것을 기본으로 두고, 여러 Aggregate의 변경이 필요하다면 각각의 트랜잭션과 이벤트를 통한 후속 처리로 나눌 수 있는지 검토한다.
+주문 Aggregate에서는 `Order`가 Root이자 Entity이고, `OrderLine`은 Root를 통해 관리되는 Entity, `ShippingAddress`는 Value Object다. 모든 Aggregate Root는 Entity지만 모든 Entity가 Root인 것은 아니다. 또한 같은 경계에 속한다고 해서 내부 값이 매번 모두 함께 변경되는 것은 아니다. Root가 변경 뒤에도 경계 안의 업무 규칙을 지킬 수 있어야 한다는 뜻이다.
 
-Entity, Value Object와 Aggregate를 이용하면 주문 모델의 상태와 변경 경계를 표현할 수 있다. 기능 하나를 완성하려면 한 객체에 담기 어려운 규칙을 계산하고, 필요한 Aggregate를 불러와 실행한 뒤 저장하는 코드도 필요하다.
+Aggregate가 너무 크면 작은 변경에도 많은 데이터를 불러오거나 잠가야 할 수 있다. 반대로 너무 작게 나누면 강한 일관성이 필요한 규칙이 여러 Aggregate에 흩어진다. Aggregate는 트랜잭션 경계를 결정하는 중요한 기준이며, 한 Aggregate의 변경을 한 트랜잭션에서 완료하는 것을 기본으로 삼을 수 있다. 여러 Aggregate가 협력한다면 하나의 트랜잭션으로 묶을지, 별도 트랜잭션과 Event로 이어갈지는 필요한 일관성과 실패 처리 방식에 따라 정한다.
 
-## 도메인 모델로 기능을 완성한다
+Aggregate의 이름은 기능 이름과도 구분한다. 회원가입과 주문 취소는 실행해야 할 **Use Case**이고, `Member`와 `Order`는 상태와 생명주기를 가진 Aggregate 후보다.
 
-기능을 완성하는 과정에서는 Domain Service, Application Service와 Repository가 서로 다른 일을 맡는다. 이름은 비슷해도 Domain Service는 업무 규칙을 표현하고, Application Service는 그 규칙을 사용해 하나의 작업을 진행한다.
+Entity, Value Object와 Aggregate를 이용하면 주문 모델의 상태와 변경 경계를 표현할 수 있다. 그런데 업무 규칙이라고 해서 언제나 한 객체에 자연스럽게 들어가지는 않는다.
 
-### Domain Service는 한 객체가 맡기 어려운 규칙을 다룬다
+## 한 객체에 담기 어려운 업무 규칙을 다룬다
 
-주문 취소 조건은 `Order` 안에 자연스럽게 들어간다. 금액 계산도 `Money`가 맡을 수 있다. 먼저 규칙을 책임질 Entity나 Value Object가 있는지 살펴보는 이유다.
+주문 취소 조건은 `Order` 안에 자연스럽게 들어간다. 금액 계산도 `Money`가 맡을 수 있다. 업무 규칙은 먼저 그 규칙을 가장 잘 아는 Entity나 Value Object에 둔다.
 
-할인처럼 여러 모델의 정보를 함께 판단해야 하는 규칙은 한 객체에 넣기 어려울 수 있다. 이 규칙 자체가 독립적인 업무 개념이라면 **Domain Service**로 표현할 수 있다.
+할인처럼 한 객체에 자연스럽게 귀속시키기 어려운 업무 규칙도 있다. 이 규칙 자체가 독립적인 도메인 개념이라면 **Domain Service**로 표현할 수 있다. 여러 Aggregate를 사용한다는 사실보다 `업무 규칙을 어느 객체가 책임지는 것이 자연스러운가`가 판단 기준이다.
 
 회원 등급과 주문을 같은 판매 정책 컨텍스트에서 다룬다고 가정해 보자. 두 정보를 함께 살펴 할인액을 계산하는 정책은 다음과 같다.
 
 ```java
 public class DiscountPolicy {
 
-    public Money calculate(Member member, Order order) {
-        if (member.isVip()) {
+    public Money calculate(
+        MemberGrade grade,
+        Order order
+    ) {
+        if (grade.isVip()) {
             return order.totalPrice()
                 .multiply(new BigDecimal("0.10"));
         }
@@ -338,7 +370,20 @@ public class DiscountPolicy {
 }
 ```
 
-`DiscountPolicy`는 회원 등급과 주문 금액을 바탕으로 할인액을 계산한다. 다만 어느 회원과 주문을 불러오고, 계산 결과를 어디에 저장할지까지 결정하지는 않는다. 그 전체 흐름은 Application Service가 맡는다.
+`DiscountPolicy`는 회원 등급과 주문 금액을 바탕으로 할인액을 계산한다. 어느 등급과 주문을 불러오고 계산 결과를 어디에 저장할지는 결정하지 않는다. Domain Service는 도메인 모델 안의 업무 규칙이고, Spring의 `@Service`는 객체를 Bean으로 등록하는 기술적 Annotation이므로 같은 기준의 개념도 아니다.
+
+여기까지 컨텍스트 안의 모델을 구성하는 네 가지 개념을 살펴봤다.
+
+| 개념 | 모델에서 맡는 일 |
+|---|---|
+| Entity | 식별자로 같은 대상을 계속 추적 |
+| Value Object | 값 자체와 의미를 표현 |
+| Aggregate | Root가 상태와 업무 규칙의 일관성을 관리 |
+| Domain Service | 한 객체에 자연스럽게 귀속하기 어려운 업무 규칙을 표현 |
+
+이제 이 도메인 모델을 실제 주문 취소 요청에서 실행해야 한다. 필요한 주문을 불러와 `cancel()`을 호출하고 저장하는 흐름은 Application Service가 맡는다.
+
+## 도메인 모델로 주문 취소를 실행한다
 
 ### Application Service는 작업의 흐름을 조정한다
 
@@ -365,6 +410,14 @@ public class CancelOrderService {
 
 `CancelOrderService`는 주문 취소라는 사용 사례를 처음부터 끝까지 진행한다. 반면 배송을 시작한 주문을 취소할 수 있는지는 `Order.cancel()`이 판단한다. HTTP API뿐 아니라 관리자 기능과 배치에서도 똑같이 지켜야 하는 주문의 규칙이기 때문이다.
 
+| 코드의 역할 | 담당 영역 |
+|---|---|
+| `Order` 조회 | Application |
+| `order.cancel()` 호출과 저장 | Application |
+| 취소 가능한 상태인지 판단하고 상태 변경 | Domain |
+
+**Application Service는 하나의 Use Case를 완료할 실행 순서를 조정하고, 도메인 모델은 업무적으로 무엇이 가능한지 판단한다.**
+
 Spring 애플리케이션의 각 영역에 방금 살펴본 역할을 놓으면 다음과 같다.
 
 | 영역 | 맡는 일 |
@@ -378,12 +431,12 @@ Spring 애플리케이션의 각 영역에 방금 살펴본 역할을 놓으면 
 
 | 구분 | 할인 적용에서 맡는 일 |
 |---|---|
-| Application Service | `Order`와 `Member` 조회 → 할인 계산 요청 → 결과 저장 |
+| Application Service | `Order`와 `MemberGrade` 조회 → 할인 계산 요청 → 결과 저장 |
 | Domain Service | 회원 등급과 주문 금액을 바탕으로 할인액 계산 |
 
 ### Repository는 Aggregate를 저장하고 복원한다
 
-Application Service가 작업을 진행하려면 Aggregate를 불러오고 변경 결과를 저장할 통로가 필요하다. 이 역할을 **Repository**가 맡는다.
+Application Service가 작업을 진행하려면 Aggregate를 불러오고 변경 결과를 저장할 통로가 필요하다. 이 역할을 **Repository**가 맡는다. DDD의 Repository는 테이블별 CRUD 객체라기보다 Aggregate를 저장하고 복원하는 컬렉션 같은 추상화다.
 
 ```java
 public interface OrderRepository {
@@ -412,7 +465,9 @@ orderRepository.save(order);
 
 #### 저장 기술로 구현할 때
 
-이 예제의 Application Service는 도메인에 정의한 `OrderRepository` 인터페이스에 의존한다. Infrastructure 영역은 Spring Data JPA나 `EntityManager`로 이 계약을 구현한다.
+이 예제에서는 Application과 Domain이 필요로 하는 저장 계약을 `OrderRepository` 인터페이스로 표현하고, Infrastructure가 Spring Data JPA나 `EntityManager`로 구현한다. 인터페이스를 어느 패키지에 둘지는 의존성 방향을 어떻게 설계할지에 따른 선택이며, DDD가 특정 패키지 위치를 강제하지는 않는다.
+
+DDD의 Repository와 Spring Data의 `JpaRepository`도 같은 개념은 아니다. 전자는 도메인 모델에서 Aggregate에 접근하는 방식을 설명하고, 후자는 JPA 기반 저장 코드를 제공하는 프레임워크 인터페이스다. 프로젝트가 단순하다면 하나의 인터페이스가 두 역할을 함께 맡을 수도 있다.
 
 JPA Entity가 영속 상태라면 변경 사항은 Dirty Checking으로 반영될 수 있다. 예제의 `save()`는 `Aggregate를 불러오고 변경한 뒤 저장한다`는 흐름을 보여주기 위해 명시했다.
 
@@ -429,15 +484,15 @@ Aggregate를 저장하는 경로를 정했다면, 값을 읽기만 하는 기능
 | 변경 | `Command → Application Service → Aggregate → Repository` |
 | 조회 | `Query → DAO / Projection → Response` |
 
-이처럼 변경과 조회의 책임을 나누는 구조를 **CQRS**라고 한다. Command Query Responsibility Segregation, 즉 명령과 조회 책임 분리를 뜻한다.
+조회 전용 DAO나 Projection을 사용했다는 사실만으로 반드시 CQRS를 적용했다고 부를 필요는 없다. 여기서는 Aggregate가 중요한 변경 경로와 화면에 필요한 값을 읽는 조회 경로의 요구가 다르다는 점을 확인하면 된다.
 
-가장 단순한 형태는 하나의 애플리케이션과 데이터베이스를 유지한 채 코드의 경로만 나누는 방식이다. CQRS는 필요에 따라 함께 사용할 수 있는 선택지이며 DDD의 필수 요소는 아니다.
+이 차이를 더 명시적으로 나누어 Command와 Query에 별도의 모델과 처리 경로를 두는 패턴이 **CQRS**다. 가장 단순한 형태에서는 하나의 애플리케이션과 데이터베이스를 유지하면서 읽기와 쓰기 모델만 구분할 수도 있다. 이 글에서는 CQRS를 여기까지 연결하고, 주문 목록은 조회 목적에 맞는 Projection을 사용할 수 있다는 결론만 남긴다.
 
 이제 주문 컨텍스트 안에서는 규칙을 판단하고, 기능을 실행하고, 상태를 저장할 수 있다. 주문 취소 뒤에 필요한 환불과 출고 중단은 결제와 배송 컨텍스트의 몫이다.
 
 ## 컨텍스트는 계약으로 협력한다
 
-주문, 결제와 배송은 경계를 나눈 뒤에도 계속 협력한다. 각 컨텍스트는 내부 모델을 독립적으로 유지하고, 서로 주고받을 정보와 형식을 계약으로 정한다. 다음처럼 주문 컨텍스트가 상품 컨텍스트의 내부 모델을 직접 참조하면 두 코드가 함께 묶인다.
+주문, 결제와 배송은 경계를 나눈 뒤에도 계속 협력한다. 각 컨텍스트는 내부 모델을 독립적으로 유지하고, 서로 주고받을 정보와 형식을 계약으로 정한다. 다음처럼 주문 컨텍스트가 상품 컨텍스트의 내부 모델을 직접 사용하면 상품 모델이 바뀔 때 주문 모델도 영향을 받는다.
 
 ```java
 import catalog.domain.Product;
@@ -447,7 +502,7 @@ public class OrderLine {
 }
 ```
 
-상품 컨텍스트는 내부 `Product` 대신 외부에 공개할 계약을 제공한다. 주문 컨텍스트는 이 값을 주문 당시의 상품 정보로 바꿔 보관한다.
+문제는 다른 패키지를 import했다는 문법보다 상대 컨텍스트의 내부 모델에 의존한다는 데 있다. 상품 컨텍스트가 외부에 공개할 계약을 제공하면 주문 컨텍스트는 이 값을 주문 당시의 상품 정보로 바꿔 보관할 수 있다.
 
 ```java
 // 상품 컨텍스트가 공개한 계약
@@ -478,13 +533,13 @@ public record OrderedProduct(
 
 ### Command, Domain Event와 Integration Event를 구분한다
 
-상품 정보를 조회하듯 데이터를 주고받을 수도 있다. 주문 취소처럼 상태를 바꾸고 후속 처리를 이어 가야 할 때는 메시지를 사용할 수 있다. 메시지에서는 `해 달라는 요청`과 `이미 일어난 사실`을 구분한다. 전자가 **Command**, 후자가 **Domain Event**다.
+상품 정보를 조회하듯 데이터를 주고받을 수도 있지만, 주문 취소처럼 상태를 바꾼 뒤 후속 처리를 이어 가야 할 때는 메시지가 유용하다. 앞서 Event Storming에서 나눈 `해 달라는 요청`과 `이미 일어난 사실`은 코드에서도 구분한다.
 
 - **Command — `CancelOrder`**: 주문을 취소해 달라는 요청
 
 - **Domain Event — `OrderCanceled`**: 주문이 이미 취소되었다는 사실
 
-- **Integration Event**: 주문 취소 사실을 다른 컨텍스트에 공개하는 메시지
+- **Integration Event — `OrderCanceledIntegrationEvent`**: 주문 취소 사실을 다른 컨텍스트에 공개하는 메시지
 
 주문이 취소되었다는 사실을 코드로 표현하면 다음과 같다.
 
@@ -498,36 +553,70 @@ public record OrderCanceled(
 
 #### 같은 애플리케이션 안에서 전달한다면
 
-Application Service는 주문 상태를 바꾼 뒤 `OrderCanceled`를 만들어 발행할 수 있다. 같은 애플리케이션 안에서 전달한다면 Spring의 `ApplicationEventPublisher`를 사용할 수 있다.
+Application Service는 도메인 모델이 취소를 승인한 뒤 `OrderCanceled`를 발행할 수 있다. 같은 애플리케이션 안에서 전달한다면 Spring의 `ApplicationEventPublisher`를 사용할 수 있다.
 
 ```java
 order.cancel();
+orderRepository.save(order);
 
 eventPublisher.publishEvent(
     new OrderCanceled(order.id(), Instant.now())
 );
+```
 
-@TransactionalEventListener(
-    phase = TransactionPhase.AFTER_COMMIT
-)
-public void handle(OrderCanceled event) {
-    notificationService.sendCancelNotice(event.orderId());
+이 예제는 흐름을 단순하게 보여주려고 Application Service가 이벤트를 만든다. 이벤트가 도메인 판단과 더 밀접하다면 Aggregate가 이벤트를 등록하거나 반환하고, Application Service가 이를 발행하도록 설계할 수도 있다. 어느 방식을 택하든 취소가 거절되었는데 `OrderCanceled`가 먼저 만들어져서는 안 된다.
+
+커밋이 끝난 뒤 알림을 보내고 싶다면 리스너를 다음처럼 분리할 수 있다.
+
+```java
+@Component
+@RequiredArgsConstructor
+public class OrderCanceledListener {
+
+    private final NotificationService notificationService;
+
+    @TransactionalEventListener(
+        phase = TransactionPhase.AFTER_COMMIT
+    )
+    public void handle(OrderCanceled event) {
+        notificationService.sendCancelNotice(event.orderId());
+    }
 }
 ```
 
-일반 `@EventListener`는 기본 설정에서 동기로 실행된다. 트랜잭션이 커밋된 뒤 후속 작업을 시작하려면 위와 같이 `@TransactionalEventListener`의 실행 시점을 `AFTER_COMMIT`으로 정할 수 있다.
+일반 `@EventListener`는 기본 설정에서 발행 스레드가 리스너까지 실행한다. `@TransactionalEventListener(AFTER_COMMIT)`은 실행 시점을 커밋 이후로 정할 뿐, 작업을 자동으로 비동기로 만들거나 이벤트를 안전하게 보관하지는 않는다. 비동기 실행에는 별도 설정이 필요하고, 프로세스가 중단되어도 다시 처리해야 한다면 저장과 재시도 방식까지 설계해야 한다.
 
 #### 다른 컨텍스트에 전달한다면
 
-다른 컨텍스트에도 알려야 한다면 `OrderCanceled`를 외부 계약인 `OrderCanceledIntegrationEvent`로 바꿔 Kafka 같은 메시지 브로커로 전달할 수 있다.
+다른 컨텍스트에도 알려야 한다면 내부의 `OrderCanceled`를 외부 계약인 `OrderCanceledIntegrationEvent`로 바꿔 Kafka 같은 메시지 브로커로 전달할 수 있다.
+
+```java
+public record OrderCanceledIntegrationEvent(
+    long orderId,
+    Instant occurredAt
+) {
+    public static OrderCanceledIntegrationEvent from(
+        OrderCanceled event
+    ) {
+        return new OrderCanceledIntegrationEvent(
+            event.orderId().value(),
+            event.occurredAt()
+        );
+    }
+}
+```
+
+아래 그림에서 `OrderCanceled`는 주문 컨텍스트 안에서 전달되고, 외부로 나갈 때는 별도의 Integration Event로 변환된다.
 
 ![Spring Application Event로 같은 애플리케이션 안에서 Domain Event를 전달하고, Integration Event는 Kafka를 거쳐 다른 컨텍스트로 전달하는 흐름](/images/posts/domain-driven-design/domain-event-flow.svg "Spring Application Event와 Integration Event의 전달 범위")
 
-결제와 쿠폰 컨텍스트는 이 메시지를 받은 뒤 각자의 규칙에 따라 환불과 쿠폰 복구를 처리한다. 외부 메시지는 주문 트랜잭션이 성공한 뒤 전달되어야 하며, 실제 구현에서는 발행 실패와 재시도, 중복 처리, DB 트랜잭션과 메시지 사이의 정합성을 함께 설계한다.
+결제와 쿠폰 컨텍스트는 이 메시지를 받은 뒤 각자의 규칙에 따라 환불과 쿠폰 복구를 처리한다. 이렇게 하면 주문이 상대 컨텍스트의 처리 순서와 내부 모델까지 알 필요가 없다.
+
+다만 이벤트가 DB와 메시지 브로커의 저장을 하나의 트랜잭션으로 묶어 주는 것은 아니다. 주문 저장은 성공했지만 메시지 발행은 실패할 수 있다. 이런 간격을 줄이는 대표적인 방법이 이벤트를 DB에 함께 기록한 뒤 별도 작업이 브로커로 전달하는 **Transactional Outbox**다. 재전송 과정에서는 같은 메시지가 여러 번 도착할 수 있으므로 소비자는 중복 처리에도 안전해야 한다.
 
 컨텍스트는 메시지뿐 아니라 API로도 협력한다. 응답을 직접 주고받을 때는 외부 모델이 내부로 그대로 퍼지지 않도록 경계에서 변환할 수 있다.
 
-### 외부 모델을 내 언어로 번역한다
+### 조금 더 나아가면: 외부 모델을 내 언어로 번역한다
 
 결제 컨텍스트가 반환한 `PaymentResponse`를 주문 코드까지 그대로 전달하면 주문도 결제의 이름과 응답 구조를 알아야 한다. 경계에 Adapter를 두면 외부 응답을 주문 컨텍스트의 `RefundResult`로 바꿀 수 있다.
 
@@ -557,15 +646,33 @@ public class PaymentAdapter {
 
 결제 응답 형식이 바뀌면 `PaymentAdapter`의 변환 코드가 영향을 받는다. 주문 모델은 `RefundResult`라는 자신의 언어를 유지한다. 이처럼 외부 모델을 내 컨텍스트의 언어로 번역하는 경계를 **부패 방지 계층**이라고 한다. 영어로는 Anti-Corruption Layer, 줄여서 ACL이라고 부른다.
 
+ACL의 구체적인 구현 형태를 외울 필요는 없다. 핵심은 다른 컨텍스트의 언어를 내 모델 안까지 그대로 끌고 오지 않고 경계에서 번역하는 데 있다.
+
 컨텍스트가 많아지면 개별 계약뿐 아니라 전체 관계도 함께 볼 필요가 있다.
 
 ### Context Map은 컨텍스트 사이의 관계를 보여준다
 
 여러 컨텍스트가 어떤 관계로 연결되고 어떤 계약을 주고받는지 정리한 그림을 **Context Map**이라고 한다. 상품 컨텍스트가 주문에 상품 정보를 제공하고, 주문 컨텍스트가 결제와 쿠폰에 취소 결과를 전달하는 관계를 다음처럼 표현할 수 있다.
 
+그림에서는 상품 정보를 API 계약으로 받아 주문의 언어로 바꾸고, 주문 취소 결과는 Integration Event로 결제와 쿠폰에 전달한다.
+
 ![상품, 주문, 결제와 쿠폰 컨텍스트가 API 계약, ACL과 Integration Event로 협력하는 Context Map](/images/posts/domain-driven-design/context-map-example.svg "주문 기능을 중심으로 정리한 Context Map의 예")
 
 Context Map을 보면 어느 컨텍스트가 정보를 제공하고, 경계에서 어떤 변환이 필요하며, 변경의 영향이 어디까지 이어지는지 확인할 수 있다.
+
+## DDD와 함께 등장하지만 다른 질문을 다룬다
+
+DDD를 공부하다 보면 헥사고날 아키텍처, CQRS, 이벤트 기반 아키텍처와 MSA가 함께 등장한다. 서로 조합할 수 있지만 같은 개념은 아니다.
+
+| 접근법 | 주로 답하려는 질문 |
+|---|---|
+| DDD | 복잡한 업무를 어떤 언어와 모델, 경계로 이해할까? |
+| 헥사고날·클린 아키텍처 | 핵심 규칙을 외부 기술의 변화에서 어떻게 보호할까? |
+| CQRS | 상태를 바꾸는 모델과 조회하는 모델을 분리할 필요가 있는가? |
+| 이벤트 기반 아키텍처 | 사건을 중심으로 구성요소가 어떻게 느슨하게 협력할까? |
+| MSA | 독립적으로 배포하고 운영할 서비스 경계를 어디에 둘까? |
+
+DDD가 나머지 방식을 요구하는 것은 아니다. 도메인 모델은 하나의 애플리케이션 안에서도 만들 수 있고, CQRS나 이벤트도 필요한 부분에만 적용할 수 있다. 해결하려는 문제가 서로 만날 때 함께 사용하는 것이다.
 
 ## DDD는 언제 도움이 될까?
 
@@ -608,6 +715,14 @@ DDD는 다음처럼 업무 자체를 이해하고 유지하기 어려운 영역�
 
 이 과정은 한 번에 끝나지 않는다. 구현에서 발견한 내용을 다시 대화로 가져오면서 업무에 대한 이해와 모델을 함께 다듬는다. 처음에는 복잡한 업무 하나를 골라 이 순서를 반복해 보는 것만으로도 충분하다.
 
+```text
+업무 이해 → 모델링 → 구현
+    ↑          ↓
+    └── 새로 발견한 규칙과 예외
+```
+
+DDD를 시작한다는 것은 먼저 모든 모델을 완성한 뒤 개발에 들어간다는 뜻이 아니다. 주문 취소처럼 경계가 분명한 Use Case 하나를 구현하고, 그 과정에서 발견한 예외를 대화와 모델에 다시 반영하며 범위를 넓혀 간다.
+
 ## 정리
 
 주문 취소 기능의 문제는 코드보다 앞에서 시작됐다. `취소`라는 말을 팀마다 다르게 이해했고, 주문과 결제, 배송 중 어디에서 무엇을 판단할지도 정리되지 않았다.
@@ -648,13 +763,14 @@ DDD는 도메인 전문가와 개발자가 업무를 함께 이해하는 데서 
 
 DDD는 복잡한 업무를 함께 이해하고, 그 이해가 모델과 코드에서도 같은 의미로 이어지게 만든다. 위 개념들은 그 과정을 표현하는 수단이다.
 
-실제 요구사항을 만났을 때 표에 적은 질문을 던지는 것부터 시작해 보자.
+실제 요구사항을 만났을 때 표에 적은 질문을 던지는 것부터 시작해 보자. 그 답을 찾는 과정이 업무 이해를 모델과 코드로 이어 가는 출발점이다.
 
 ## 참고 자료
 
 ### 공식 자료
 
 - [Eric Evans - Domain-Driven Design Reference](https://www.domainlanguage.com/wp-content/uploads/2016/05/DDD_Reference_2015-03.pdf)
+- [Microsoft Learn - Use domain analysis to model microservices](https://learn.microsoft.com/en-us/azure/architecture/microservices/model/domain-analysis)
 - [Microsoft Learn - Use Tactical DDD to Design Microservices](https://learn.microsoft.com/en-us/azure/architecture/microservices/model/tactical-ddd)
 - [Microsoft Learn - DDD 지향 마이크로 서비스 디자인](https://learn.microsoft.com/ko-kr/dotnet/architecture/microservices/microservice-ddd-cqrs-patterns/ddd-oriented-microservice)
 - [Microsoft Learn - Designing a microservice domain model](https://learn.microsoft.com/en-us/dotnet/architecture/microservices/microservice-ddd-cqrs-patterns/microservice-domain-model)
@@ -672,5 +788,6 @@ DDD는 복잡한 업무를 함께 이해하고, 그 이해가 모델과 코드�
 - [Martin Fowler - Ubiquitous Language](https://martinfowler.com/bliki/UbiquitousLanguage.html)
 - [Martin Fowler - Bounded Context](https://martinfowler.com/bliki/BoundedContext.html)
 - [Martin Fowler - DDD Aggregate](https://martinfowler.com/bliki/DDD_Aggregate.html)
+- [microservices.io - Transactional Outbox](https://microservices.io/patterns/data/transactional-outbox.html)
 - [카카오페이 기술 블로그 - 여신코어 DDD로 구축하기](https://tech.kakaopay.com/post/backend-domain-driven-design/)
 - [LY Corporation Tech Blog - DDD를 Merchant 시스템 구축에 활용한 사례](https://techblog.lycorp.co.jp/ko/applying-ddd-to-merchant-system-development)
