@@ -340,13 +340,13 @@ public class DiscountPolicy {
 | Aggregate | Root가 상태와 업무 규칙의 일관성을 관리 |
 | Domain Service | 한 객체에 자연스럽게 귀속하기 어려운 업무 규칙을 표현 |
 
-이제 이 도메인 모델을 실제 주문 취소 요청에서 실행해야 한다. 필요한 주문을 불러와 `cancel()`을 호출하고 저장하는 흐름은 Application Service가 맡는다.
+이제 앞에서 만든 도메인 모델을 실제 주문 취소 기능에서 어떻게 사용하는지 살펴보자.
 
 ## 도메인 모델로 주문 취소를 실행한다
 
 ### Application Service는 작업의 흐름을 조정한다
 
-주문 취소 사례로 돌아가 보자. `Order`는 취소 가능 여부를 판단할 수 있지만, 기능을 실행하려면 요청받은 주문을 불러오고 `cancel()`을 호출한 뒤 변경 결과를 저장해야 한다.
+앞에서 `Order.cancel()`에 주문 취소 규칙을 담았다. 하지만 이 메서드만으로 주문 취소 기능이 끝나지는 않는다. 취소할 주문을 불러오고, `cancel()`을 호출한 뒤, 바뀐 주문을 다시 저장해야 한다. 이처럼 도메인 모델을 사용해 하나의 기능을 처음부터 끝까지 진행하는 흐름을 **Application Service**가 맡는다.
 
 ```java
 @Service
@@ -367,9 +367,15 @@ public class CancelOrderService {
 }
 ```
 
-`CancelOrderService`는 주문 취소라는 사용 사례를 처음부터 끝까지 진행한다. 반면 배송을 시작한 주문을 취소할 수 있는지는 `Order.cancel()`이 판단한다. HTTP API뿐 아니라 관리자 기능과 배치에서도 똑같이 지켜야 하는 주문의 규칙이기 때문이다.
+코드의 흐름은 다음 세 단계다.
 
-할인 적용 기능이라면 Application Service가 주문과 회원 등급을 준비하고, 앞에서 만든 `DiscountPolicy`가 할인액을 계산한다.
+```text
+주문 조회 → 취소 규칙 실행 → 변경 결과 저장
+```
+
+`CancelOrderService`는 이 순서를 조정하고 트랜잭션을 묶는다. 취소할 수 있는 주문인지는 `Order.cancel()`이 판단한다. HTTP API, 관리자 기능과 배치 중 어디에서 취소를 요청하더라도 같은 규칙을 지켜야 하기 때문이다.
+
+앞의 할인 예시도 역할은 같다. Application Service가 주문과 회원 등급을 준비하면 `DiscountPolicy`가 할인액을 계산한다. Application Service는 작업의 순서를 맡고, 도메인 모델은 업무적으로 가능한지를 판단한다.
 
 ### Repository는 Aggregate를 저장하고 복원한다
 
