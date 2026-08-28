@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="1080" viewBox="0 0 680 1080" role="img" aria-labelledby="title desc">
+  <title id="title">주문 기능을 중심으로 정리한 Context Map</title>
+  <desc id="desc">상품 컨텍스트는 ProductInfo 계약을 제공하고 주문 컨텍스트는 ACL에서 이를 번역한다. 주문 컨텍스트는 OrderCanceled Integration Event를 결제와 쿠폰 컨텍스트에 전달한다</desc>
+  <style>text { font-family:Pretendard,"Noto Sans KR",sans-serif; }</style>
+  <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 10 5 0 10z" fill="#858c94"/></marker></defs>
+  <rect width="680" height="1080" fill="#202226"/>
+  <rect x="96" y="34" width="488" height="190" rx="4" fill="#292c31" stroke="#858c94" stroke-width="2"/>
+  <text x="340" y="80" text-anchor="middle" font-size="24" font-weight="700" fill="#f1f3f5">상품 컨텍스트</text>
+  <rect x="202" y="118" width="276" height="72" rx="4" fill="#30343a" stroke="#4a4f56"/>
+  <text x="340" y="149" text-anchor="middle" font-size="20" font-weight="700" fill="#f1f3f5">Product</text>
+  <text x="340" y="174" text-anchor="middle" font-size="14" fill="#aab0b7">현재 상품 정보</text>
+  <path d="M340 224V286" stroke="#858c94" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="362" y="251" font-size="14" fill="#aab0b7">ProductInfo · API 계약</text>
+  <rect x="232" y="290" width="216" height="80" rx="4" fill="#283a50" stroke="#78aeea" stroke-width="2"/>
+  <text x="340" y="323" text-anchor="middle" font-size="19" font-weight="700" fill="#f1f3f5">ACL</text>
+  <text x="340" y="350" text-anchor="middle" font-size="14" fill="#78aeea">외부 모델을 번역</text>
+  <path d="M340 370V426" stroke="#858c94" stroke-width="2" marker-end="url(#arrow)"/>
+  <rect x="68" y="430" width="544" height="326" rx="4" fill="#292c31" stroke="#78aeea" stroke-width="2"/>
+  <text x="340" y="478" text-anchor="middle" font-size="24" font-weight="700" fill="#78aeea">주문 컨텍스트</text>
+  <rect x="126" y="516" width="428" height="82" rx="4" fill="#30343a" stroke="#4a4f56"/>
+  <text x="340" y="550" text-anchor="middle" font-size="20" font-weight="700" fill="#f1f3f5">OrderedProduct</text>
+  <text x="340" y="578" text-anchor="middle" font-size="14" fill="#aab0b7">주문 당시 상품 정보</text>
+  <rect x="126" y="632" width="428" height="82" rx="4" fill="#30343a" stroke="#4a4f56"/>
+  <text x="340" y="666" text-anchor="middle" font-size="20" font-weight="700" fill="#f1f3f5">Order</text>
+  <text x="340" y="694" text-anchor="middle" font-size="14" fill="#aab0b7">취소 결과 발생</text>
+  <path d="M340 756V826" stroke="#858c94" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="362" y="786" font-size="14" fill="#aab0b7">OrderCanceled</text>
+  <text x="362" y="807" font-size="13" fill="#aab0b7">Integration Event</text>
+  <rect x="68" y="830" width="252" height="170" rx="4" fill="#292c31" stroke="#858c94" stroke-width="2"/>
+  <rect x="360" y="830" width="252" height="170" rx="4" fill="#292c31" stroke="#858c94" stroke-width="2"/>
+  <text x="194" y="888" text-anchor="middle" font-size="21" font-weight="700" fill="#f1f3f5">결제 컨텍스트</text>
+  <text x="194" y="932" text-anchor="middle" font-size="15" fill="#aab0b7">환불 정책 실행</text>
+  <text x="486" y="888" text-anchor="middle" font-size="21" font-weight="700" fill="#f1f3f5">쿠폰 컨텍스트</text>
+  <text x="486" y="932" text-anchor="middle" font-size="15" fill="#aab0b7">쿠폰 복구 정책 실행</text>
+</svg>

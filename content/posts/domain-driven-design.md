@@ -188,12 +188,7 @@ shipment.stopDispatch();
 
 이제 카메라를 컨텍스트 안쪽으로 옮겨 보자. Entity, Value Object와 Aggregate로 대상과 값, 변경 규칙을 코드에 표현하는 관점을 **전술적 설계**라고 한다. DDD에서는 이렇게 전체 업무의 경계를 보는 설계와 경계 안의 모델을 만드는 설계를 함께 다룬다.
 
-> **여기까지는 코드보다 큰 문제를 살펴봤다.**
->
-> - Domain: 어떤 업무를 해결하는가
-> - Domain Model: 그 업무에서 무엇이 중요한가
-> - Ubiquitous Language: 어떤 말을 같은 의미로 사용할 것인가
-> - Bounded Context: 그 모델과 언어가 어디까지 유효한가
+![전략적 설계는 업무와 모델의 큰 경계를 정하고, 전술적 설계는 경계 안의 객체와 규칙을 코드로 표현한다](/images/posts/domain-driven-design/strategic-tactical-design.svg "DDD의 전략적 설계와 전술적 설계")
 
 ## 경계 안의 모델을 코드로 표현한다
 
@@ -342,6 +337,10 @@ Order Aggregate
    └─ ShippingAddress  ← Value Object
 ```
 
+> **Aggregate의 경계는 한 트랜잭션에서 함께 지켜야 할 규칙을 기준으로 찾는다.**
+>
+> 주문 상품의 수량을 바꿀 때 총금액도 함께 맞춰야 한다면 두 상태는 같은 경계 안에서 관리한다.
+
 Aggregate가 지키는 일관성은 한 작업이 끝났을 때 경계 안의 상태가 업무 규칙을 만족한다는 의미다. 주문 상품의 수량을 바꾼 뒤에는 총금액도 그 수량과 맞아야 한다.
 
 Entity와 Value Object는 객체의 성격을 설명한다. Aggregate는 여러 객체의 변경을 어디까지 함께 관리할지 정한다. 서로 답하는 질문이 다르다.
@@ -351,8 +350,6 @@ Aggregate Root는 Entity이며, Aggregate 안에는 Root를 통해 관리되는 
 Aggregate는 상태와 생명주기를 가진 대상을 중심으로 찾는다. `회원가입`과 `주문 취소`는 한 번의 요청을 처리하는 사용 사례이고, 그 과정에서 상태가 바뀌는 `Member`와 `Order`가 Aggregate 후보가 된다.
 
 Aggregate가 너무 크면 작은 변경에도 많은 데이터를 불러오거나 잠가야 할 수 있다. 반대로 너무 작게 나누면 한 번에 지켜야 할 규칙이 여러 Aggregate에 흩어진다.
-
-Aggregate의 경계는 **어떤 규칙을 한 트랜잭션에서 강하게 지켜야 하는가**를 기준으로 정한다. 함께 일관성을 지켜야 하는 객체만 묶으면 경계가 필요한 범위보다 커지는 것을 막을 수 있다.
 
 한 Aggregate의 변경은 하나의 트랜잭션에서 완료하는 것이 기본이다. 여러 Aggregate의 변경이 필요하다면 경계를 다시 살펴보고, 각각의 트랜잭션과 이벤트를 통한 후속 처리로 나눌 수 있는지 검토한다.
 
@@ -421,6 +418,17 @@ JPA에서는 영속 상태인 Entity의 변경을 Dirty Checking이 반영하므
 
 Aggregate는 특히 **변경할 때 일관성을 지키는 경계**다. 주문 취소에는 Order Aggregate를 사용하고, 주문 목록은 JOIN이나 Projection으로 화면에 필요한 값만 조회할 수 있다.
 
+### 변경과 조회는 서로 다른 모델을 사용할 수 있다
+
+주문 취소와 주문 목록은 같은 주문 데이터를 다루지만 필요한 모델은 다르다. 주문을 취소할 때는 업무 규칙을 지켜야 하므로 Application Service가 `Order` Aggregate를 불러와 상태를 변경한다. 반면 주문 목록은 화면에 필요한 값을 빠르게 조합하면 되므로 Aggregate 전체를 복원하지 않고 조회 전용 DAO나 Projection을 사용할 수 있다.
+
+| 작업 | 처리 흐름 |
+|---|---|
+| 변경 | `Command → Application Service → Aggregate → Repository` |
+| 조회 | `Query → DAO / Projection → Response` |
+
+이처럼 변경과 조회의 책임을 나누는 구조를 **CQRS 방식**이라고 부른다. CQRS는 Command Query Responsibility Segregation, 즉 명령과 조회 책임 분리를 뜻한다. 간단한 프로젝트에서는 하나의 애플리케이션과 데이터베이스를 그대로 사용하면서 코드의 처리 경로만 나눌 수 있다.
+
 ### Domain Service는 한 객체가 맡기 어려운 규칙을 다룬다
 
 주문 취소 조건은 `Order` 안에 자연스럽게 들어갔다. 할인처럼 여러 모델의 정보를 함께 판단하는 규칙은 주인을 정하기가 더 어렵다.
@@ -443,10 +451,12 @@ public class DiscountPolicy {
 }
 ```
 
-할인을 적용하는 전체 흐름은 Application Service가 진행한다.
+두 Service가 맡는 일은 다음처럼 나뉜다.
 
-- **Application Service:** `Order`와 `Member`를 조회하고 `DiscountPolicy`를 호출한 뒤, 할인 결과를 반영해 저장한다.
-- **Domain Service:** `Order`와 `Member`의 상태를 바탕으로 할인 금액을 계산한다.
+| 구분 | 맡는 일 | 할인 적용 예시 |
+|---|---|---|
+| Application Service | 하나의 사용 사례와 트랜잭션을 진행 | `Order`와 `Member`를 조회하고 `DiscountPolicy`를 호출한 뒤 결과를 저장 |
+| Domain Service | 한 객체에 귀속하기 어려운 업무 규칙을 처리 | 회원 등급과 주문 금액을 바탕으로 할인액을 계산 |
 
 `DiscountPolicy`는 두 Aggregate의 정보를 받아 할인 규칙을 계산하는 독립된 도메인 개념이다.
 
@@ -513,17 +523,7 @@ public record OrderCanceled(
 
 `Order.cancel()`이 주문 상태를 바꾸면 `OrderCanceled`라는 사건이 생긴다. 주문 컨텍스트 안에서는 이 Domain Event를 받아 같은 업무에 속한 후속 처리를 이어 갈 수 있다.
 
-```text
-Order.cancel()
-↓
-OrderCanceled                    ← Domain Event
-├─ 주문 컨텍스트 내부의 후속 처리
-└─ 외부 계약으로 변환
-   ↓
-   OrderCanceledIntegrationEvent ← Integration Event
-   ↓
-   결제·쿠폰 컨텍스트의 후속 처리
-```
+![주문 컨텍스트 내부의 Domain Event가 외부 계약인 Integration Event로 변환되어 다른 컨텍스트에 전달되는 흐름](/images/posts/domain-driven-design/domain-event-flow.svg "Domain Event와 Integration Event의 역할")
 
 결제나 쿠폰처럼 다른 컨텍스트에도 이 사실을 알려야 한다면 외부에 공개할 계약을 따로 정한다. 이때 사용하는 메시지가 **Integration Event**다. 내부의 `OrderCanceled`를 외부 계약인 `OrderCanceledIntegrationEvent`로 바꾸어 발행하는 식이다.
 
@@ -541,7 +541,13 @@ Integration Event는 보통 주문 트랜잭션이 성공한 뒤 외부로 전�
 
 이처럼 외부 모델을 내 컨텍스트의 언어로 번역하는 경계를 **부패 방지 계층**이라고 한다. 영어로는 Anti-Corruption Layer, 줄여서 ACL이라고 부른다.
 
-여러 컨텍스트가 어떤 관계로 연결되는지 정리한 그림은 **컨텍스트 맵**이라고 한다. 예를 들어 상품 컨텍스트가 주문에 상품 정보를 제공하고, 주문 컨텍스트가 결제에 취소 결과를 전달하는 관계를 한눈에 표시할 수 있다.
+### Context Map은 컨텍스트 사이의 관계를 보여준다
+
+여러 컨텍스트가 어떤 관계로 연결되고 어떤 계약을 주고받는지 정리한 그림을 **Context Map**이라고 한다. 상품 컨텍스트가 주문에 상품 정보를 제공하고, 주문 컨텍스트가 결제와 쿠폰에 취소 결과를 전달하는 관계를 다음처럼 표현할 수 있다.
+
+![상품, 주문, 결제와 쿠폰 컨텍스트가 API 계약, ACL과 Integration Event로 협력하는 Context Map](/images/posts/domain-driven-design/context-map-example.svg "주문 기능을 중심으로 정리한 Context Map의 예")
+
+Context Map을 보면 어느 컨텍스트가 정보를 제공하고, 경계에서 어떤 변환이 필요하며, 변경의 영향이 어디까지 이어지는지 확인할 수 있다.
 
 ## 실제 프로젝트에서 DDD를 연습한다면
 
@@ -600,8 +606,12 @@ DDD는 도메인 전문가와 개발자가 업무를 함께 이해하는 데서 
 | Aggregate | 어떤 상태와 규칙을 Root가 일관되게 책임질까? |
 | Application Service | 한 Use Case를 어떤 순서로 진행할까? |
 | Repository | Aggregate를 어떻게 저장하고 복원할까? |
+| CQRS | 변경과 조회에 같은 모델이 필요한가? |
 | Domain Service | 한 객체에 귀속시키기 어려운 업무 규칙인가? |
 | Domain Event | 도메인에서 어떤 의미 있는 일이 이미 일어났는가? |
+| Integration Event | 다른 컨텍스트에 어떤 사실을 공개할까? |
+| ACL | 외부 모델을 내 컨텍스트의 언어로 어떻게 바꿀까? |
+| Context Map | 컨텍스트들은 어떤 관계와 계약으로 협력하는가? |
 
 DDD는 복잡한 업무를 정확하게 이해하고, 그 이해가 코드에서도 같은 의미로 이어지게 만든다. Entity, Aggregate와 Event는 이를 표현하는 수단이다. 실제 요구사항을 만났을 때 표에 적은 질문을 던지는 것부터 시작해 보자.
 
