@@ -1,30 +1,20 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="480" viewBox="0 0 1200 480" role="img" aria-labelledby="title desc">
-  <title id="title">Order Aggregate 구조</title>
-  <desc id="desc">Order Root를 통해 OrderLine과 ShippingAddress를 변경하는 구조</desc>
-  <rect width="1200" height="480" fill="#f7f7f6"/>
-  <g font-family="Pretendard, Noto Sans KR, sans-serif">
-    <rect x="64" y="50" width="1072" height="350" rx="8" fill="none" stroke="#3568a8" stroke-width="3"/>
-    <text x="92" y="91" font-size="20" font-weight="700" fill="#3568a8">Order Aggregate</text>
-    <rect x="112" y="145" width="270" height="180" rx="6" fill="#202124"/>
-    <text x="140" y="187" font-size="23" font-weight="700" fill="#ffffff">Order</text>
-    <text x="140" y="217" font-size="15" fill="#d8dadd">Aggregate Root · Entity</text>
-    <line x1="140" y1="240" x2="354" y2="240" stroke="#5f646a"/>
-    <text x="140" y="272" font-size="16" fill="#ffffff">cancel()</text>
-    <text x="140" y="301" font-size="16" fill="#ffffff">changeQuantity()</text>
-    <line x1="382" y1="205" x2="475" y2="205" stroke="#8b9096" stroke-width="2"/>
-    <path d="M465 195l12 10-12 10" fill="none" stroke="#8b9096" stroke-width="2"/>
-    <line x1="382" y1="285" x2="475" y2="285" stroke="#8b9096" stroke-width="2"/>
-    <path d="M465 275l12 10-12 10" fill="none" stroke="#8b9096" stroke-width="2"/>
-    <rect x="477" y="145" width="250" height="120" rx="6" fill="#ffffff" stroke="#51565c" stroke-width="2"/>
-    <text x="505" y="188" font-size="21" font-weight="700" fill="#202124">OrderLine</text>
-    <text x="505" y="220" font-size="15" fill="#62666b">Entity · 상품 · 수량 · 주문 가격</text>
-    <rect x="477" y="285" width="250" height="80" rx="6" fill="#ffffff" stroke="#51565c" stroke-width="2"/>
-    <text x="505" y="321" font-size="20" font-weight="700" fill="#202124">ShippingAddress</text>
-    <text x="505" y="348" font-size="15" fill="#62666b">Value Object</text>
-    <line x1="770" y1="128" x2="770" y2="365" stroke="#d0d3d6"/>
-    <text x="816" y="171" font-size="19" font-weight="700" fill="#202124">Root가 지키는 규칙</text>
-    <text x="816" y="219" font-size="17" fill="#44484d">배송 후에는 취소할 수 없다</text>
-    <text x="816" y="258" font-size="17" fill="#44484d">수량은 1개 이상이어야 한다</text>
-    <text x="816" y="297" font-size="17" fill="#44484d">수량 변경 후 총금액을 다시 계산한다</text>
-  </g>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="420" viewBox="0 0 1200 420" role="img" aria-labelledby="title desc">
+  <title id="title">Order Aggregate의 변경 경로</title>
+  <desc id="desc">외부 변경 요청이 Order Root를 거쳐 OrderLine과 ShippingAddress로 전달되는 구조</desc>
+  <style>text { font-family:Pretendard,"Noto Sans KR",sans-serif; }</style>
+  <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="#858c94"/></marker></defs>
+  <rect width="1200" height="420" fill="#202226"/>
+  <text x="54" y="192" font-size="19" font-weight="700" fill="#f1f3f5">외부 코드</text><text x="54" y="222" font-size="15" fill="#aab0b7">Controller · Service</text>
+  <path d="M198 205H292" stroke="#858c94" stroke-width="1.5" marker-end="url(#arrow)"/><text x="245" y="181" text-anchor="middle" font-size="14" fill="#aab0b7">변경 요청</text>
+  <rect x="296" y="42" width="850" height="336" rx="4" fill="none" stroke="#78aeea" stroke-width="2"/>
+  <rect x="318" y="27" width="174" height="30" fill="#202226"/><text x="328" y="50" font-size="20" font-weight="700" fill="#78aeea">ORDER AGGREGATE</text>
+  <rect x="342" y="112" width="292" height="204" rx="4" fill="#283a50" stroke="#78aeea" stroke-width="1.5"/>
+  <text x="372" y="153" font-size="23" font-weight="700" fill="#f1f3f5">Order</text><text x="372" y="180" font-size="14" fill="#aab0b7">Aggregate Root · Entity</text>
+  <line x1="372" y1="201" x2="604" y2="201" stroke="#4a4f56"/>
+  <text x="372" y="236" font-size="16" fill="#f1f3f5">cancel()</text><text x="372" y="270" font-size="16" fill="#f1f3f5">changeQuantity()</text><text x="372" y="297" font-size="14" fill="#aab0b7">규칙 확인 후 내부 상태 변경</text>
+  <path d="M634 171H726" stroke="#858c94" stroke-width="1.5" marker-end="url(#arrow)"/><path d="M634 263H726" stroke="#858c94" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <rect x="730" y="112" width="356" height="118" rx="4" fill="#292c31" stroke="#858c94" stroke-width="1.5"/>
+  <text x="760" y="157" font-size="21" font-weight="700" fill="#f1f3f5">OrderLine</text><text x="760" y="189" font-size="15" fill="#aab0b7">Entity · 상품 · 수량 · 주문 가격</text>
+  <rect x="730" y="250" width="356" height="94" rx="4" fill="#292c31" stroke="#858c94" stroke-width="1.5"/>
+  <text x="760" y="289" font-size="20" font-weight="700" fill="#f1f3f5">ShippingAddress</text><text x="760" y="319" font-size="15" fill="#aab0b7">Value Object</text>
 </svg>

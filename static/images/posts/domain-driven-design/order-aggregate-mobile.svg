@@ -1,25 +1,21 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="600" height="790" viewBox="0 0 600 790" role="img" aria-labelledby="title desc">
-  <title id="title">Order Aggregate 구조</title>
-  <desc id="desc">Order Root를 통해 내부 객체를 변경하고 규칙을 지키는 구조</desc>
-  <rect width="600" height="790" fill="#f7f7f6"/>
-  <g font-family="Pretendard, Noto Sans KR, sans-serif">
-    <rect x="42" y="40" width="516" height="700" rx="8" fill="none" stroke="#3568a8" stroke-width="3"/>
-    <text x="70" y="84" font-size="25" font-weight="700" fill="#3568a8">Order Aggregate</text>
-    <rect x="90" y="125" width="420" height="150" rx="6" fill="#202124"/>
-    <text x="120" y="168" font-size="25" font-weight="700" fill="#ffffff">Order</text>
-    <text x="120" y="201" font-size="17" fill="#d8dadd">Aggregate Root · Entity</text>
-    <text x="120" y="239" font-size="17" fill="#ffffff">cancel() · changeQuantity()</text>
-    <line x1="300" y1="275" x2="300" y2="330" stroke="#8b9096" stroke-width="2"/>
-    <path d="M290 320l10 12 10-12" fill="none" stroke="#8b9096" stroke-width="2"/>
-    <rect x="90" y="332" width="420" height="92" rx="6" fill="#ffffff" stroke="#51565c" stroke-width="2"/>
-    <text x="120" y="371" font-size="23" font-weight="700" fill="#202124">OrderLine</text>
-    <text x="120" y="402" font-size="17" fill="#62666b">Entity · 상품 · 수량 · 주문 가격</text>
-    <rect x="90" y="446" width="420" height="82" rx="6" fill="#ffffff" stroke="#51565c" stroke-width="2"/>
-    <text x="120" y="481" font-size="22" font-weight="700" fill="#202124">ShippingAddress</text>
-    <text x="120" y="510" font-size="17" fill="#62666b">Value Object</text>
-    <line x1="90" y1="570" x2="510" y2="570" stroke="#d0d3d6"/>
-    <text x="90" y="613" font-size="21" font-weight="700" fill="#202124">Root가 지키는 규칙</text>
-    <text x="90" y="654" font-size="18" fill="#44484d">배송 후 취소 불가 · 수량은 1개 이상</text>
-    <text x="90" y="692" font-size="18" fill="#44484d">수량을 바꾸면 총금액 다시 계산</text>
-  </g>
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="760" viewBox="0 0 680 760" role="img" aria-labelledby="title desc">
+  <title id="title">Order Aggregate의 변경 경로</title>
+  <desc id="desc">외부 변경 요청이 Order Root를 거쳐 OrderLine과 ShippingAddress로 전달되는 구조</desc>
+  <style>text { font-family:Pretendard,"Noto Sans KR",sans-serif; }</style>
+  <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="#858c94"/></marker></defs>
+  <rect width="680" height="760" fill="#202226"/>
+  <text x="60" y="54" font-size="19" font-weight="700" fill="#f1f3f5">외부 코드</text><text x="60" y="82" font-size="15" fill="#aab0b7">Controller · Service</text>
+  <path d="M340 93V141" stroke="#858c94" stroke-width="1.5" marker-end="url(#arrow)"/><text x="361" y="122" font-size="14" fill="#aab0b7">변경 요청</text>
+  <rect x="34" y="144" width="612" height="574" rx="4" fill="none" stroke="#78aeea" stroke-width="2"/>
+  <rect x="56" y="129" width="174" height="30" fill="#202226"/><text x="66" y="152" font-size="20" font-weight="700" fill="#78aeea">ORDER AGGREGATE</text>
+  <rect x="88" y="196" width="504" height="218" rx="4" fill="#283a50" stroke="#78aeea" stroke-width="1.5"/>
+  <text x="118" y="239" font-size="23" font-weight="700" fill="#f1f3f5">Order</text><text x="118" y="268" font-size="14" fill="#aab0b7">Aggregate Root · Entity</text>
+  <line x1="118" y1="289" x2="562" y2="289" stroke="#4a4f56"/>
+  <text x="118" y="325" font-size="16" fill="#f1f3f5">cancel()</text><text x="118" y="359" font-size="16" fill="#f1f3f5">changeQuantity()</text><text x="118" y="391" font-size="14" fill="#aab0b7">규칙 확인 후 내부 상태 변경</text>
+  <path d="M340 414V460" stroke="#858c94" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <rect x="88" y="464" width="504" height="96" rx="4" fill="#292c31" stroke="#858c94" stroke-width="1.5"/>
+  <text x="118" y="503" font-size="20" font-weight="700" fill="#f1f3f5">OrderLine</text><text x="118" y="534" font-size="15" fill="#aab0b7">Entity · 상품 · 수량 · 주문 가격</text>
+  <path d="M340 560V600" stroke="#858c94" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <rect x="88" y="604" width="504" height="80" rx="4" fill="#292c31" stroke="#858c94" stroke-width="1.5"/>
+  <text x="118" y="638" font-size="19" font-weight="700" fill="#f1f3f5">ShippingAddress</text><text x="118" y="666" font-size="14" fill="#aab0b7">Value Object</text>
 </svg>

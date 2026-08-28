@@ -1,36 +1,33 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="560" viewBox="0 0 1200 560" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="540" viewBox="0 0 1200 540" role="img" aria-labelledby="title desc">
   <title id="title">바운디드 컨텍스트와 애그리거트의 경계</title>
-  <desc id="desc">주문 컨텍스트 안의 주문 및 쿠폰 애그리거트와 상품 컨텍스트의 상품 애그리거트를 구분한 그림</desc>
-  <rect width="1200" height="560" fill="#f7f7f6"/>
-  <g font-family="Pretendard, Noto Sans KR, sans-serif" fill="#202124">
-    <rect x="58" y="55" width="690" height="440" rx="8" fill="none" stroke="#3568a8" stroke-width="3"/>
-    <text x="88" y="98" font-size="21" font-weight="700" fill="#3568a8">주문 컨텍스트</text>
-    <rect x="94" y="140" width="360" height="255" rx="6" fill="#ffffff" stroke="#51565c" stroke-width="2"/>
-    <text x="120" y="180" font-size="21" font-weight="700">Order Aggregate</text>
-    <rect x="120" y="215" width="128" height="62" rx="4" fill="#202124"/>
-    <text x="184" y="241" text-anchor="middle" font-size="18" font-weight="700" fill="#ffffff">Order</text>
-    <text x="184" y="264" text-anchor="middle" font-size="13" fill="#d8dadd">Root</text>
-    <line x1="248" y1="246" x2="295" y2="246" stroke="#8b9096" stroke-width="2"/>
-    <rect x="295" y="215" width="132" height="62" rx="4" fill="#ffffff" stroke="#8b9096"/>
-    <text x="361" y="242" text-anchor="middle" font-size="17" font-weight="650">OrderLine</text>
-    <text x="361" y="265" text-anchor="middle" font-size="13" fill="#62666b">Entity</text>
-    <rect x="120" y="307" width="307" height="55" rx="4" fill="#ffffff" stroke="#8b9096"/>
-    <text x="274" y="341" text-anchor="middle" font-size="16">Money · ShippingAddress</text>
-    <rect x="492" y="140" width="218" height="154" rx="6" fill="#ffffff" stroke="#51565c" stroke-width="2"/>
-    <text x="518" y="180" font-size="20" font-weight="700">Coupon Aggregate</text>
-    <text x="518" y="225" font-size="17">Coupon Root</text>
-    <text x="518" y="257" font-size="15" fill="#62666b">사용 여부 · 만료 규칙</text>
-    <text x="492" y="352" font-size="17" font-weight="650">CancelOrderService</text>
-    <text x="492" y="382" font-size="15" fill="#62666b">컨텍스트 안에서 사용 사례 진행</text>
-    <line x1="748" y1="275" x2="836" y2="275" stroke="#8b9096" stroke-width="2"/>
-    <path d="M826 265l12 10-12 10" fill="none" stroke="#8b9096" stroke-width="2"/>
-    <text x="792" y="251" text-anchor="middle" font-size="14" fill="#62666b">명시적 계약</text>
-    <rect x="838" y="55" width="304" height="440" rx="8" fill="none" stroke="#51565c" stroke-width="3"/>
-    <text x="868" y="98" font-size="21" font-weight="700">상품 컨텍스트</text>
-    <rect x="874" y="140" width="232" height="210" rx="6" fill="#ffffff" stroke="#51565c" stroke-width="2"/>
-    <text x="900" y="180" font-size="20" font-weight="700">Product Aggregate</text>
-    <text x="900" y="230" font-size="17">Product Root</text>
-    <text x="900" y="270" font-size="16" fill="#62666b">ProductName</text>
-    <text x="900" y="305" font-size="16" fill="#62666b">CatalogPrice</text>
-  </g>
+  <desc id="desc">주문 컨텍스트 안의 주문과 쿠폰 애그리거트, 상품 컨텍스트의 상품 애그리거트를 구분한 그림</desc>
+  <style>text { font-family:Pretendard,"Noto Sans KR",sans-serif; }</style>
+  <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="#858c94"/></marker></defs>
+  <rect width="1200" height="540" fill="#202226"/>
+  <rect x="36" y="42" width="754" height="456" rx="4" fill="none" stroke="#78aeea" stroke-width="2"/>
+  <rect x="58" y="28" width="166" height="30" fill="#202226"/><text x="68" y="51" font-size="20" font-weight="700" fill="#78aeea">주문 컨텍스트</text>
+  <rect x="74" y="92" width="424" height="310" rx="4" fill="#292c31" stroke="#858c94" stroke-width="1.5"/>
+  <text x="96" y="125" font-size="17" font-weight="700" fill="#f1f3f5">ORDER AGGREGATE</text>
+  <rect x="100" y="166" width="154" height="92" rx="4" fill="#283a50" stroke="#78aeea" stroke-width="1.5"/>
+  <text x="177" y="205" text-anchor="middle" font-size="21" font-weight="700" fill="#f1f3f5">Order</text><text x="177" y="232" text-anchor="middle" font-size="14" fill="#aab0b7">Aggregate Root</text>
+  <path d="M254 212H309" stroke="#858c94" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <rect x="312" y="166" width="160" height="92" rx="4" fill="#30343a" stroke="#4a4f56" stroke-width="1.5"/>
+  <text x="392" y="205" text-anchor="middle" font-size="19" font-weight="700" fill="#f1f3f5">OrderLine</text><text x="392" y="232" text-anchor="middle" font-size="14" fill="#aab0b7">Entity</text>
+  <path d="M177 258V303" stroke="#858c94" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <rect x="100" y="306" width="372" height="68" rx="4" fill="#30343a" stroke="#4a4f56" stroke-width="1.5"/>
+  <text x="286" y="335" text-anchor="middle" font-size="18" font-weight="700" fill="#f1f3f5">Money · ShippingAddress</text><text x="286" y="359" text-anchor="middle" font-size="14" fill="#aab0b7">Value Object</text>
+  <rect x="532" y="92" width="220" height="182" rx="4" fill="#292c31" stroke="#858c94" stroke-width="1.5"/>
+  <text x="552" y="125" font-size="17" font-weight="700" fill="#f1f3f5">COUPON AGGREGATE</text>
+  <rect x="556" y="157" width="172" height="82" rx="4" fill="#283a50" stroke="#78aeea" stroke-width="1.5"/>
+  <text x="642" y="191" text-anchor="middle" font-size="20" font-weight="700" fill="#f1f3f5">Coupon</text><text x="642" y="218" text-anchor="middle" font-size="14" fill="#aab0b7">Aggregate Root</text>
+  <rect x="532" y="314" width="220" height="88" rx="4" fill="#30343a" stroke="#4a4f56" stroke-width="1.5"/>
+  <text x="642" y="351" text-anchor="middle" font-size="17" font-weight="700" fill="#f1f3f5">CancelOrderService</text><text x="642" y="378" text-anchor="middle" font-size="14" fill="#aab0b7">Application Service</text>
+  <path d="M790 270H850" stroke="#858c94" stroke-width="1.5" marker-end="url(#arrow)"/><text x="820" y="248" text-anchor="middle" font-size="14" fill="#aab0b7">상품 정보</text>
+  <rect x="850" y="42" width="314" height="456" rx="4" fill="none" stroke="#858c94" stroke-width="2"/>
+  <rect x="872" y="28" width="166" height="30" fill="#202226"/><text x="882" y="51" font-size="20" font-weight="700" fill="#f1f3f5">상품 컨텍스트</text>
+  <rect x="888" y="92" width="238" height="244" rx="4" fill="#292c31" stroke="#858c94" stroke-width="1.5"/>
+  <text x="910" y="125" font-size="17" font-weight="700" fill="#f1f3f5">PRODUCT AGGREGATE</text>
+  <rect x="912" y="162" width="190" height="86" rx="4" fill="#30343a" stroke="#858c94" stroke-width="1.5"/>
+  <text x="1007" y="198" text-anchor="middle" font-size="21" font-weight="700" fill="#f1f3f5">Product</text><text x="1007" y="225" text-anchor="middle" font-size="14" fill="#aab0b7">Aggregate Root</text>
+  <text x="912" y="289" font-size="15" fill="#aab0b7">ProductName · CatalogPrice</text>
 </svg>

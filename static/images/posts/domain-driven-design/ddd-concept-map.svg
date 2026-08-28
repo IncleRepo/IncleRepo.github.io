@@ -1,26 +1,35 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="330" viewBox="0 0 1200 330" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="270" viewBox="0 0 1200 270" role="img" aria-labelledby="title desc">
   <title id="title">DDD를 이해하는 흐름</title>
-  <desc id="desc">업무 이해, 언어와 모델, 경계와 규칙, 실행과 협력으로 이어지는 네 단계</desc>
-  <rect width="1200" height="330" fill="#f7f7f6"/>
-  <g font-family="Pretendard, Noto Sans KR, sans-serif">
-    <line x1="150" y1="132" x2="1050" y2="132" stroke="#c8ccd1" stroke-width="3"/>
-    <g text-anchor="middle">
-      <circle cx="150" cy="132" r="14" fill="#3568a8"/>
-      <text x="150" y="82" font-size="25" font-weight="700" fill="#202124">업무 이해</text>
-      <text x="150" y="190" font-size="17" fill="#62666b">Domain</text>
-      <text x="150" y="220" font-size="17" fill="#62666b">Domain Expert</text>
-      <circle cx="450" cy="132" r="14" fill="#3568a8"/>
-      <text x="450" y="82" font-size="25" font-weight="700" fill="#202124">언어와 모델</text>
-      <text x="450" y="190" font-size="17" fill="#62666b">Ubiquitous Language</text>
-      <text x="450" y="220" font-size="17" fill="#62666b">Domain Model</text>
-      <circle cx="750" cy="132" r="14" fill="#3568a8"/>
-      <text x="750" y="82" font-size="25" font-weight="700" fill="#202124">경계와 규칙</text>
-      <text x="750" y="190" font-size="17" fill="#62666b">Bounded Context</text>
-      <text x="750" y="220" font-size="17" fill="#62666b">Aggregate</text>
-      <circle cx="1050" cy="132" r="14" fill="#3568a8"/>
-      <text x="1050" y="82" font-size="25" font-weight="700" fill="#202124">실행과 협력</text>
-      <text x="1050" y="190" font-size="17" fill="#62666b">Application</text>
-      <text x="1050" y="220" font-size="17" fill="#62666b">Repository · Event</text>
-    </g>
+  <desc id="desc">업무 이해에서 언어와 모델, 경계와 규칙, 실행과 협력으로 이어지는 네 단계</desc>
+  <style>text { font-family:Pretendard,"Noto Sans KR",sans-serif; }</style>
+  <rect width="1200" height="270" fill="#202226"/>
+  <g fill="none" stroke="#858c94" stroke-width="2">
+    <path d="M218 116H323"/><path d="m312 108 12 8-12 8"/>
+    <path d="M508 116H613"/><path d="m602 108 12 8-12 8"/>
+    <path d="M798 116H903"/><path d="m892 108 12 8-12 8"/>
+  </g>
+  <g transform="translate(34 58)">
+    <circle cx="28" cy="58" r="24" fill="#283a50"/>
+    <text x="28" y="65" text-anchor="middle" font-size="18" font-weight="700" fill="#78aeea">1</text>
+    <text x="66" y="54" font-size="23" font-weight="700" fill="#f1f3f5">업무 이해</text>
+    <text x="66" y="83" font-size="16" fill="#aab0b7">도메인 · 도메인 전문가</text>
+  </g>
+  <g transform="translate(324 58)">
+    <circle cx="28" cy="58" r="24" fill="#283a50"/>
+    <text x="28" y="65" text-anchor="middle" font-size="18" font-weight="700" fill="#78aeea">2</text>
+    <text x="66" y="54" font-size="23" font-weight="700" fill="#f1f3f5">언어와 모델</text>
+    <text x="66" y="83" font-size="16" fill="#aab0b7">유비쿼터스 언어 · 도메인 모델</text>
+  </g>
+  <g transform="translate(614 58)">
+    <circle cx="28" cy="58" r="24" fill="#283a50"/>
+    <text x="28" y="65" text-anchor="middle" font-size="18" font-weight="700" fill="#78aeea">3</text>
+    <text x="66" y="54" font-size="23" font-weight="700" fill="#f1f3f5">경계와 규칙</text>
+    <text x="66" y="83" font-size="16" fill="#aab0b7">바운디드 컨텍스트 · 애그리거트</text>
+  </g>
+  <g transform="translate(904 58)">
+    <circle cx="28" cy="58" r="24" fill="#283a50"/>
+    <text x="28" y="65" text-anchor="middle" font-size="18" font-weight="700" fill="#78aeea">4</text>
+    <text x="66" y="54" font-size="23" font-weight="700" fill="#f1f3f5">실행과 협력</text>
+    <text x="66" y="83" font-size="16" fill="#aab0b7">응용 서비스 · 저장소 · 이벤트</text>
   </g>
 </svg>
