@@ -480,7 +480,7 @@ public class ProductTranslator {
 }
 ```
 
-`ProductTranslator`는 외부 계약을 주문 컨텍스트의 언어로 바꾸며 **부패 방지 계층(Anti-Corruption Layer, ACL)**을 구성한다. 상품의 현재 가격은 주문 시점에 확정한 `orderPrice`로 바뀐다. 상품의 응답 구조가 달라져도 이 경계에서 변화를 흡수하면 주문 모델은 `OrderedProduct`라는 자신의 의미를 유지할 수 있다.
+`ProductTranslator`는 외부 계약을 주문 컨텍스트의 언어로 바꾸며 **부패 방지 계층(Anti-Corruption Layer, ACL)을** 구성한다. 상품의 현재 가격은 주문 시점에 확정한 `orderPrice`로 바뀐다. 상품의 응답 구조가 달라져도 이 경계에서 변화를 흡수하면 주문 모델은 `OrderedProduct`라는 자신의 의미를 유지할 수 있다.
 
 여기까지는 상품 컨텍스트의 정보가 주문 컨텍스트 안으로 들어오는 흐름이었다. 반대 방향에서는 주문 취소처럼 주문 컨텍스트에서 일어난 변화를 결제와 쿠폰 컨텍스트에 알려야 한다.
 
