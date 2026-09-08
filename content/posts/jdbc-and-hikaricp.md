@@ -35,21 +35,11 @@ Connection Pool은 이 비용을 매 요청마다 반복하지 않도록 이미 
 
 MySQL과 PostgreSQL은 통신 규칙과 Driver가 다르지만, Java 애플리케이션은 JDBC라는 공통 API로 SQL을 실행할 수 있다.
 
-Java는 `Connection`, `PreparedStatement`, `ResultSet`과 같은 공통 API를 제공한다. 실제 데이터베이스 Protocol과 Socket 통신은 MySQL Connector/J나 PostgreSQL JDBC Driver 같은 구현체가 맡는다. 이 공통 규격이 JDBC다.
+JDBC는 `Connection`, `PreparedStatement`, `ResultSet`과 같은 공통 API를 제공한다. 애플리케이션이 이 API를 호출하면 MySQL Connector/J나 PostgreSQL JDBC Driver가 각 데이터베이스의 Protocol에 맞춰 Socket 통신을 처리한다.
 
 ![애플리케이션에서 JDBC Driver를 거쳐 데이터베이스로 연결되는 구조](/images/posts/jdbc-and-hikaricp/legacy-01.png "JDBC 연결 구조")
 
 ![JDBC API와 Driver 구현의 관계](/images/posts/jdbc-and-hikaricp/legacy-02.png "JDBC의 인터페이스 기반 구조")
-
-이를 역할로 나누면 다음과 같다.
-
-```text
-애플리케이션
-→ 공통 JDBC API 사용
-
-데이터베이스별 차이
-→ JDBC Driver가 처리
-```
 
 JPA도 이 구조를 건너뛰지 않는다. Hibernate가 Entity 작업을 SQL로 바꾸더라도 실제 데이터베이스 통신에는 결국 JDBC Driver와 Connection이 필요하다.
 
@@ -93,13 +83,7 @@ try (Connection connection = dataSource.getConnection();
 
 코드에서 `Connection`은 하나의 Java 객체로 보이지만, 내부적으로는 데이터베이스 Session과 연결된 통신 경로를 나타낸다.
 
-일반 객체는 다음처럼 애플리케이션 안에서 생성할 수 있다.
-
-```java
-Member member = new Member();
-```
-
-반면 새로운 물리 Connection을 만드는 과정에는 환경과 설정에 따라 다음 작업이 포함될 수 있다.
+새로운 물리 Connection을 만드는 과정에는 환경과 설정에 따라 다음 작업이 포함될 수 있다.
 
 ```text
 TCP 연결 수립
@@ -210,7 +194,7 @@ A가 바꾼 `readOnly` 상태가 그대로 남아 있다면 B의 작업에 영�
 → 다음 요청이 재사용
 ```
 
-Pool은 Connection을 보관만 하는 창고가 아니다. 다음 요청이 안전하게 재사용할 수 있도록 대여와 반납 경계를 관리한다.
+이 반납 절차를 거쳐 다음 요청이 Connection을 다시 사용할 수 있는 상태로 돌려놓는다.
 
 ### try-with-resources가 반납을 보장한다
 
@@ -405,7 +389,7 @@ Connection을 몇 개까지 빌려줄까?
 → maxLifetime
 ```
 
-세 값은 서로 다른 시점의 문제를 다룬다. 이름에 `Timeout`이나 `Lifetime`이 들어간다는 이유로 비슷한 시간 설정이라고 생각해서는 안 된다.
+대여할 수 있는 총량, 요청의 대기 시간과 연결 자체의 수명으로 나누면 각 설정의 역할이 분명해진다.
 
 ```yaml
 spring:
@@ -529,9 +513,7 @@ Active, Idle, Pending과 Timeout은 증상을 보여준다. 원인은 SQL, Trans
 
 ## 실무 사례: maxLifetime을 너무 짧게 설정했더니
 
-여기부터는 HikariCP의 기본 원리보다 한 단계 더 깊은 운영 사례다.
-
-한 서비스에서는 데이터베이스 장애 전환 뒤 새 대상에 빠르게 연결하기 위해 `maxLifetime`을 50초로 설정했다. HikariCP 기본값인 30분보다 물리 Connection을 훨씬 자주 생성하고 폐기하는 조건이었다.
+Connection을 자주 교체하면 Pool 밖의 정리 작업에도 영향을 준다. 컬리의 운영 사례에서는 데이터베이스 장애 전환 뒤 새 대상에 빠르게 연결하기 위해 `maxLifetime`을 50초로 설정했다. HikariCP 기본값인 30분보다 물리 Connection을 훨씬 자주 생성하고 폐기하는 조건이었다.
 
 당시 사용한 MySQL Connector/J에서는 폐기된 Connection과 관련된 네트워크 자원을 `AbandonedConnectionCleanupThread`가 정리하고 있었다. 이 Thread는 정리 대상을 한 번에 하나씩 처리했다.
 
@@ -546,11 +528,9 @@ Active, Idle, Pending과 Timeout은 증상을 보여준다. 원인은 SQL, Trans
 
 겉으로는 Connection 객체가 계속 늘어났기 때문에 애플리케이션이 `close()`를 빠뜨린 Pool Leak처럼 보일 수 있었다. 하지만 Pool 지표만으로 원인을 찾을 수 없었고, Heap Dump에서 `connectionFinalizerPhantomRefs`와 `AbandonedConnectionCleanupThread`로 이어지는 참조 경로를 확인한 뒤 Driver 내부 정리 병목임을 알 수 있었다.
 
-이 사례에서는 폐기된 Connection 관련 자원을 Driver가 별도 Thread에서 정리했고, Connection을 버리는 속도가 정리 속도보다 빨라 대기 대상이 쌓였다. 이 흐름을 이해하는 데 `PhantomReference`의 JVM 동작 전체까지 알 필요는 없다.
-
 해당 팀은 장애 전환을 위한 짧은 수명이라는 목적을 유지하면서 Connector/J를 지원되는 버전으로 올리고 Cleanup Thread 비활성화 옵션을 적용했다. Connector/J 8.0.22부터는 `com.mysql.cj.disableAbandonedConnectionCleanup` 시스템 속성으로 이 Thread를 비활성화할 수 있다.
 
-이 사례를 `maxLifetime`을 짧게 설정하면 항상 OOM이 발생한다는 규칙으로 받아들여서는 안 된다. 특정 Connector/J 버전과 운영 조건에서 발생한 문제다. 여기서 얻을 수 있는 일반적인 교훈은 다음과 같다.
+이 문제는 당시 Connector/J 버전과 짧은 Connection 수명이 맞물린 결과다. 연결을 교체할 때는 다음 생명주기 전체에서 어느 단계가 밀리는지 확인할 필요가 있다.
 
 ```text
 Connection 생성

@@ -12,7 +12,7 @@ tags = ['JPA', 'JDBC', 'Hibernate', '배치']
 
 회원 10만 명의 상태를 바꿔야 한다고 가정해 보자. JPA로 처리하면 느릴 것 같으니 JDBC로 바꾸면 될까?
 
-이 질문에 답하려면 먼저 둘의 관계를 알아야 한다. JPA와 JDBC는 데이터베이스에 접근하는 서로 독립적인 두 통로가 아니다. 일반적인 Spring 애플리케이션에서 JPA로 작성한 작업도 마지막에는 JDBC를 거쳐 데이터베이스에 전달된다.
+일반적인 Spring 애플리케이션에서는 JPA로 작성한 작업도 JDBC를 거쳐 데이터베이스에 전달된다. 두 방식의 차이를 이해하려면 그 위에서 Hibernate가 어떤 일을 하는지부터 살펴봐야 한다.
 
 ## JPA와 JDBC는 같은 계층의 기술이 아니다
 
@@ -34,7 +34,7 @@ JPA는 Entity를 어떤 방식으로 관리할지 정의한 표준 명세다. JP
 
 이 글에서 **JPA 방식**은 JPA와 Hibernate의 Entity 관리를 이용하는 접근을, **JDBC 직접 사용**은 `JdbcTemplate`처럼 애플리케이션이 SQL과 결과 변환을 직접 제어하는 접근을 뜻한다. 두 방식 모두 밑에서는 JDBC Driver를 사용한다. 차이는 JDBC를 사용하는지 여부가 아니라 **JDBC 위에 Hibernate의 Entity 관리를 둘 것인지**에 있다.
 
-따라서 먼저 확인할 것은 어느 기술이 더 빠른지가 아니다. 이번 작업에서 Entity의 상태 관리가 필요한지, 변경을 몇 개의 SQL로 표현할 수 있는지부터 살펴봐야 한다. 그 답에 따라 일반적인 Entity 변경, JPA Bulk DML, Hibernate의 JDBC Batch와 JDBC 직접 사용 중 자연스러운 선택지가 달라진다.
+선택 기준은 이번 작업에서 Entity의 상태 관리가 필요한지, 변경을 몇 개의 SQL로 표현할 수 있는지에 있다. 회원 한 명을 바꾸는 코드에서 출발해 대량 변경에 필요한 방법을 차례로 살펴보자.
 
 ## JPA가 편리한 이유부터 본다
 
@@ -61,7 +61,7 @@ JPA API로 조회한 Entity는 단순히 메서드에서 반환된 Java 객체�
 
 처음 조회했을 때의 값을 기억해 둔 사본은 **Snapshot**이라고 한다. Hibernate가 현재 값과 Snapshot을 비교해 변경된 Entity를 찾아내는 기능이 **Dirty Checking**이다.
 
-Dirty Checking 덕분에 비즈니스 코드는 SQL 작성이나 Parameter Binding보다 “회원 이름을 변경한다”는 의도에 집중할 수 있다. 다만 편의 기능은 아무 일도 하지 않고 얻는 것이 아니다. Hibernate는 Entity와 Snapshot을 메모리에 보관하고, Flush 시점에 두 상태를 비교해야 한다.
+Dirty Checking 덕분에 비즈니스 코드는 “회원 이름을 변경한다”는 의도에 집중할 수 있다. 이를 지원하기 위해 Hibernate는 Entity와 Snapshot을 메모리에 보관하고, Flush 시점에 두 상태를 비교한다.
 
 회원 몇 명을 변경할 때는 이 비용보다 코드의 명확성과 상태 관리가 주는 이점이 훨씬 크다. 반대로 회원 10만 명을 모두 조회한 뒤 변경하면 상황이 달라진다.
 
@@ -70,9 +70,9 @@ Dirty Checking 덕분에 비즈니스 코드는 SQL 작성이나 Parameter Bindi
 | 회원 10명 변경 | Entity와 Snapshot 10개를 관리하고 변경 여부를 확인 |
 | 회원 100,000명 변경 | Entity와 Snapshot 100,000개를 보관하고 Flush 때 대량 비교 |
 
-여기에 행마다 `UPDATE`가 실행된다면 SQL 실행 횟수도 함께 늘어난다. Dirty Checking 자체가 나쁜 것이 아니라, 작업 규모에 비해 필요 이상의 Entity를 관리할 때 비용이 커지는 것이다.
+여기에 행마다 `UPDATE`가 실행된다면 SQL 실행 횟수도 늘어난다. 10만 개의 Entity를 모두 관리할 필요가 있는 작업인지 확인할 이유다.
 
-그렇다면 대량 처리에서는 Hibernate의 Entity 관리를 버리고 `JdbcTemplate`으로 내려가야 할까? 아직 JPA 경로에서 사용할 수 있는 더 간단한 선택지가 남아 있다. 먼저 같은 변경을 SQL 한 문장으로 표현할 수 있는지 확인해야 한다.
+모든 회원에게 같은 변경을 적용한다면 한 SQL로 처리할 수도 있다. 이 방법은 현재의 JPA 구조에서도 사용할 수 있다.
 
 ## 같은 변경은 한 번의 SQL로 처리한다
 
@@ -98,7 +98,7 @@ Bulk DML은 특정 Java 데이터 접근 기술의 기능이 아니라 데이터
 int updateDormantMembers(MemberStatus status, LocalDateTime threshold);
 ```
 
-따라서 “대량 처리이므로 `JdbcTemplate`을 사용한다”고 바로 결론 내리면 선택지를 하나 건너뛰게 된다. 모든 행에 같은 규칙을 적용할 수 있다면 먼저 현재 JPA 기반 구조에서 Bulk DML로 충분한지 살펴보는 편이 단순하다.
+위 쿼리처럼 변경 조건과 값을 한 번에 표현하면 회원을 하나씩 조회하고 수정하는 과정을 생략할 수 있다.
 
 ### Bulk DML 이후에는 Entity 상태를 확인한다
 
@@ -116,11 +116,11 @@ Bulk DML은 데이터베이스의 행을 바로 바꾸지만, 영속성 컨텍�
 - `flushAutomatically`: Bulk DML을 실행하기 전에 아직 데이터베이스로 보내지 않은 Entity 변경을 먼저 반영한다.
 - `clearAutomatically`: Bulk DML 실행 후 영속성 컨텍스트를 비워, 이후 조회가 데이터베이스의 최신 값을 읽게 한다.
 
-두 옵션은 비슷한 정리 기능이 아니다. Flush는 **보류 중인 변경을 먼저 보존**하고, Clear는 **이미 오래된 상태가 된 관리 객체를 제거**한다. 영속성 컨텍스트를 비우면 모든 Entity가 분리되므로, 이후에도 같은 객체를 계속 사용해야 하는 흐름인지 함께 확인해야 한다.
+두 옵션을 함께 사용하면 **보류 중인 변경을 먼저 반영하고, Bulk DML 후 오래된 관리 상태를 비울 수 있다.** 이때 모든 Entity가 분리되므로 이후에도 같은 객체를 계속 사용하는 흐름인지 확인해야 한다.
 
 또한 JPQL Bulk DML은 Entity를 하나씩 거치지 않는다. 따라서 Entity Callback이나 일반적인 낙관적 락 검사를 자동으로 적용할 것이라고 기대해서는 안 된다. 이런 동작이 업무 규칙에 중요하다면 Bulk DML보다 Entity 단위 변경이 더 적절할 수 있다.
 
-결국 Bulk DML은 “행이 많다”는 이유로 선택하는 기능이 아니다. **여러 행의 변경을 동일한 조건과 값으로 표현할 수 있을 때** 가장 잘 맞는다. 행마다 다른 계산이 필요하다면 이제 Batch를 검토할 차례다.
+Bulk DML은 **여러 행의 변경을 동일한 조건과 값으로 표현할 수 있을 때** 잘 맞는다. 행마다 다른 계산 결과를 저장해야 한다면 여러 SQL을 효율적으로 전달할 방법이 필요하다.
 
 ## 행마다 값이 다르면 Batch를 검토한다
 
@@ -163,9 +163,7 @@ public void saveMembers(List<Member> members) {
 }
 ```
 
-이 코드가 JDBC Batch로 실행될 수 있는 이유는 메서드 이름이 `saveAll()`이어서가 아니다. 여러 저장 작업이 같은 트랜잭션과 영속성 컨텍스트에 쌓이고, Hibernate의 Batch 설정과 나머지 조건이 맞으면 Flush할 때 Hibernate가 JDBC Batch를 사용하기 때문이다.
-
-따라서 다음 코드도 바깥의 `@Transactional`로 같은 트랜잭션에 묶여 있다면 같은 조건에서 Batch가 가능하다.
+여러 저장 작업이 같은 트랜잭션과 영속성 컨텍스트에 쌓이면 Hibernate가 Flush할 때 Batch로 모을 수 있다. 따라서 다음처럼 반복문에서 `save()`를 호출해도 같은 트랜잭션에 묶여 있고 Batch 조건이 맞으면 동일하게 동작할 수 있다.
 
 ```java
 @Transactional
@@ -202,9 +200,7 @@ spring:
 3. **ID 생성 전략이 Batch를 방해하지 않아야 한다.** `GenerationType.IDENTITY`는 Insert 직후 생성된 ID를 받아야 하므로 Hibernate가 Insert를 뒤로 모으기 어렵다.
 4. **JDBC Driver가 Batch를 지원해야 한다.** Driver와 설정에 따라 실제 전송이나 SQL 재작성 방식이 달라질 수 있다.
 
-즉 `saveAll()`은 여러 Entity를 한 메서드로 저장하고 같은 트랜잭션에서 처리하기 쉽게 만들어 주지만, Batch의 발생 조건 그 자체는 아니다. 실제 조건은 **Hibernate 설정, 트랜잭션과 Flush 범위, SQL 형태, ID 전략과 JDBC Driver**다.
-
-대량 작업에서는 Batch 활성화와 별개로 영속성 컨텍스트의 크기도 제어해야 한다. 다음 예제의 메서드 이름은 Spring Data의 `saveAll()`과 구분하기 위해 `saveMembersInBatches()`로 작성했다.
+Batch를 활성화해도 처리할 Entity가 모두 영속성 컨텍스트에 남으면 메모리 사용량은 계속 늘어난다. 대량 작업에서는 일정한 간격으로 Flush한 뒤 처리가 끝난 Entity를 분리할 수 있다.
 
 ```java
 @Transactional
@@ -226,7 +222,7 @@ public void saveMembersInBatches(List<CreateMemberCommand> commands, int batchSi
 
 위 코드는 여전히 JPA API로 Entity를 저장한다. `flush()`가 실행되면 Hibernate가 Entity 변경을 SQL로 만들고, 앞의 조건이 맞으면 그 SQL들을 JDBC Batch API에 모아 전달한다. `clear()`는 처리가 끝난 Entity를 영속성 컨텍스트에서 분리한다. 이를 반복하면 수십만 개의 Entity가 한꺼번에 메모리에 쌓이는 상황을 피할 수 있다.
 
-여기서 `flush()`와 `clear()`는 JDBC Batch 기능을 켜는 설정이 아니다. `flush()`는 대기 중인 SQL을 실행하면서 하나의 Batch 처리 경계를 만들고, `clear()`는 이미 처리한 Entity를 메모리에서 분리한다. 수천 건 정도라면 Commit 때 한 번 Flush해도 Batch가 동작할 수 있지만, 수십만 건을 다룰 때는 영속성 컨텍스트가 너무 커지지 않도록 일정한 간격으로 두 메서드를 호출한다.
+처리량이 적으면 Commit 때 한 번 Flush할 수도 있다. 처리량이 커지면 위처럼 중간에 Flush와 Clear를 반복해 한꺼번에 관리하는 Entity 수를 제한한다.
 
 ```text
 EntityManager.persist()
@@ -374,7 +370,7 @@ SQL 로그 역시 필요한 구간에서만 사용한다. 수십만 건의 SQL�
 - Connection 점유 시간과 Transaction 길이
 - 전체 처리량과 실패 시 재처리 범위
 
-성능 비교는 특정 기술의 우열을 증명하는 일이 아니다. 병목이 데이터베이스의 실행 계획인지, 네트워크 왕복인지, Entity와 Snapshot 관리인지 찾아내는 과정이다.
+이 지표를 함께 보면 실행 계획, 네트워크 왕복과 Entity 관리 중 무엇이 병목이었고 변경 후 어떤 비용이 줄었는지 설명할 수 있다.
 
 ## 실제 선택 순서
 

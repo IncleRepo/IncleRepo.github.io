@@ -28,7 +28,7 @@ POST /orders
 HTTP 응답
 ```
 
-주문이 이미 정상적으로 저장됐다면 사용자가 이메일 전송까지 3초 동안 기다릴 필요가 있을까? 이때 먼저 확인할 것은 작업 시간이 아니라 다음 질문이다.
+주문이 이미 저장됐다면 사용자가 이메일 전송까지 기다려야 할까? 응답을 먼저 보내도 되는지 판단하려면 두 작업의 관계를 확인해야 한다.
 
 > **이메일 발송 성공 여부가 주문 성공 여부를 결정하는가?**
 
@@ -84,8 +84,6 @@ DB 응답을 기다림
 → Blocking / Non-Blocking
 ```
 
-동기와 비동기는 **호출 흐름이 완료를 기다리는지**를 구분한다. Blocking과 Non-Blocking은 **기다리는 동안 현재 Thread가 진행할 수 있는지**를 구분한다.
-
 예를 들어 요청 Thread가 이메일 작업을 Worker Thread에 맡기고 바로 돌아오면 요청 흐름에서는 비동기다. 하지만 Worker Thread는 SMTP 서버의 응답을 기다리는 동안 멈춰 있을 수 있다. 이때 이메일 작업 자체는 Blocking 방식으로 실행된다. 따라서 비동기와 Non-Blocking은 같은 뜻이 아니다.
 
 DB 응답을 기다리는 동안에는 해당 요청 Thread가 멈춘다. 다른 요청은 다른 Thread에서 계속 처리할 수 있다.
@@ -134,13 +132,7 @@ Worker Thread
 실제 메서드 실행
 ```
 
-각 구성 요소의 역할은 다르다.
-
-- **Proxy**는 `@Async`가 붙은 호출을 가로챈다.
-- **TaskExecutor**는 비동기 작업을 실행할 Thread Pool을 관리한다.
-- **Queue**는 Worker Thread가 바로 처리하지 못한 작업을 잠시 보관한다.
-
-내부적으로 메서드 호출은 `Runnable`이나 `Callable` 형태의 작업으로 Executor에 제출된다. 호출은 먼저 끝나고, Worker Thread가 이어서 실제 메서드를 실행한다.
+Proxy가 메서드 호출을 `Runnable`이나 `Callable` 형태의 작업으로 만들어 Executor에 제출하면 Worker Thread가 실제 메서드를 실행한다. 바로 실행할 Worker가 없으면 설정된 Queue에서 차례를 기다릴 수 있다.
 
 이 흐름에서 중요한 점은 호출이 반환됐다고 실제 작업까지 끝난 것은 아니라는 사실이다. 요청 Thread가 `sendOrderCompleted()` 호출을 빠져나온 순간 이메일 작업은 아직 Queue에서 기다리고 있을 수도 있다. 따라서 HTTP 응답 성공과 이메일 발송 성공은 서로 다른 시점에 확정된다.
 
@@ -175,7 +167,7 @@ public class MailService {
 this.sendMail() → Proxy를 다시 지나지 않음 → 현재 Thread에서 실행
 ```
 
-같은 클래스 내부 호출에서 `@Async`가 적용되지 않는 이유는 Annotation이 잘못되어서가 아니라 Proxy를 통과하지 않았기 때문이다. 비동기 작업을 별도 Spring Bean으로 분리하는 방식이 가장 이해하기 쉽고 안전하다.
+Proxy를 거치게 하려면 비동기 작업을 별도 Spring Bean으로 옮기고 그 Bean을 호출할 수 있다.
 
 ```java
 @Service
@@ -200,7 +192,7 @@ public class MailService {
 }
 ```
 
-이제 `OrderService`가 주입받은 `MailService` Bean을 호출하므로 호출이 Proxy를 지나간다. 메서드를 다른 Bean으로 분리하는 이유는 **외부 Bean 호출을 만들어 Spring Proxy가 개입할 경계를 확보하기 위해서다.**
+이제 `OrderService`가 주입받은 `MailService`를 호출할 때 Proxy가 개입해 이메일 작업을 Executor로 넘긴다.
 
 ### `void` 작업의 예외는 원래 요청으로 돌아가지 않는다
 
@@ -356,7 +348,7 @@ Message Queue
 → 다른 Process도 이해할 Message가 보관됨
 ```
 
-둘 다 Queue라는 이름을 사용하지만 같은 저장소가 아니다. `@Async`의 Queue에는 같은 JVM에서 실행할 `Runnable` 같은 작업이 들어간다. Broker에는 Java 메서드 자체가 아니라 여러 프로세스가 약속된 형식으로 읽을 수 있는 데이터가 기록된다.
+`@Async`의 Queue에는 같은 JVM에서 실행할 `Runnable` 같은 작업이 들어간다. 외부 Broker에 보관하려면 다른 프로세스도 읽을 수 있도록 작업에 필요한 정보를 데이터로 표현해야 한다.
 
 메시지 큐는 이러한 구조를 가리키는 개념이고, 실제로 메시지를 받아 보관하고 전달하는 역할은 Kafka·RabbitMQ 같은 제품이나 Amazon SQS 같은 Cloud Service가 맡을 수 있다. 제품마다 메시지를 저장하고 전달하는 방식은 다르다. 이 글에서는 이후에 살펴볼 Partition, Consumer Group, Offset을 구체적으로 설명하기 위해 **Kafka**를 예로 사용한다.
 
@@ -383,20 +375,11 @@ Kafka Broker
 - **Topic**은 같은 목적의 메시지를 모아두는 논리적인 이름이다.
 - **Consumer**는 메시지를 읽어 실제 업무를 수행하는 쪽이다.
 
-이제 네 가지 용어를 앞의 주문 완료 흐름에 하나씩 대입해 보자.
+주문 서비스가 Producer로서 `order-completed` Topic에 Event를 보내면, 이메일 처리 애플리케이션은 Consumer로서 이를 읽고 이메일을 발송한다.
 
-```text
-주문 서비스             → Producer
-Kafka                   → Broker
-order-completed         → Topic
-이메일 처리 애플리케이션 → Consumer
-```
+Broker는 실제 서버이고 Topic은 메시지를 목적별로 구분하는 이름이므로, 하나의 Kafka에는 `order-completed`, `payment-completed`, `delivery-started`처럼 여러 Topic이 있을 수 있다.
 
-주문 서비스는 Producer의 역할을 맡아 `order-completed` Topic으로 Event를 보낸다. Kafka Broker는 이 Event를 보관한다. 이메일 처리 애플리케이션은 Consumer가 되어 해당 Topic의 Event를 읽고 이메일을 발송한다.
-
-여기서 Broker와 Topic을 같은 대상으로 생각하기 쉽다. Broker는 메시지를 실제로 보관하는 서버이고, Topic은 Broker 안에서 메시지를 목적별로 구분하는 논리적인 이름이다. 하나의 Kafka에는 `order-completed`, `payment-completed`, `delivery-started`처럼 여러 Topic이 있을 수 있다.
-
-Producer가 보내는 것은 Java 메서드가 아니라 Consumer와 약속한 형식의 데이터다. 주문 완료 Event라면 다음처럼 주문 식별자와 발생 시각 등이 들어갈 수 있다.
+이메일 Consumer가 주문을 찾을 수 있도록 Event에 주문 식별자와 발생 시각 등을 담는다.
 
 ```json
 {
@@ -406,7 +389,7 @@ Producer가 보내는 것은 Java 메서드가 아니라 Consumer와 약속한 �
 }
 ```
 
-Consumer는 이 데이터를 읽어 `orderId`에 해당하는 수신자를 찾고 이메일을 발송한다. Producer는 Consumer의 이메일 메서드를 직접 호출하지 않으며, Consumer가 어느 서버에서 실행되는지도 알 필요가 없다. 두 애플리케이션은 Topic에 기록되는 Event 형식만 약속한다.
+Consumer는 `orderId`로 수신자를 찾아 이메일을 발송한다. Producer는 Event를 Broker에 남기면 되므로 이메일 처리 애플리케이션이 어느 서버에서 실행되는지 몰라도 된다.
 
 ### 메시지 한 건은 다음 순서로 이동한다
 
@@ -524,9 +507,7 @@ Consumer가 0번부터 4번까지 처리한 뒤 재시작하면 어디서부터 
 
 ## Spring에서는 이렇게 Kafka에 연결할 수 있다
 
-지금부터 나오는 설정은 메시지 큐를 선택하는 기준이 아니다. 앞에서 살펴본 Producer를 Spring 애플리케이션에서 구성하는 모습을 보여 주는 보충 예시다.
-
-Spring 애플리케이션에서 Kafka에 접근하려면 먼저 Spring Kafka 의존성이 필요하다. 이 의존성을 추가하면 Kafka Producer와 Consumer를 Spring 방식으로 구성할 수 있다.
+앞의 Producer와 Consumer를 Spring에서 구성하려면 Spring Kafka 의존성을 추가한다.
 
 ![Spring Kafka 의존성 구성](/images/posts/async-processing-and-message-queue/legacy-03.png "Spring Kafka 의존성")
 
@@ -555,9 +536,7 @@ Spring 애플리케이션에서 Kafka에 접근하려면 먼저 Spring Kafka 의
 2. Kafka에 주문 취소 Event 발행
 ```
 
-첫 번째 작업은 Database에서, 두 번째 작업은 Kafka에서 실행된다. DB를 먼저 Commit하면 다음 문제가 생길 수 있다.
-
-DB Transaction이 보장하는 원자성은 Database 안의 변경에만 적용된다. 같은 Service 메서드에서 `repository.save()`와 `kafkaTemplate.send()`를 연달아 호출하더라도 Database와 Kafka는 각자의 성공과 실패를 따로 관리한다.
+주문 상태는 Database에서, Event 발행은 Kafka에서 각각 처리한다. 같은 Service 메서드에서 두 작업을 연달아 호출해도 성공과 실패는 따로 확정되므로, DB Commit 뒤 다음과 같은 상황이 생길 수 있다.
 
 ```text
 DB Commit 성공
@@ -618,9 +597,7 @@ Outbox 상태 갱신 또는 삭제
 
 이 구조를 **Transactional Outbox**라고 한다. DB 변경과 Kafka 발행을 하나의 Transaction으로 만드는 것이 아니다. 업무 상태와 “이 Event를 나중에 발행해야 한다”는 기록을 같은 DB Transaction에서 확정하는 방식이다.
 
-Publisher가 실패해도 Pending Outbox가 DB에 남아 있으므로 다시 조회해 발행할 수 있다. Outbox는 **실패한 발행을 다시 시도할 수 있도록 기록을 남긴다.** 중복 발행은 Consumer의 멱등 처리와 함께 다뤄야 한다.
-
-여기에도 실패 구간은 남아 있다.
+Publisher가 실패해도 Pending Outbox를 다시 조회해 발행할 수 있다. 다만 발행은 성공했는데 완료 기록만 남기지 못한 경우에는 같은 Event를 다시 보낼 수 있다.
 
 ```text
 Kafka 발행 성공
@@ -831,8 +808,6 @@ Lag의 현재 값만 보는 것보다 변화 추세를 함께 보는 편이 중�
 → Message Broker의 가치가 큼
 ```
 
-선택 기준은 작업 시간보다 유실과 복구 요구에 가깝다.
-
 `@Async`는 다음과 같은 작업에 잘 맞는다.
 
 - 같은 애플리케이션 안에서 끝나는 짧은 부수 작업
@@ -894,7 +869,7 @@ HTTP 응답 전에 작업 결과가 꼭 필요한가?
 - Broker가 복구 수단을 제공해도 DB 변경과 Event 발행의 불일치, 중복 전달, 순서, Retry와 운영 관측은 별도로 설계해야 한다.
 - Transactional Outbox는 DB와 Kafka를 하나의 Transaction으로 묶는 방식이 아니라, 업무 변경과 발행 의도를 같은 DB Transaction에 기록해 실패한 발행을 다시 시도할 수 있게 하는 방식이다.
 
-**`@Async`와 메시지 큐의 차이는 어느 쪽이 더 빠른가에 있지 않다. `@Async`는 같은 애플리케이션 안에서 작업 실행을 다른 Thread로 분리하는 단순한 방법이다. 메시지 큐는 처리해야 할 사실을 애플리케이션 외부에 남겨 Producer와 Consumer의 생명주기를 분리하고, 실패 후 다시 처리할 근거를 만드는 구조다. 그 대신 메시지 큐를 선택하면 순서·중복·Retry·DLQ/DLT·Outbox와 운영 관측도 함께 설계해야 한다.**
+**응답 뒤에 남은 작업을 어디에 보관하고, 실패하면 어떻게 다시 처리할지를 기준으로 선택한다.** 로컬 비동기로 요구사항을 만족할 수 있다면 그 단순함을 유지하고, 작업 보존과 독립적인 처리·확장이 필요할 때 메시지 큐의 운영 비용을 함께 검토하면 된다.
 
 ## 참고 자료
 

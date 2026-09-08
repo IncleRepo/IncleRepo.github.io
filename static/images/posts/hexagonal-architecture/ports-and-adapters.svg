@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="430" viewBox="0 0 1200 430" role="img" aria-labelledby="title desc">
+  <title id="title">애플리케이션을 중심에 둔 Port와 Adapter</title>
+  <desc id="desc">HTTP와 배치 같은 외부 요청이 입력 어댑터와 입력 포트를 거쳐 애플리케이션으로 들어오고 출력 포트와 출력 어댑터를 통해 데이터베이스와 Redis로 나가는 구조</desc>
+  <style>text { font-family:Pretendard,"Noto Sans KR",sans-serif; }</style>
+  <rect width="1200" height="430" rx="24" fill="#202226"/>
+
+  <g fill="none" stroke="#7c838c" stroke-width="3">
+    <path d="M168 215H245"/><path d="m233 206 14 9-14 9"/>
+    <path d="M405 215H474"/><path d="m462 206 14 9-14 9"/>
+    <path d="M726 215H795"/><path d="m783 206 14 9-14 9"/>
+    <path d="M955 215H1032"/><path d="m1020 206 14 9-14 9"/>
+  </g>
+
+  <g transform="translate(30 140)">
+    <rect width="138" height="150" rx="16" fill="#292c31" stroke="#555b63"/>
+    <text x="69" y="42" text-anchor="middle" font-size="20" font-weight="700" fill="#f1f3f5">외부 요청</text>
+    <text x="69" y="81" text-anchor="middle" font-size="16" fill="#aeb4bb">HTTP</text>
+    <text x="69" y="108" text-anchor="middle" font-size="16" fill="#aeb4bb">Batch · Message</text>
+  </g>
+
+  <g transform="translate(247 140)">
+    <rect width="158" height="150" rx="16" fill="#29384a" stroke="#78aeea" stroke-width="2"/>
+    <text x="79" y="55" text-anchor="middle" font-size="20" font-weight="700" fill="#78aeea">입력 Adapter</text>
+    <text x="79" y="94" text-anchor="middle" font-size="16" fill="#d6dce3">Controller</text>
+  </g>
+
+  <g transform="translate(476 122)">
+    <rect width="250" height="186" rx="20" fill="#30343a" stroke="#d4a857" stroke-width="2"/>
+    <rect x="-2" y="-34" width="254" height="34" rx="10" fill="#3a3327"/>
+    <text x="125" y="-11" text-anchor="middle" font-size="16" font-weight="700" fill="#f2c66f">입력 Port</text>
+    <text x="125" y="51" text-anchor="middle" font-size="23" font-weight="700" fill="#f7f8f9">애플리케이션</text>
+    <text x="125" y="88" text-anchor="middle" font-size="17" fill="#d9dde2">Application Service</text>
+    <text x="125" y="119" text-anchor="middle" font-size="17" fill="#d9dde2">Domain Model</text>
+    <rect x="-2" y="186" width="254" height="34" rx="10" fill="#3a3327"/>
+    <text x="125" y="209" text-anchor="middle" font-size="16" font-weight="700" fill="#f2c66f">출력 Port</text>
+  </g>
+
+  <g transform="translate(797 140)">
+    <rect width="158" height="150" rx="16" fill="#29384a" stroke="#78aeea" stroke-width="2"/>
+    <text x="79" y="55" text-anchor="middle" font-size="20" font-weight="700" fill="#78aeea">출력 Adapter</text>
+    <text x="79" y="94" text-anchor="middle" font-size="16" fill="#d6dce3">JPA · Redis</text>
+  </g>
+
+  <g transform="translate(1034 140)">
+    <rect width="138" height="150" rx="16" fill="#292c31" stroke="#555b63"/>
+    <text x="69" y="42" text-anchor="middle" font-size="20" font-weight="700" fill="#f1f3f5">외부 기술</text>
+    <text x="69" y="81" text-anchor="middle" font-size="16" fill="#aeb4bb">DB · Redis</text>
+    <text x="69" y="108" text-anchor="middle" font-size="16" fill="#aeb4bb">외부 API</text>
+  </g>
+
+  <text x="600" y="390" text-anchor="middle" font-size="17" fill="#aeb4bb">Port는 애플리케이션의 계약이고, Adapter는 외부 기술을 그 계약에 맞춘다.</text>
+</svg>

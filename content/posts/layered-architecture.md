@@ -14,9 +14,7 @@ Spring 애플리케이션에서는 Controller, Service, Repository로 역할을 
 
 ![Controller, DTO, Repository, Service로 나눈 패키지 구조](/images/posts/layered-architecture/project-directory.png "Spring에서 자주 만나는 패키지 구조")
 
-왜 굳이 세 부분으로 나눌까? 각기 다른 책임을 분리하고 코드의 참조 방향을 제한하기 위해서다.
-
-주문 취소 요청 하나가 처리되는 과정을 단순화하면 다음과 같다.
+세 부분으로 나누는 이유는 각기 다른 책임을 분리하고 코드의 참조 방향을 제한하기 위해서다. 주문 취소 요청을 예로 들면 다음과 같은 흐름이 된다.
 
 ```text
 HTTP 요청 → Controller → Service → Repository → DB
@@ -32,9 +30,7 @@ HTTP 요청 → Controller → Service → Repository → DB
 
 ![User Interface부터 Data까지 여러 계층으로 나눈 레이어드 아키텍처](/images/posts/layered-architecture/layered-architecture.png "계층을 더 세분화한 레이어드 아키텍처의 한 가지 예")
 
-위 그림은 Layer를 비교적 세분화한 사례다. 프로젝트에 따라 Application과 Domain을 나누기도 하고 Infrastructure를 별도로 표현하기도 한다. 레이어드 아키텍처가 반드시 세 계층으로 구성되는 것은 아니다.
-
-이 글에서는 단순한 Spring 구조에 맞춰 다음 세 영역을 중심으로 본다.
+위 그림처럼 Application과 Domain을 나누거나 Infrastructure를 별도로 표현하는 등 프로젝트에 따라 Layer의 수와 이름은 달라진다. 여기서는 익숙한 Spring 구조에 맞춰 다음 세 영역을 중심으로 본다.
 
 - **Presentation Layer:** 외부 인터페이스와 애플리케이션의 경계
 - **Application/Business Layer:** 하나의 애플리케이션 작업을 조정
@@ -107,7 +103,7 @@ Repository는 데이터 접근을 담당하는 **Persistence Layer**에 해당�
 
 ![Controller Layer에서 하위 Layer로 향하는 의존 방향과 한 계층을 건너뛰는 참조](/images/posts/layered-architecture/layer-dependency-direction.png "한 DDD 리팩터링 사례의 Layer 의존 방향. 출처: Özkan, Babur와 van den Brand (2023), Figure 3, CC BY 4.0")
 
-의존 방향을 정해도 변경의 영향까지 사라지지는 않는다. Repository의 반환형이 바뀌면 Service도 수정될 수 있다. 그래도 **누가 누구를 참조하는지 예측하기 쉬워진다.**
+Repository의 반환형이 바뀌면 이를 사용하는 Service도 수정될 수 있다. 의존 방향을 정해 두면 이런 변경이 생겼을 때 **어느 코드부터 영향을 확인해야 할지 예측하기 쉬워진다.**
 
 ## 이 구조가 널리 사용되는 이유
 
@@ -164,7 +160,7 @@ order
 
 이런 구성은 기능을 기준으로 코드를 묶는 **Package by Feature**다. 예시처럼 `user`, `order` 같은 업무 영역을 최상위 패키지로 사용하면 **Package by Domain**이라고 부르기도 한다. 어느 이름을 사용하든 기능별로 패키지를 나눈 뒤 내부 요청 흐름은 Controller, Service, Repository 순서로 구성할 수 있다.
 
-두 방식 가운데 하나가 항상 더 좋은 것은 아니다. 코드가 단순할 때는 역할별 구성이 편하고, 기능이 늘어나 서로 관련된 코드를 함께 찾는 일이 많아지면 기능별 구성이 유리할 수 있다.
+코드가 단순할 때는 역할별 구성이 편하고, 기능이 늘어나 관련 코드를 함께 찾는 일이 많아지면 기능별 구성이 유리할 수 있다.
 
 ## 업무 규칙이 Service에 모이면 비대해질 수 있다
 
@@ -188,9 +184,9 @@ public void completeOrder(long orderId) {
 
 이 메서드도 주문 조회, 상태 검증과 변경만 조정하므로 그 자체로는 복잡하지 않다. 그러나 주문 취소와 완료에 이어 가격 계산, 할인 판단과 재고 확인까지 같은 클래스에 쌓이면 `OrderService`가 여러 업무 규칙을 모두 처리하며 점점 비대해질 수 있다.
 
-레이어드 아키텍처는 **코드를 어느 책임의 Layer에 둘 것인지** 알려준다. 그러나 주문이라는 업무 개념을 어떤 객체와 규칙으로 표현할지는 정해 주지 않는다. 도메인 모델링에 별도의 기준이 없다면 업무 규칙이 Service에 모이기 쉽다.
+레이어드 아키텍처로 **코드를 어느 책임의 Layer에 둘지** 나눴다면, 그 안에서 주문 규칙을 어떤 객체가 맡을지도 정해야 한다. 계층 구조는 유지하면서 취소 조건이나 가격 계산을 도메인 객체에 맡기면 Service에 몰린 책임을 나눌 수 있다.
 
-이 문제는 계층 구조를 유지한 채 업무 규칙을 도메인 객체로 나누어 풀 수 있다. 그런데 Service가 커지는 것만 문제가 되는 것은 아니다. 계층 형식에 맞추느라 Service가 거의 아무 일도 하지 않는 반대 상황도 생긴다.
+반대로 업무 처리가 단순한 기능에서는 Service에 맡길 일이 거의 없을 수도 있다. 이때도 모든 요청이 Service를 거치게 하면 어떤 코드가 생길까?
 
 ## 형식적인 계층 통과가 반복되면 Architecture Sinkhole이 된다
 
@@ -220,7 +216,7 @@ Sinkhole을 줄이기 위해 일부 Layer를 열고 Controller가 Repository를 
 | 닫힌 Layer 유지 | 요청 흐름과 Application 경계가 일정함 | 단순 전달 코드가 생길 수 있음 |
 | 일부 Layer 개방 | 의미 없는 전달을 줄일 수 있음 | Controller가 Persistence에 직접 의존함 |
 
-Layer를 건너뛰도록 허용한다면 프로젝트 안에서 일관된 기준을 세워야 한다. Service를 무조건 없애기보다 **구조의 일관성과 불필요한 통과 코드 사이에서 적절한 지점을 찾는 것**이 중요하다.
+Layer를 건너뛰도록 허용한다면 어떤 요청에 허용할지 팀의 기준을 정해야 한다. **일정한 호출 경로를 유지하는 이점과 단순 전달 코드를 줄이는 이점**을 함께 보고 선택한다.
 
 각 Layer가 실제 책임을 맡고 있어도 외부 기술과의 결합은 그대로 남을 수 있다.
 
@@ -240,7 +236,7 @@ public class OrderService {
 
 위 Service는 주문 작업을 조정하면서 Kafka의 구체적인 API를 직접 사용한다. `OrderRepository`가 `JpaRepository`를 그대로 노출하거나 외부 API Client를 직접 사용한다면 JPA와 외부 연동 기술도 Service 코드에 드러난다.
 
-**Layer를 나누는 것과 핵심 로직을 외부 기술에서 분리하는 것은 별개의 문제다.** 레이어드 아키텍처만으로 이런 기술 의존성이 사라지지는 않는다. 외부 기술과 핵심 로직 사이에 더 분명한 경계가 필요하다면 헥사고날 아키텍처와 같은 다른 구조로 시야를 넓힐 수 있다.
+이 코드처럼 **Layer를 나누어도 핵심 로직이 외부 기술을 직접 사용할 수 있다.** Kafka를 교체할 때 주문 처리 코드까지 자주 바꿔야 한다면 두 코드 사이에 더 분명한 경계를 둘 이유가 생긴다. 헥사고날 아키텍처는 이 경계를 다루는 방법 중 하나다.
 
 ## 레이어드 아키텍처는 언제 잘 맞을까?
 
@@ -270,7 +266,7 @@ public class OrderService {
 
 단순함이 주는 이점이 현재 시스템에 충분하다면 레이어드 아키텍처는 좋은 선택이다. 업무 규칙과 기술 의존성이 복잡해질수록 **Layer를 나누는 것만으로 충분한가**라는 다음 질문이 생긴다.
 
-Service 안에 쌓인 업무 규칙을 객체가 직접 맡게 하려면 어떻게 해야 할까? Service가 JPA나 Kafka를 모르게 만들 수는 없을까? 경계와 의존 방향을 애플리케이션 전체에서 더 엄격하게 관리하면 어떤 구조가 될까? 이런 질문은 DDD, 헥사고날 아키텍처, 클린 아키텍처를 공부하는 출발점이 된다.
+이어서 DDD에서는 업무 규칙을 모델과 코드로 표현하는 방법을, 헥사고날과 클린 아키텍처에서는 핵심 로직과 외부 기술 사이의 경계를 더 살펴본다.
 
 ## 참고 자료
 

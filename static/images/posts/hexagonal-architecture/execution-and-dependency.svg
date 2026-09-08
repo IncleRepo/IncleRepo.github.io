@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="480" viewBox="0 0 1200 480" role="img" aria-labelledby="title desc">
+  <title id="title">실행 흐름과 코드 의존 방향</title>
+  <desc id="desc">실행할 때는 컨트롤러에서 로그인 서비스를 거쳐 레디스로 호출이 이어지고, 소스코드의 의존은 입력 포트와 출력 포트를 향한다.</desc>
+  <style>text { font-family:Pretendard,"Noto Sans KR",sans-serif; }</style>
+  <rect width="1200" height="480" rx="24" fill="#202226"/>
+
+  <text x="52" y="54" font-size="22" font-weight="700" fill="#f1f3f5">실행 흐름</text>
+  <text x="52" y="82" font-size="15" fill="#aeb4bb">요청을 처리할 때 메서드가 호출되는 순서</text>
+  <g fill="none" stroke="#7c838c" stroke-width="3">
+    <path d="M262 142H330"/><path d="m318 133 14 9-14 9"/>
+    <path d="M540 142H630"/><path d="m618 133 14 9-14 9"/>
+    <path d="M840 142H930"/><path d="m918 133 14 9-14 9"/>
+  </g>
+  <g font-size="18" font-weight="700" text-anchor="middle">
+    <g transform="translate(52 108)"><rect width="210" height="68" rx="13" fill="#29384a" stroke="#78aeea"/><text x="105" y="42" fill="#dce9f8">UserController</text></g>
+    <g transform="translate(330 108)"><rect width="210" height="68" rx="13" fill="#30343a" stroke="#d4a857"/><text x="105" y="42" fill="#f7f8f9">SignInService</text></g>
+    <g transform="translate(630 108)"><rect width="210" height="68" rx="13" fill="#29384a" stroke="#78aeea"/><text x="105" y="42" fill="#dce9f8">Redis Adapter</text></g>
+    <g transform="translate(930 108)"><rect width="210" height="68" rx="13" fill="#292c31" stroke="#555b63"/><text x="105" y="42" fill="#d9dde2">Redis</text></g>
+  </g>
+
+  <line x1="52" y1="224" x2="1148" y2="224" stroke="#3b3f45"/>
+  <text x="52" y="274" font-size="22" font-weight="700" fill="#f1f3f5">코드 의존 방향</text>
+  <text x="52" y="302" font-size="15" fill="#aeb4bb">각 클래스가 컴파일할 때 참조하는 대상</text>
+  <g fill="none" stroke="#f2c66f" stroke-width="3">
+    <path d="M232 372H300"/><path d="m288 363 14 9-14 9"/>
+    <path d="M510 372H480"/><path d="m492 363-14 9 14 9"/>
+    <path d="M690 372H720"/><path d="m708 363 14 9-14 9"/>
+    <path d="M968 372H900"/><path d="m912 363-14 9 14 9"/>
+  </g>
+  <g font-size="17" font-weight="700" text-anchor="middle">
+    <g transform="translate(52 338)"><rect width="180" height="68" rx="13" fill="#29384a" stroke="#78aeea"/><text x="90" y="42" fill="#dce9f8">Controller</text></g>
+    <g transform="translate(300 338)"><rect width="180" height="68" rx="13" fill="#3a3327" stroke="#d4a857"/><text x="90" y="42" fill="#f2c66f">입력 Port</text></g>
+    <g transform="translate(510 338)"><rect width="180" height="68" rx="13" fill="#30343a" stroke="#d4a857"/><text x="90" y="42" fill="#f7f8f9">SignInService</text></g>
+    <g transform="translate(720 338)"><rect width="180" height="68" rx="13" fill="#3a3327" stroke="#d4a857"/><text x="90" y="42" fill="#f2c66f">출력 Port</text></g>
+    <g transform="translate(968 338)"><rect width="180" height="68" rx="13" fill="#29384a" stroke="#78aeea"/><text x="90" y="31" fill="#dce9f8">Redis</text><text x="90" y="52" font-size="14" fill="#dce9f8">Adapter</text></g>
+  </g>
+  <text x="600" y="450" text-anchor="middle" font-size="16" fill="#aeb4bb">호출은 외부 기술로 이어지고, 코드의 화살표는 애플리케이션이 소유한 Port를 향한다.</text>
+</svg>
